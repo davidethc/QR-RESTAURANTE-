@@ -18,11 +18,13 @@ export function CategorySection({
   isOpen,
   onToggle,
   sectionRef,
+  onSelectProduct,
 }: {
   category: PublicCategory;
   isOpen: boolean;
   onToggle: () => void;
   sectionRef: (el: HTMLElement | null) => void;
+  onSelectProduct: (product: PublicCategory["products"][number]) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -54,7 +56,11 @@ export function CategorySection({
       {isOpen && (
         <div className="flex flex-col gap-2 pb-2">
           {visibleProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onSelect={onSelectProduct}
+            />
           ))}
 
           {hasMore && !showAll && (

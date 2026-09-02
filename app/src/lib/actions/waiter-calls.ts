@@ -2,17 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getTableSession } from "@/lib/session";
 import type { CallType, CallStatus } from "@/config/constants";
 import type { ActionResult } from "@/types/actions";
 
 export async function callWaiter(
-  sessionToken: string,
   type: CallType
 ): Promise<ActionResult<string>> {
+  const session = await getTableSession();
+  if (!session) {
+    return {
+      ok: false,
+      error: "No encontramos tu mesa. Escanea el código QR nuevamente.",
+    };
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("create_waiter_call", {
-    p_session_token: sessionToken,
+    p_session_token: session.sessionToken,
     p_type: type,
   });
 

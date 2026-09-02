@@ -3,6 +3,7 @@ import { getTableSession } from "@/lib/session";
 import { getPublicMenu } from "@/lib/queries/menu";
 import { MenuHeader } from "./_components/menu-header";
 import { MenuBrowser } from "./_components/menu-browser";
+import { ActiveOrdersBanner } from "./_components/active-orders-banner";
 
 export async function generateMetadata({
   params,
@@ -45,7 +46,12 @@ export default async function MenuPage({
         restaurant={menu.restaurant}
         tableNumber={session.tableNumber}
       />
-      <MenuBrowser categories={menu.categories} />
+      <ActiveOrdersBanner slug={slug} tableNumber={session.tableNumber} />
+      <MenuBrowser
+        categories={menu.categories}
+        slug={slug}
+        tableNumber={session.tableNumber}
+      />
     </main>
   );
 }

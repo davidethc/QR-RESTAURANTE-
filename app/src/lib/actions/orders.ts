@@ -2,19 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getTableSession } from "@/lib/session";
 import type { CartItem } from "@/types/menu";
 import type { CustomerOrder, SessionOrderSummary } from "@/types/staff";
 import type { ActionResult } from "@/types/actions";
 
+const NO_SESSION_ERROR =
+  "No encontramos tu mesa. Escanea el código QR nuevamente.";
+
+/**
+ * El token de sesión vive en una cookie httpOnly — el navegador nunca
+ * lo ve ni puede pasarlo como argumento. Estas actions lo leen ellas
+ * mismas, del lado del servidor; el cliente solo llama sin token.
+ */
 export async function createOrder(
-  sessionToken: string,
   items: CartItem[],
   notes?: string
 ): Promise<ActionResult<string>> {
+  const session = await getTableSession();
+  if (!session) return { ok: false, error: NO_SESSION_ERROR };
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("create_customer_order", {
-    p_session_token: sessionToken,
+    p_session_token: session.sessionToken,
     p_items: items.map((item) => ({
       product_id: item.product.id,
       quantity: item.quantity,
@@ -28,13 +39,15 @@ export async function createOrder(
 }
 
 export async function getOrderStatus(
-  sessionToken: string,
   orderId: string
 ): Promise<ActionResult<CustomerOrder>> {
+  const session = await getTableSession();
+  if (!session) return { ok: false, error: NO_SESSION_ERROR };
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("get_customer_order", {
-    p_session_token: sessionToken,
+    p_session_token: session.sessionToken,
     p_order_id: orderId,
   });
 
@@ -42,13 +55,16 @@ export async function getOrderStatus(
   return { ok: true, data: data as unknown as CustomerOrder };
 }
 
-export async function getSessionOrders(
-  sessionToken: string
-): Promise<ActionResult<SessionOrderSummary[]>> {
+export async function getSessionOrders(): Promise<
+  ActionResult<SessionOrderSummary[]>
+> {
+  const session = await getTableSession();
+  if (!session) return { ok: false, error: NO_SESSION_ERROR };
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("get_session_orders", {
-    p_session_token: sessionToken,
+    p_session_token: session.sessionToken,
   });
 
   if (error) return { ok: false, error: error.message };

@@ -1,11 +1,17 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
 import { CategorySection } from "./category-section";
-import type { PublicCategory } from "@/types/menu";
+import { ProductSheet } from "./product-sheet";
+import { CartSheet } from "./cart-sheet";
+import { ServiceButtons } from "./service-buttons";
+import { useCart } from "@/hooks/use-cart";
+import { formatPrice } from "@/lib/utils";
+import type { PublicCategory, PublicProduct } from "@/types/menu";
 
 function normalize(text: string): string {
   return text
@@ -14,12 +20,26 @@ function normalize(text: string): string {
     .toLowerCase();
 }
 
-export function MenuBrowser({ categories }: { categories: PublicCategory[] }) {
+export function MenuBrowser({
+  categories,
+  slug,
+  tableNumber,
+}: {
+  categories: PublicCategory[];
+  slug: string;
+  tableNumber: number;
+}) {
   const [query, setQuery] = useState("");
   const [openCategories, setOpenCategories] = useState<Set<string>>(
     () => new Set(categories.map((c) => c.id))
   );
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const [selectedProduct, setSelectedProduct] = useState<PublicProduct | null>(
+    null
+  );
+  const [cartOpen, setCartOpen] = useState(false);
+  const cart = useCart(slug, tableNumber);
 
   const results = useMemo(() => {
     const q = normalize(query.trim());
@@ -53,7 +73,7 @@ export function MenuBrowser({ categories }: { categories: PublicCategory[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-4">
+    <div className="flex flex-col gap-5 pb-28">
       <div className="sticky top-0 z-10 flex flex-col gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -89,6 +109,7 @@ export function MenuBrowser({ categories }: { categories: PublicCategory[] }) {
               category={category}
               isOpen={openCategories.has(category.id)}
               onToggle={() => toggleCategory(category.id)}
+              onSelectProduct={setSelectedProduct}
               sectionRef={(el) => {
                 sectionRefs.current[category.id] = el;
               }}
@@ -101,10 +122,51 @@ export function MenuBrowser({ categories }: { categories: PublicCategory[] }) {
         ) : (
           <div className="flex flex-col gap-2">
             {results.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                onSelect={setSelectedProduct}
+              />
             ))}
           </div>
         )}
+      </div>
+
+      <ProductSheet
+        product={selectedProduct}
+        onOpenChange={(open) => !open && setSelectedProduct(null)}
+        onAdd={(product, quantity, notes) =>
+          cart.addItem(product, quantity, notes)
+        }
+      />
+
+      <CartSheet
+        open={cartOpen}
+        onOpenChange={setCartOpen}
+        items={cart.items}
+        total={cart.total}
+        onUpdateQuantity={cart.updateQuantity}
+        onRemove={cart.removeItem}
+        onClearCart={cart.clearCart}
+        slug={slug}
+        tableNumber={tableNumber}
+      />
+
+      <div className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur">
+        {cart.itemCount > 0 && (
+          <Button
+            size="lg"
+            className="w-full justify-between"
+            onClick={() => setCartOpen(true)}
+          >
+            <span className="flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4" />
+              Ver pedido · {cart.itemCount}
+            </span>
+            <span>{formatPrice(cart.total)}</span>
+          </Button>
+        )}
+        <ServiceButtons tableNumber={tableNumber} />
       </div>
     </div>
   );

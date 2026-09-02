@@ -1,16 +1,36 @@
 import Image from "next/image";
-import { UtensilsCrossed } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { UtensilsCrossed, Plus } from "lucide-react";
+import { formatPrice, cn } from "@/lib/utils";
 import type { PublicProduct } from "@/types/menu";
 
-export function ProductCard({ product }: { product: PublicProduct }) {
+export function ProductCard({
+  product,
+  onSelect,
+}: {
+  product: PublicProduct;
+  onSelect?: (product: PublicProduct) => void;
+}) {
   const soldOut = !product.available;
 
   return (
     <article
-      className={`flex gap-3 rounded-xl border bg-card p-3 ${
-        soldOut ? "opacity-60" : ""
-      }`}
+      role={soldOut ? undefined : "button"}
+      tabIndex={soldOut ? undefined : 0}
+      onClick={soldOut ? undefined : () => onSelect?.(product)}
+      onKeyDown={
+        soldOut
+          ? undefined
+          : (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect?.(product);
+              }
+            }
+      }
+      className={cn(
+        "flex gap-3 rounded-xl border bg-card p-3 text-left",
+        soldOut ? "opacity-60" : "cursor-pointer active:bg-muted"
+      )}
     >
       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
         {product.image_url ? (
@@ -48,6 +68,14 @@ export function ProductCard({ product }: { product: PublicProduct }) {
           </span>
         )}
       </div>
+
+      {!soldOut && (
+        <div className="flex shrink-0 items-center">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <Plus className="h-4 w-4" />
+          </div>
+        </div>
+      )}
     </article>
   );
 }
