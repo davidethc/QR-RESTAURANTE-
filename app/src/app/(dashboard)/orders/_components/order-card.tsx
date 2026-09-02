@@ -12,7 +12,8 @@ export function OrderCard({ order }: { order: StaffOrder }) {
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-foreground">
-            #{order.order_number} · Mesa {order.table_number}
+            #{order.order_number} ·{" "}
+            {order.table_name ?? `Mesa ${order.table_number}`}
           </p>
           <ElapsedTimer since={order.created_at} warnAfterMinutes={10} />
         </div>

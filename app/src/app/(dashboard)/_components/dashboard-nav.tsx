@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, ClipboardList, LayoutGrid } from "lucide-react";
+import { LogOut, ClipboardList, LayoutGrid, ChefHat } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
 
 const NAV_LINKS = [
   { href: "/orders", label: "Pedidos", icon: ClipboardList, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
+  { href: "/kitchen", label: "Cocina", icon: ChefHat, roles: ["OWNER", "ADMIN", "KITCHEN"] as UserRole[] },
   { href: "/tables", label: "Mesas", icon: LayoutGrid, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
 ];
 

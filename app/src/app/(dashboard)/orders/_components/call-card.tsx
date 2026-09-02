@@ -18,7 +18,7 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
           <Icon className="h-5 w-5 text-wine" />
           <div>
             <p className="font-semibold text-foreground">
-              Mesa {call.table_number}
+              {call.table_name ?? `Mesa ${call.table_number}`}
             </p>
             <p className="text-sm text-muted-foreground">{label}</p>
           </div>

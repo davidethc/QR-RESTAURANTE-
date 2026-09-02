@@ -94,7 +94,29 @@ update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
 ### Fase 4 — Cocina
-⏳ No construida todavía.
+✅ Verificado 2026-09-02. Ruta `/kitchen`, 3 columnas (Nuevos=ACCEPTED,
+En preparación=PREPARING, Listos=READY), Realtime compartido con
+`useStaffRealtime`. Ciclo completo probado cruzando paneles: cocina
+"Preparar" → "Marcar listo" → visible al instante como "Listo" en el
+panel de mesero (`/orders`) → mesero "Marcar entregado". Cocina no
+tiene botones de aceptar/rechazar ni ve precios (por diseño, revisar
+`kitchen-order-card.tsx` si esto cambia).
+
+**Bug encontrado y corregido durante esta ronda**: `order-card.tsx` y
+`call-card.tsx` (mesero) siempre mostraban `Mesa {table_number}`
+ignorando `table_name` — la Mesa 5 ("Terraza" en la base) nunca se veía
+con su nombre real fuera de la grilla de Mesas. Se corrigió en ambos
+componentes y en `kitchen-order-card.tsx` (nuevo) para usar
+`table_name ?? \`Mesa ${table_number}\``, igual que `tables/page.tsx`.
+El tracker del cliente (`order-tracker.tsx`) y los toasts de `notify.*`
+siguen mostrando el número (no el nombre) — decisión pendiente, no bug,
+si se quiere cambiar habría que tipar `tableNumber` como string ahí.
+
+**Nota de scope**: `/kitchen` solo está protegido por autenticación
+(vía `proxy.ts`), no por rol — un WAITER autenticado puede visitarlo
+igual que un KITCHEN, la única diferencia es que el link no aparece en
+su nav. Mismo patrón que `/orders` y `/tables` ya tenían. No se agregó
+gate de rol porque ningún otro panel del dashboard lo tiene tampoco.
 
 ### Fase 5 — Admin
 ⏳ No construida todavía.
