@@ -16,7 +16,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="es" className={cn("h-full antialiased", "font-sans", geist.variable)}>
       <body className="min-h-full flex flex-col">
         {children}
-        <GooeyToaster position="top-center" bounce={0.4} showProgress closeButton />
+        <GooeyToaster
+          position="top-center"
+          bounce={0.4}
+          showProgress
+          closeButton
+          duration={5000}
+        />
       </body>
     </html>
   );

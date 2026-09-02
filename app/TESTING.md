@@ -93,6 +93,41 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### Toasts: 5s por defecto, tres persistentes hasta cerrarlas a mano (2026-09-02)
+
+Pedido del usuario: que los toasts desaparezcan solos a los 5 segundos, excepto
+los del personal para "pedido nuevo por aceptar" y las dos llamadas del
+cliente (mesero / cuenta) — esas deben quedarse hasta que alguien las cierre
+a mano, para que no se pierdan de vista sin querer.
+
+**Implementado**: `notifications.ts` ahora pasa `timing: { displayDuration:
+5000 }` explícito en cada notificación normal, y `duration: Infinity`
+explícito en `newOrder`, `waiterCalled`, `billRequested`.
+
+**Detalle importante de la librería (`goey-toast`)**: el prop `duration` del
+`<GooeyToaster>` global (en `layout.tsx`) **no** se aplica de forma confiable
+a un toast que no trae su propia duración — se confirmó leyendo
+`node_modules/goey-toast/dist/index.js`: cada llamada calcula su propia
+duración con `timing?.displayDuration ?? duration ?? (description ?
+DEFAULT_EXPANDED_DURATION : undefined)`, sin consultar el prop global del
+Toaster. **Por eso cada notify.* tiene que traer su propia duración
+explícita** — no alcanza con configurarla una sola vez arriba. Se dejó el
+prop `duration={5000}` en `layout.tsx` de todas formas, como respaldo, pero
+no hay que confiar en él solo.
+
+**Nota sobre cómo se verificó (y su límite)**: no se pudo confirmar el
+temporizador de 5s a simple vista en este entorno — el panel de navegador
+automatizado nunca tiene el foco real del sistema operativo
+(`document.visibilityState` da `"hidden"` incluso con la pestaña
+"seleccionada" dentro de la herramienta), y estas librerías de toast pausan
+el conteo cuando la pestaña no está realmente activa (comportamiento
+correcto y deseado para un usuario real, no un bug). La corrección se
+verificó leyendo el código fuente exacto de la librería y confirmando que
+los valores pasados (`timing.displayDuration: 5000`, `duration: Infinity`)
+ganan primero en su cadena de prioridad — no por cronómetro en pantalla. Si
+se necesita confirmar visualmente alguna vez, hay que probarlo en un
+navegador real con la ventana en foco, no desde esta herramienta.
+
 ### Bug real reportado por el usuario 2026-09-02: error de hidratación + aviso mudo
 
 El usuario mandó una captura real de un "Recoverable Error" de hidratación en
