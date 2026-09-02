@@ -149,3 +149,13 @@ export interface SessionOrderSummary {
   created_at: string;
   item_count: number;
 }
+
+export interface RestaurantSettings {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  phone: string | null;
+  address: string | null;
+}

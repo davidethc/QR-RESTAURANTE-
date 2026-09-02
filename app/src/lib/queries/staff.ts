@@ -8,6 +8,7 @@ import type {
   TableStatusRow,
   AdminMenu,
   StaffMember,
+  RestaurantSettings,
 } from "@/types/staff";
 
 /**
@@ -104,4 +105,18 @@ export async function getKitchenOrders(
   restaurantId: string
 ): Promise<StaffOrder[]> {
   return getStaffOrders(restaurantId, ["ACCEPTED", "PREPARING", "READY"]);
+}
+
+export async function getRestaurantSettings(
+  restaurantId: string
+): Promise<RestaurantSettings> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("restaurants")
+    .select("id, name, slug, description, logo_url, phone, address")
+    .eq("id", restaurantId)
+    .single();
+
+  if (error) throw error;
+  return data;
 }

@@ -139,8 +139,41 @@ cambios de permisos**: si un botón nuevo no hace nada y no hay error en
 consola del navegador, revisar el RPC en Postgres — la autorización de
 verdad vive ahí, no en el componente.
 
-### Fase 5 — Admin
-⏳ No construida todavía.
+### Fase 5 — Admin (Carta + Configuración)
+✅ Verificado 2026-09-02 (`/menu` y `/settings`). Probado en el navegador
+como `owner@demo.monky.com`: crear categoría, crear producto con foto
+real (subida a `product-images/{restaurant_id}/...`), editar precio,
+apagar disponibilidad (se refleja al instante en la carta pública como
+"Actualmente no disponible" — ver nota de `updateTag` abajo), eliminar
+producto y categoría. Configuración: editar nombre/descripción/
+teléfono/dirección y subir logo — el logo ahora SÍ se muestra en el
+encabezado de la carta pública (`menu-header.tsx`), antes era solo
+texto. Todos los datos de prueba de esta ronda se limpiaron después
+(quedó un archivo huérfano de 69 bytes en `product-images` — Storage no
+permite `DELETE` directo por SQL, "Direct deletion... not allowed",
+hay que usar la Storage API; no vale la pena para un archivo de prueba
+tan pequeño).
+
+**Bug de plataforma encontrado (no de este proyecto)**: Next.js 16
+cambió la firma de `revalidateTag` — ahora exige un segundo argumento
+`profile` (`revalidateTag(tag, "max")` o similar). Sin él, `tsc` falla
+con "Expected 2 arguments, but got 1" en cada llamada. La función
+correcta para este caso (invalidar caché desde dentro de una Server
+Action, para que el propio autor de la escritura vea su cambio al
+instante) es **`updateTag(tag)`** — un import distinto, no una versión
+de `revalidateTag` con más argumentos. Ver `AGENTS.md` del proyecto:
+"This is NOT the Next.js you know" — la guía real está en
+`node_modules/next/dist/docs/`, no en el training data.
+
+**Decisión de scope, no pendiente**: no se implementó personalización
+de colores del restaurante — el tema (turquesa/granate) es CSS
+compilado en `globals.css`, no una columna en la base. Agregar eso
+sería una feature nueva de verdad (theming dinámico por restaurante),
+no algo que ya estuviera a medias.
+
+**Aún no construido de Fase 5**: generación/impresión de QR de mesas —
+pendiente elegir librería con el usuario antes de instalar nada (regla
+del plan original, no se ha roto).
 
 ## Verificación estándar antes de dar por cerrada una ronda de QA
 
