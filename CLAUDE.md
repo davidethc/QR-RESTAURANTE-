@@ -203,6 +203,9 @@ Listar todos los archivos en `raw/` con:
 2. **Siempre** consultar `memory/` para contexto persistente entre sesiones
 3. Cuando se trabaje con wiki, leer `index.md` primero para orientación
 4. Leer `log.md` últimas 5 entradas para entender decisiones recientes
+5. **Antes de hacer QA o probar algo del código** (`app/`), leer `app/TESTING.md`
+   — registro de qué ya se probó, cómo, y con qué credenciales/datos de prueba.
+   Actualizarlo después de cada ronda de QA nueva, no solo leerlo.
 
 ### Escritura
 1. **Nunca** modificar `raw/` — es inmutable
