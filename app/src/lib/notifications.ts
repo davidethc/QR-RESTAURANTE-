@@ -20,8 +20,11 @@ export const notify = {
   },
 
   // ── Cliente ──
-  orderPlaced(orderNumber: number) {
-    gooeyToast.success(`Pedido #${orderNumber} enviado`, {
+  itemAdded(productName: string) {
+    gooeyToast.success(`${productName} agregado`);
+  },
+  orderPlaced() {
+    gooeyToast.success("Pedido enviado", {
       description: "El restaurante ya lo recibió.",
     });
   },

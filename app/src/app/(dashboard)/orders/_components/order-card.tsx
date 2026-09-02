@@ -50,7 +50,7 @@ export function OrderCard({ order }: { order: StaffOrder }) {
         <div className="mt-3 flex gap-2">
           <ActionButton
             action={() => acceptOrder(order.id)}
-            successMessage="Pedido aceptado"
+            successMessage="Pedido aceptado — en preparación"
             className="flex-1"
           >
             Aceptar

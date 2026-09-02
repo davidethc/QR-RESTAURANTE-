@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { notify } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import { createOrder } from "@/lib/actions/orders";
 import type { CartItem } from "@/types/menu";
@@ -120,6 +121,7 @@ export function CartSheet({
               confirmLabel="Enviar pedido"
               action={() => createOrder(items)}
               onSuccess={(orderId) => {
+                notify.orderPlaced();
                 onClearCart();
                 onOpenChange(false);
                 router.push(`/r/${slug}/${tableNumber}/order/${orderId}`);

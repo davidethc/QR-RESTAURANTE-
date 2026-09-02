@@ -10,6 +10,7 @@ import { ProductSheet } from "./product-sheet";
 import { CartSheet } from "./cart-sheet";
 import { ServiceButtons } from "./service-buttons";
 import { useCart } from "@/hooks/use-cart";
+import { notify } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
@@ -135,9 +136,10 @@ export function MenuBrowser({
       <ProductSheet
         product={selectedProduct}
         onOpenChange={(open) => !open && setSelectedProduct(null)}
-        onAdd={(product, quantity, notes) =>
-          cart.addItem(product, quantity, notes)
-        }
+        onAdd={(product, quantity, notes) => {
+          cart.addItem(product, quantity, notes);
+          notify.itemAdded(product.name);
+        }}
       />
 
       <CartSheet

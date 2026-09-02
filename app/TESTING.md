@@ -93,6 +93,35 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### Ajuste de UX 2026-09-02: menos clics para el mesero + toasts del cliente
+El usuario probó el panel real (no en esta sesión) y encontró dos cosas:
+
+1. **Demasiados estados manuales**: "Aceptar" y "Preparar" eran dos clics
+   separados que no representan ningún momento real distinto (se acepta
+   y se empieza a cocinar al mismo tiempo). `acceptOrder` ahora llama
+   `accept_order` y `start_order_preparing` en secuencia — un pedido
+   PENDING pasa a PREPARING con un solo clic. El botón "Preparar"
+   sigue existiendo en `order-card.tsx`/`kitchen-order-card.tsx` como
+   respaldo manual solo por si `start_order_preparing` fallara después
+   de aceptar (poco probable, pero deja al pedido recuperable en vez de
+   atascado). **Si vuelves a tocar el flujo de aceptar pedidos, no
+   reintroduzcas el paso manual de "Preparar" como obligatorio.**
+2. **Sin feedback al cliente**: `notify.orderPlaced()` existía en
+   `notifications.ts` desde Fase 2 pero **nunca se llamaba** — el
+   cliente no veía ningún toast al enviar su pedido. Tampoco había
+   ningún aviso al agregar un producto al carrito. Se conectaron ambos:
+   `notify.itemAdded(nombre)` en `menu-browser.tsx` (al agregar) y
+   `notify.orderPlaced()` en `cart-sheet.tsx` (al confirmar el envío).
+   **Lección**: una función definida en `notifications.ts` no
+   garantiza que esté conectada en algún lado — grep por su nombre
+   antes de asumir que "ya está implementado".
+
+Verificado en el navegador: agregar "Bolón de chicharrón" muestra el
+toast "Bolón de chicharrón agregado"; enviar el pedido muestra "Pedido
+enviado"; aceptar un pedido pendiente lo deja directo en "Preparando"
+con el toast "Pedido aceptado — en preparación", sin pasar por un
+estado "Aceptado" visible ni requerir un segundo clic.
+
 ### Fase 4 — Cocina
 ✅ Verificado 2026-09-02. Ruta `/kitchen`, 3 columnas (Nuevos=ACCEPTED,
 En preparación=PREPARING, Listos=READY), Realtime compartido con
