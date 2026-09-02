@@ -1,0 +1,13 @@
+# Estado de sesión de Obsidian (por dispositivo, no se comparte)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# macOS
+.DS_Store
+
+# Editores
+.vscode/
+.idea/
+
+# Estado de ejecución local (no es contenido del proyecto)
+.claude/scheduled_tasks.lock

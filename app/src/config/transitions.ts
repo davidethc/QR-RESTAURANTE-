@@ -1,0 +1,15 @@
+import { ORDER_STATUS, type OrderStatus } from "./constants";
+
+const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  [ORDER_STATUS.PENDING]: [ORDER_STATUS.ACCEPTED, ORDER_STATUS.REJECTED, ORDER_STATUS.CANCELLED],
+  [ORDER_STATUS.ACCEPTED]: [ORDER_STATUS.PREPARING, ORDER_STATUS.CANCELLED],
+  [ORDER_STATUS.PREPARING]: [ORDER_STATUS.READY, ORDER_STATUS.CANCELLED],
+  [ORDER_STATUS.READY]: [ORDER_STATUS.DELIVERED],
+  [ORDER_STATUS.DELIVERED]: [],
+  [ORDER_STATUS.REJECTED]: [],
+  [ORDER_STATUS.CANCELLED]: [],
+};
+
+export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
+  return VALID_TRANSITIONS[from]?.includes(to) ?? false;
+}

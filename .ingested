@@ -1,0 +1,15 @@
+# Archivos ingestados — Wiki LLM Monky.com
+# Formato: TIMESTAMP | FILENAME | STATUS
+# Solo archivos .md en raw/assets/
+
+2026-09-01T23:09:00Z | FASE TÉCNICA — ARQUITECTURA, CÓDIGO Y BASE DE DATOS DEL MVP.md | ingested
+2026-09-01T22:43:00Z | FASE UX — WIREFRAMES DE COCINA.md | ingested
+2026-09-01T22:43:00Z | FASE UX — WIREFRAMES DEL CLIENTE MOBILE.md | ingested
+2026-09-01T22:43:00Z | FASE UX — WIREFRAMES DEL MESERO.md | ingested
+2026-09-01T22:32:00Z | MAPA DE PANTALLAS — MVP.md | ingested
+2026-09-01T22:43:00Z | PROYECTO — FASES UX, REGLAS DE NEGOCIO, DATOS Y ARQUITECTURA DEL MVP.md | ingested
+2026-09-01T22:25:00Z | PROYECTO_ SISTEMA DIGITAL DE ATENCIÓN Y PEDIDOS PARA RESTAURANTES.md | ingested
+2026-09-01T22:25:00Z | Roles y flujo operativo — MVP.md | ingested
+2026-09-02T10:30:00Z | DATABASE DESIGN V2 — SCHEMA SQL SEGURO DEL MVP (1).md | ingested
+
+# Nuevos archivos detectados después de esta línea se ingestan automáticamente
