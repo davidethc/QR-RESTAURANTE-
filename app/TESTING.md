@@ -171,9 +171,21 @@ compilado en `globals.css`, no una columna en la base. Agregar eso
 sería una feature nueva de verdad (theming dinámico por restaurante),
 no algo que ya estuviera a medias.
 
-**Aún no construido de Fase 5**: generación/impresión de QR de mesas —
-pendiente elegir librería con el usuario antes de instalar nada (regla
-del plan original, no se ha roto).
+### QR de mesas
+✅ Verificado 2026-09-02. El usuario eligió `qrcode` (npm) cuando se le
+preguntó (regla del plan: preguntar antes de instalar). Botón "Ver QR"
+en `/tables` (solo OWNER/ADMIN), genera el QR client-side con
+`QRCode.toDataURL` apuntando a `${window.location.origin}/scan/{qr_token}`
+— usa el dominio real del navegador, no una URL fija, así que funciona
+igual en localhost que ya en producción sin cambiar código. Incluye
+"Descargar PNG" y "Imprimir" (abre una pestaña con una tarjeta simple
+y llama a `window.print()`). Verificado que el QR de Mesa 1 codifica
+exactamente `http://localhost:3000/scan/db88bbe3-...` (el token real).
+
+Con esto, Fase 5 queda completa: Carta, Configuración y QR de mesas.
+Lo único explícitamente fuera de scope (por decisión, no olvido):
+crear/renombrar mesas desde la UI (hoy solo se editan por SQL) y
+personalizar colores del restaurante.
 
 ## Verificación estándar antes de dar por cerrada una ronda de QA
 

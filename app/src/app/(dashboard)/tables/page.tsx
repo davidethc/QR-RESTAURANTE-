@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/shared/page-header";
 import { TableStatusBadge } from "@/components/shared/status-badge";
+import { TableQrDialog } from "./_components/table-qr-dialog";
 import { formatPrice } from "@/lib/utils";
 import { getMyRestaurant, getTablesStatus } from "@/lib/queries/staff";
 
@@ -9,6 +10,7 @@ export const metadata: Metadata = { title: "Mesas" };
 export default async function TablesPage() {
   const session = await getMyRestaurant();
   const tables = await getTablesStatus(session.restaurant.id);
+  const canManage = session.role === "OWNER" || session.role === "ADMIN";
 
   return (
     <main>
@@ -46,6 +48,16 @@ export default async function TablesPage() {
               <p className="mt-2 text-sm font-semibold text-wine">
                 {formatPrice(table.active_total)}
               </p>
+            )}
+
+            {canManage && (
+              <div className="mt-3">
+                <TableQrDialog
+                  restaurantName={session.restaurant.name}
+                  tableLabel={table.name ?? `Mesa ${table.number}`}
+                  qrToken={table.qr_token}
+                />
+              </div>
             )}
           </div>
         ))}
