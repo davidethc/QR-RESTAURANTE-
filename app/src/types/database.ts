@@ -705,6 +705,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_and_prepare_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       accept_order: { Args: { p_order_id: string }; Returns: undefined }
       cancel_order: {
         Args: { p_order_id: string; p_reason?: string }

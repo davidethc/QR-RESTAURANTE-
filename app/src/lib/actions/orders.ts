@@ -76,22 +76,19 @@ export async function getSessionOrders(): Promise<
  * de "empezar a preparar" en dos clics no representa ningún momento
  * real distinto en la cocina (se acepta y se empieza a cocinar al
  * mismo tiempo) y solo agrega un paso más para personal que ya anda
- * ocupado. Si `start_order_preparing` llegara a fallar después de
- * aceptar, el pedido queda en ACCEPTED y el botón "Preparar" (todavía
- * presente para ese caso) sirve de respaldo manual.
+ * ocupado. `accept_and_prepare_order` hace ambas cosas en una sola
+ * transacción de Postgres — si algo falla, no queda a medias (nunca
+ * un pedido "aceptado pero no marcado preparando" por un error de red
+ * entre dos llamadas separadas). `accept_order` y `start_order_preparing`
+ * siguen existiendo para el caso raro de recuperación manual.
  */
 export async function acceptOrder(orderId: string): Promise<ActionResult> {
   const supabase = await createClient();
 
-  const { error: acceptError } = await supabase.rpc("accept_order", {
+  const { error } = await supabase.rpc("accept_and_prepare_order", {
     p_order_id: orderId,
   });
-  if (acceptError) return { ok: false, error: acceptError.message };
-
-  const { error: prepareError } = await supabase.rpc("start_order_preparing", {
-    p_order_id: orderId,
-  });
-  if (prepareError) return { ok: false, error: prepareError.message };
+  if (error) return { ok: false, error: error.message };
 
   revalidatePath("/orders");
   revalidatePath("/kitchen");

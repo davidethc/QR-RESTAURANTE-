@@ -93,6 +93,49 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### Auditoría de backend 2026-09-02: RPC atómico + hallazgo crítico de permisos
+
+El usuario pidió explícitamente revisar la base de datos antes de confiar en el
+cambio de "menos clics" de arriba. Se encontraron y corrigieron dos cosas:
+
+1. **`acceptOrder` llamaba dos RPCs separados** (`accept_order` +
+   `start_order_preparing`), cada uno su propia transacción. Si el segundo
+   fallara justo después de que el primero ya se guardó, el pedido quedaba
+   "aceptado pero no marcado preparando" con un error mostrado al mesero que
+   no reflejaba la realidad. Se reemplazó por **`accept_and_prepare_order`**
+   — un solo RPC, una sola transacción de Postgres, todo o nada. Verificado:
+   `accepted_at` y `preparing_at` quedan con el mismo timestamp exacto, y los
+   dos registros de `audit_logs` (ACCEPT_ORDER + START_PREPARING) también.
+
+2. **Hallazgo importante, aplica a cualquier RPC nuevo que se cree en este
+   proyecto**: este proyecto de Supabase tiene un *default privilege* a nivel
+   de esquema (`ALTER DEFAULT PRIVILEGES ... GRANT EXECUTE ON FUNCTIONS TO
+   anon, authenticated, service_role`) que le da a **`anon` acceso automático
+   a toda función nueva**, sin que nadie lo pida. Esto es *independiente* del
+   rol `PUBLIC` — hacer `revoke all on function ... from public;` **no** le
+   quita el permiso a `anon`, porque su acceso no vino por herencia de
+   `PUBLIC` sino por un grant directo. El RPC nuevo (`accept_and_prepare_order`)
+   terminó siendo llamable por `anon` sin que la migración lo pidiera —
+   detectado con `get_advisors(type: security)`, no a simple vista. La
+   función seguía protegida en la práctica (`if auth.uid() is null then
+   raise exception`), pero era una superficie de ataque innecesaria.
+   **Corrección**: `revoke execute on function ... from anon;` explícito,
+   además del `from public`. **Regla para cualquier RPC futuro que no sea
+   para el cliente anónimo**: la migración debe revocar de `anon` por
+   nombre, no confiar en que `revoke ... from public` alcance. Verificar
+   siempre con:
+   ```sql
+   select grantee from information_schema.routine_privileges
+   where routine_name = '<nombre_del_rpc>';
+   ```
+   Antes de dar por buena una función nueva, confirmar que la lista NO
+   incluya `anon` a menos que sea explícitamente para el cliente (como
+   `get_session_calls`, `create_customer_order`, etc.).
+
+Base de datos limpiada por completo después de esta ronda (0 pedidos, 0
+llamadas, 0 sesiones, mesas disponibles) — quedó lista para producción con
+solo el catálogo real de 50 productos / 8 categorías.
+
 ### Ajuste de UX 2026-09-02: menos clics para el mesero + toasts del cliente
 El usuario probó el panel real (no en esta sesión) y encontró dos cosas:
 
