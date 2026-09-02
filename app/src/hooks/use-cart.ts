@@ -26,7 +26,16 @@ function readCart(key: string): CartItem[] {
 
 export function useCart(slug: string, tableNumber: number) {
   const key = storageKey(slug, tableNumber);
-  const [items, setItems] = useState<CartItem[]>(() => readCart(key));
+  // Empieza vacío siempre: leer localStorage en el useState inicial hace
+  // que el servidor (sin localStorage) y el cliente (con un carrito ya
+  // guardado) rendericen árboles distintos — el clásico mismatch de
+  // hidratación (mismo tipo de bug que ElapsedTimer, aquí en otro archivo).
+  // El carrito real se carga recién en el useEffect, solo en el cliente.
+  const [items, setItems] = useState<CartItem[]>([]);
+
+  useEffect(() => {
+    setItems(readCart(key));
+  }, [key]);
 
   // Sincroniza si el carrito cambia en otra pestaña de la misma mesa.
   useEffect(() => {

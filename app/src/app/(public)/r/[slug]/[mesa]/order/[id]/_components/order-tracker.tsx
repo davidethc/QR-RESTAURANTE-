@@ -20,8 +20,17 @@ const STEPS: { status: OrderStatus; label: string }[] = [
 
 const TERMINAL: OrderStatus[] = ["DELIVERED", "REJECTED", "CANCELLED"];
 
+/**
+ * "Aceptar" y "empezar a preparar" ahora pasan en la misma acción del
+ * mesero (un solo RPC atómico) — el pedido nunca se queda visible en
+ * ACCEPTED el tiempo suficiente como para que el sondeo del cliente lo
+ * capture; salta directo a PREPARING. Por eso PREPARING dispara el
+ * mismo aviso que antes disparaba ACCEPTED — si no, el cliente nunca
+ * se entera de que su pedido fue aceptado hasta que está listo.
+ */
 function notifyTransition(status: OrderStatus, orderNumber: number) {
-  if (status === "ACCEPTED") notify.orderAccepted(orderNumber);
+  if (status === "ACCEPTED" || status === "PREPARING")
+    notify.orderAccepted(orderNumber);
   else if (status === "READY") notify.orderReadyForCustomer(orderNumber);
   else if (status === "DELIVERED") notify.orderDelivered(orderNumber);
   else if (status === "REJECTED") notify.orderRejected(orderNumber, null);

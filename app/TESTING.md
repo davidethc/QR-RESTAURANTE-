@@ -93,6 +93,41 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### Bug real reportado por el usuario 2026-09-02: error de hidratación + aviso mudo
+
+El usuario mandó una captura real de un "Recoverable Error" de hidratación en
+`/r/omm-siri/1`. Dos causas, ambas encontradas y corregidas:
+
+1. **`use-cart.ts` tenía el mismo tipo de bug que ya se había corregido en
+   `ElapsedTimer`, pero en un archivo distinto** — `useState(() =>
+   readCart(key))` leía `localStorage` en el inicializador, que corre tanto en
+   servidor (sin `localStorage`, devuelve `[]`) como en cliente (con carrito
+   real ya guardado). Si el cliente ya tenía algo en el carrito de una visita
+   anterior, el árbol que React esperaba pintar (según el servidor) no
+   coincidía con el que pintaba de verdad (con el botón "Ver pedido" visible).
+   **Corregido** con el mismo patrón: empezar en `[]` siempre, cargar el
+   carrito real recién en un `useEffect` (cliente-only). Verificado
+   recargando la página completa con un carrito ya guardado — cero errores
+   en consola.
+   **Lección que ya deberíamos tener aprendida**: cualquier `useState`
+   inicializado leyendo `localStorage`, `Date.now()`, o cualquier otra API
+   que difiera entre servidor y cliente es sospechoso por defecto. Antes de
+   escribir uno nuevo, usar el patrón "empieza neutro, corrige en
+   `useEffect`". Se hizo un grep de todo `src/` (`useState(() =>`,
+   `localStorage`, `window.`, `document.`) para confirmar que no quedó
+   ningún otro caso — limpio.
+
+2. **El cliente no recibía ningún aviso cuando su pedido pasaba a
+   "preparando"**. Consecuencia directa del RPC atómico de la sección de
+   abajo: como ACCEPTED y PREPARING ahora pasan en la misma transacción, el
+   pedido nunca queda "visible" en estado ACCEPTED el tiempo suficiente para
+   que el sondeo del cliente (`order-tracker.tsx`) lo capture — salta
+   directo a PREPARING, y esa transición no disparaba ningún toast.
+   **Corregido**: `notifyTransition` ahora dispara el mismo aviso
+   ("Pedido #N aceptado — Pasó a cocina.") tanto en ACCEPTED como en
+   PREPARING. Verificado con un pedido real y sondeo de verdad (no solo
+   cambiando el estado por SQL): el toast aparece.
+
 ### Auditoría de backend 2026-09-02: RPC atómico + hallazgo crítico de permisos
 
 El usuario pidió explícitamente revisar la base de datos antes de confiar en el
