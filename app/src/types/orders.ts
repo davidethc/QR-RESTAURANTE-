@@ -40,6 +40,13 @@ export interface OrderItemOption {
   created_at: string;
 }
 
+export interface SessionCall {
+  id: string;
+  type: CallType;
+  status: CallStatus;
+  created_at: string;
+}
+
 export interface WaiterCall {
   id: string;
   restaurant_id: string;

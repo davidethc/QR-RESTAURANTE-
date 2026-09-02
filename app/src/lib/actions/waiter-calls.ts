@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTableSession } from "@/lib/session";
 import type { CallType, CallStatus } from "@/config/constants";
 import type { ActionResult } from "@/types/actions";
+import type { SessionCall } from "@/types/orders";
 
 export async function callWaiter(
   type: CallType
@@ -26,6 +27,25 @@ export async function callWaiter(
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, data };
+}
+
+export async function getSessionCalls(): Promise<ActionResult<SessionCall[]>> {
+  const session = await getTableSession();
+  if (!session) {
+    return {
+      ok: false,
+      error: "No encontramos tu mesa. Escanea el código QR nuevamente.",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("get_session_calls", {
+    p_session_token: session.sessionToken,
+  });
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: (data ?? []) as unknown as SessionCall[] };
 }
 
 export async function handleCall(

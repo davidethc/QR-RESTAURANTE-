@@ -4,6 +4,7 @@ import { getPublicMenu } from "@/lib/queries/menu";
 import { MenuHeader } from "./_components/menu-header";
 import { MenuBrowser } from "./_components/menu-browser";
 import { ActiveOrdersBanner } from "./_components/active-orders-banner";
+import { ActiveCallBanner } from "./_components/active-call-banner";
 
 export async function generateMetadata({
   params,
@@ -47,6 +48,7 @@ export default async function MenuPage({
         tableNumber={session.tableNumber}
       />
       <ActiveOrdersBanner slug={slug} tableNumber={session.tableNumber} />
+      <ActiveCallBanner />
       <MenuBrowser
         categories={menu.categories}
         slug={slug}

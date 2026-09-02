@@ -46,6 +46,14 @@ export const notify = {
   callAcknowledged() {
     gooeyToast.success("Un mesero fue avisado");
   },
+  callInProgress(type: "WAITER" | "BILL") {
+    gooeyToast.info(
+      type === "BILL" ? "Tu mesero va por la cuenta" : "Tu mesero va en camino"
+    );
+  },
+  callDone(type: "WAITER" | "BILL") {
+    gooeyToast.success(type === "BILL" ? "Cuenta entregada" : "Solicitud atendida");
+  },
 
   // ── Personal: eventos que exigen atención, más visibles ──
   newOrder(orderNumber: number, tableNumber: number) {
