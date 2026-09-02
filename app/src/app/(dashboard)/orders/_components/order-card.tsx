@@ -3,7 +3,12 @@ import { OrderStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
 import { ActionButton } from "@/components/shared/action-button";
 import { RejectDialog } from "./reject-dialog";
-import { acceptOrder, markDelivered } from "@/lib/actions/orders";
+import {
+  acceptOrder,
+  markDelivered,
+  startPreparing,
+  markReady,
+} from "@/lib/actions/orders";
 import type { StaffOrder } from "@/types/staff";
 
 export function OrderCard({ order }: { order: StaffOrder }) {
@@ -54,10 +59,24 @@ export function OrderCard({ order }: { order: StaffOrder }) {
         </div>
       )}
 
-      {(order.status === "ACCEPTED" || order.status === "PREPARING") && (
-        <p className="mt-3 text-sm text-muted-foreground">
-          Esperando a cocina…
-        </p>
+      {order.status === "ACCEPTED" && (
+        <ActionButton
+          action={() => startPreparing(order.id)}
+          successMessage="En preparación"
+          className="mt-3 w-full"
+        >
+          Preparar
+        </ActionButton>
+      )}
+
+      {order.status === "PREPARING" && (
+        <ActionButton
+          action={() => markReady(order.id)}
+          successMessage="Pedido listo"
+          className="mt-3 w-full"
+        >
+          Marcar listo
+        </ActionButton>
       )}
 
       {order.status === "READY" && (

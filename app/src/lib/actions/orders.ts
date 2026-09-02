@@ -103,6 +103,7 @@ export async function startPreparing(orderId: string): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/kitchen");
+  revalidatePath("/orders");
   return { ok: true, data: undefined };
 }
 
@@ -114,6 +115,7 @@ export async function markReady(orderId: string): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/kitchen");
+  revalidatePath("/orders");
   return { ok: true, data: undefined };
 }
 

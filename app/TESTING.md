@@ -118,6 +118,27 @@ igual que un KITCHEN, la única diferencia es que el link no aparece en
 su nav. Mismo patrón que `/orders` y `/tables` ya tenían. No se agregó
 gate de rol porque ningún otro panel del dashboard lo tiene tampoco.
 
+### Cambio de negocio 2026-09-02: el mesero también puede Preparar/Marcar listo
+Decisión del usuario: cocina tiene las manos ocupadas cocinando y no
+va a tocar confiablemente una tablet — exigir que solo cocina avance
+el pedido (ACCEPTED→PREPARING→READY) crea un cuello de botella real.
+Se agregaron los mismos botones de `KitchenOrderCard` a `order-card.tsx`
+(mesero): ahora cualquiera de los dos (cocina o mesero) puede avanzar
+el pedido, lo que sea más rápido en la operación real. `/kitchen` sigue
+existiendo tal cual para el restaurante que sí tenga a alguien de
+cocina libre para usarlo.
+
+**Bug real encontrado al probar esto** (no obvio desde el código de
+React): los RPCs `start_order_preparing` y `mark_order_ready` tenían el
+chequeo de rol **en la base de datos**, no en el frontend — restringido
+a OWNER/ADMIN/KITCHEN, sin WAITER. El botón nuevo en el panel de mesero
+no hacía nada (fallaba silencioso vía `notify.error`, RPC devolvía "No
+autorizado..."). Se corrigió agregando WAITER a esas dos funciones
+(migración `039_waiter_can_prepare_and_ready`). **Lección para futuros
+cambios de permisos**: si un botón nuevo no hace nada y no hay error en
+consola del navegador, revisar el RPC en Postgres — la autorización de
+verdad vive ahí, no en el componente.
+
 ### Fase 5 — Admin
 ⏳ No construida todavía.
 
