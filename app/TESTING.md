@@ -97,6 +97,32 @@ solo** pedido → se vio idéntico a como se veía antes (sin encabezado
 de grupo), confirmando que no se rompió el caso común. `tsc --noEmit`,
 `npm run build` y `get_advisors` limpios.
 
+### Aviso "Ver" en la notificación de solicitud lleva directo a Solicitudes (2026-09-03)
+
+El usuario pidió que, al llegarle al mesero un aviso de "Llamar
+mesero" o "Pedir cuenta", pudiera hacer clic ahí mismo y caer directo
+en la pestaña de Solicitudes, en vez de tener que ir a buscarla a
+mano. `goey-toast` no permite un `onClick` sobre el toast completo,
+pero sí expone `action: {label, onClick}` (botón dentro del toast) —
+se usó eso, con el label "Ver".
+
+`notify.waiterCalled`/`notify.billRequested` (`lib/notifications.ts`)
+ahora aceptan un segundo parámetro opcional `onView`. Como estas dos
+únicas notificaciones solo se disparan desde `OrdersBoard`
+(`orders-board.tsx` — `KitchenBoard` usa el mismo hook de Realtime pero
+nunca llama a estas dos), no hizo falta navegación entre páginas: el
+`Tabs` de `OrdersBoard` pasó de `defaultValue="pending"` (no
+controlado) a `value={activeTab}` controlado por estado, y el `onView`
+que se le pasa a la notificación es simplemente `() =>
+setActiveTab("calls")`.
+
+Verificado con dos pestañas reales del navegador (una como mesero
+logueado en `/orders`, otra como cliente en `/scan/<token>` de Mesa 1):
+tocar "Llamar mesero" del lado cliente hizo aparecer el toast "Mesa 1
+solicita atención" con el botón "Ver" del lado mesero (sin recargar);
+tocar "Ver" cambió la pestaña activa a "Solicitudes (1)" mostrando la
+tarjeta de la mesa correcta. `tsc --noEmit` y `npm run build` limpios.
+
 ### Fase 3 — Panel de mesero
 ✅ Verificado 2026-09-02. Login, Realtime real (no sondeo) en `orders` y
 `waiter_calls` con dos pestañas simultáneas, aceptar/rechazar pedido (5 motivos

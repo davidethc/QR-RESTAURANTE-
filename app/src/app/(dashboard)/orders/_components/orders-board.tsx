@@ -36,6 +36,7 @@ export function OrdersBoard({
   const [orders, setOrders] = useState(initialOrders);
   const [calls, setCalls] = useState(initialCalls);
   const [tableFilter, setTableFilter] = useState(initialTableFilter);
+  const [activeTab, setActiveTab] = useState("pending");
 
   const prevStatusRef = useRef<Map<string, OrderStatus>>(
     new Map(initialOrders.map((o) => [o.id, o.status]))
@@ -70,8 +71,9 @@ export function OrdersBoard({
       );
       for (const call of newCalls) {
         if (call.status === "PENDING" && !prevCallIdsRef.current.has(call.id)) {
-          if (call.type === "BILL") notify.billRequested(call.table_number);
-          else notify.waiterCalled(call.table_number);
+          const goToCalls = () => setActiveTab("calls");
+          if (call.type === "BILL") notify.billRequested(call.table_number, goToCalls);
+          else notify.waiterCalled(call.table_number, goToCalls);
         }
       }
       prevCallIdsRef.current = newCallIds;
@@ -129,7 +131,7 @@ export function OrdersBoard({
         </div>
       )}
 
-      <Tabs defaultValue="pending" className="px-4 py-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 py-4">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pending">Nuevos ({pending.length})</TabsTrigger>
           <TabsTrigger value="progress">Preparando ({inProgress.length})</TabsTrigger>

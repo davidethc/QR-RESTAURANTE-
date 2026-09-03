@@ -98,16 +98,18 @@ export const notify = {
       ...AUTO_DISMISS,
     });
   },
-  waiterCalled(tableNumber: number) {
+  waiterCalled(tableNumber: number, onView?: () => void) {
     playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} solicita atención`, {
       duration: Infinity,
+      action: onView ? { label: "Ver", onClick: onView } : undefined,
     });
   },
-  billRequested(tableNumber: number) {
+  billRequested(tableNumber: number, onView?: () => void) {
     playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} pidió la cuenta`, {
       duration: Infinity,
+      action: onView ? { label: "Ver", onClick: onView } : undefined,
     });
   },
 };
