@@ -93,6 +93,60 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### Rediseño de "Sugerencias": combos automáticos plato+bebida (2026-09-03)
+
+El usuario probó la primera versión (solo aparecía con productos "Destacado"
+marcados a mano) y aclaró la intención real: **la sección debe tener
+contenido siempre**, no depender de que el restaurante configure algo
+primero. Además pidió específicamente combos de verdad — plato + bebida
+con el precio de los dos juntos, ordenados de más barato a más caro — dando
+como ejemplo "medio tigrillo normal + café filtrado".
+
+**Rediseño en `lib/suggestions.ts`** (`getMenuSuggestions`), con prioridad:
+1. Si hay productos "Destacado" marcados a mano → esos mandan, como platos
+   sueltos (el restaurante los eligió a propósito).
+2. Si no hay ninguno → arma combos automáticos: detecta la categoría de
+   bebidas por nombre (`normalize(nombre).includes("bebida")`), toma un
+   plato de cada categoría restante + una bebida (rotando entre las
+   bebidas disponibles), suma los dos precios, y ordena de más barato a
+   más caro.
+3. Si el restaurante no tiene una categoría reconocible como bebidas →
+   cae a mostrar platos sueltos (uno por categoría, por turnos) en vez de
+   forzar un combo sin sentido.
+
+`SuggestionsRow` ahora renderiza dos tipos de tarjeta (`MenuSuggestion` es
+un discriminated union `single | combo`): las de combo muestran las dos
+miniaturas + "Plato + Bebida" + precio sumado, y al tocarlas agregan
+**ambos** productos al carrito de una vez (no abren el detalle — el combo
+ya está decidido). `flattenSuggestions()` aplana los combos a productos
+sueltos para el "¿Agregas algo más?" del carrito, que sigue siendo de
+un solo toque por producto individual (agregar un combo completo ahí sería
+demasiada fricción para ese momento).
+
+**Bug real encontrado y corregido antes de que llegara a producción**:
+`onAddCombo` iba a llamar `cart.addItem(dish, ...)` y luego
+`cart.addItem(drink, ...)` seguidos — pero ambas llamadas parten del mismo
+`items` capturado en el cierre de React antes de que la primera termine de
+actualizarse, así que la segunda sobrescribía a la primera y **se perdía
+el plato, solo quedaba la bebida**. Se agregó `addItems()` a `use-cart.ts`
+— una sola llamada, un solo `persist()`, ambos productos en el mismo
+array. Lección: nunca llamar dos veces seguidas una función que hace
+`setState([...state, x])` esperando que se acumulen — hay que armar el
+array completo antes de la única llamada.
+
+**Nota de caché al probar**: cambiar `featured` por SQL directo (para
+probar el fallback) no dispara `updateTag`, así que la carta pública sigue
+sirviendo la versión vieja hasta 5 minutos. Para forzar el refresco al
+probar, hay que pasar por la app de verdad (cualquier acción de
+`lib/actions/menu.ts`, como togglear "Disponible" dos veces) — no alcanza
+con cambiar la base y recargar.
+
+Verificado end-to-end con los 50 productos reales de Omm Siri, sin nada
+marcado como Destacado: aparecieron 4 combos (\$3,25 a \$9,25, incluido
+"Tigrillo normal + Café filtrado" — casi el ejemplo exacto del usuario).
+Tocar uno agregó los dos productos como líneas separadas en el carrito,
+sin perder ninguno, y el total sumó correctamente.
+
 ### Investigación real + "Sugerencias" y upsell en el carrito (2026-09-03)
 
 El usuario pidió esta vez que la investigación fuera de verdad en internet

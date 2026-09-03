@@ -12,6 +12,7 @@ import { CartSheet } from "./cart-sheet";
 import { ServiceButtons } from "./service-buttons";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
+import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { formatPrice } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
@@ -55,10 +56,13 @@ export function MenuBrowser({
     return map;
   }, [cart.items]);
 
-  const featuredProducts = useMemo(
-    () =>
-      categories.flatMap((c) => c.products).filter((p) => p.featured && p.available),
-    [categories]
+  // "Sugerencias para ti" nunca se ve vacío: si el restaurante no
+  // marcó nada como Destacado, se arman combos plato+bebida ordenados
+  // de más barato a más caro — ver lib/suggestions.ts.
+  const suggestions = useMemo(() => getMenuSuggestions(categories), [categories]);
+  const suggestedProducts = useMemo(
+    () => flattenSuggestions(suggestions),
+    [suggestions]
   );
 
   const results = useMemo(() => {
@@ -122,7 +126,17 @@ export function MenuBrowser({
       </div>
 
       {results === null && (
-        <SuggestionsRow products={featuredProducts} onSelect={setSelectedProduct} />
+        <SuggestionsRow
+          suggestions={suggestions}
+          onSelectProduct={setSelectedProduct}
+          onAddCombo={(dish, drink) => {
+            cart.addItems([
+              { product: dish, quantity: 1, notes: "" },
+              { product: drink, quantity: 1, notes: "" },
+            ]);
+            notify.itemAdded(`${dish.name} + ${drink.name}`);
+          }}
+        />
       )}
 
       <div className="flex flex-col gap-5 px-4">
@@ -177,7 +191,7 @@ export function MenuBrowser({
         onClearCart={cart.clearCart}
         slug={slug}
         tableNumber={tableNumber}
-        suggestedProducts={featuredProducts}
+        suggestedProducts={suggestedProducts}
         onAddSuggestion={(product) => {
           cart.addItem(product, 1, "");
           notify.itemAdded(product.name);

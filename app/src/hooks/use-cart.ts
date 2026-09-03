@@ -64,6 +64,23 @@ export function useCart(slug: string, tableNumber: number) {
     [items, persist]
   );
 
+  // Para agregar varios de una vez (p. ej. un combo plato+bebida) —
+  // llamar addItem() dos veces seguidas perdería el primero, porque
+  // ambas llamadas parten del mismo `items` capturado en el cierre
+  // antes de que la primera termine de actualizar el estado.
+  const addItems = useCallback(
+    (entries: { product: PublicProduct; quantity: number; notes: string }[]) => {
+      persist([
+        ...items,
+        ...entries.map((e) => ({
+          ...e,
+          subtotal: e.product.price * e.quantity,
+        })),
+      ]);
+    },
+    [items, persist]
+  );
+
   const removeItem = useCallback(
     (index: number) => {
       persist(items.filter((_, i) => i !== index));
@@ -90,5 +107,14 @@ export function useCart(slug: string, tableNumber: number) {
   const total = items.reduce((sum, item) => sum + item.subtotal, 0);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  return { items, addItem, removeItem, updateQuantity, clearCart, total, itemCount };
+  return {
+    items,
+    addItem,
+    addItems,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    total,
+    itemCount,
+  };
 }
