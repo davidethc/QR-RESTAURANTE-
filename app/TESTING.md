@@ -254,6 +254,25 @@ como el resto del sistema ya asumía: como máximo una sesión activa por
 mesa. Limpieza de datos aplicada sobre las 11 sesiones huérfanas
 existentes (cerradas por SQL, quedando solo la más reciente por mesa).
 
+**Bug propio, introducido por la migración 046 y corregido de inmediato
+al reportar el usuario "Me sale QR inválido" en los links de Mesa 1 y
+2**: `resolve_table_qr` devuelve `table_id` como columna de salida
+(`RETURNS TABLE(... table_id uuid ...)`) — dentro del cuerpo de la
+función, escribir `where table_id = v_table.id` sin calificar es
+ambiguo entre esa variable de salida y la columna
+`table_sessions.table_id`, y Postgres lo rechaza en tiempo de
+ejecución (`42702: column reference "table_id" is ambiguous"`), no en
+el momento de aplicar la migración. El error hacía que **todo** escaneo
+de QR cayera a "QR inválido", para cualquier mesa. **Migración
+`047_fix_ambiguous_table_id_resolve_table_qr`**: se calificó la
+consulta con el alias `ts.table_id`. Lección: cuando una función
+`RETURNS TABLE(...)` reutiliza el mismo nombre de columna que una
+tabla real referenciada adentro, cualquier referencia sin calificar a
+ese nombre es ambigua — alias siempre. Verificado con
+`select * from resolve_table_qr(...)` para los tokens de Mesa 1 y 2, y
+con `curl -i` sobre `/scan/<token>` confirmando el `307` a `/r/omm-siri/N`
+con la cookie de sesión seteada, para ambas mesas.
+
 **Bug de frontend encontrado de paso, bloqueaba probar todo lo
 anterior**: `/tables` (Server Component) tiraba 500 en cada carga:
 `Error: Event handlers cannot be passed to Client Component props` —
