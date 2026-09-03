@@ -21,7 +21,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           bounce={0.4}
           showProgress
           closeButton
-          duration={5000}
+          duration={2000}
         />
       </body>
     </html>

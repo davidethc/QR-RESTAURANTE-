@@ -9,7 +9,7 @@ import { playAlertSound } from "@/lib/alert-sound";
  * el ícono y la urgencia de cada aviso quedan definidos en un solo lugar
  * y son consistentes entre cliente, mesero y cocina.
  *
- * Duración: todas desaparecen solas a los 5s (`AUTO_DISMISS_MS`) —
+ * Duración: todas desaparecen solas a los 2s (`AUTO_DISMISS_MS`) —
  * `timing.displayDuration` se pasa explícito en cada una porque el
  * `duration` del <GooeyToaster> global no se aplicaba de forma
  * confiable a los toasts que no traían su propia duración (revisado
@@ -18,7 +18,7 @@ import { playAlertSound } from "@/lib/alert-sound";
  * el personal tiene que atenderlas o cerrarlas a mano, para que un
  * pedido nuevo o un llamado de mesa no se pierdan de vista sin querer.
  */
-const AUTO_DISMISS_MS = 5000;
+const AUTO_DISMISS_MS = 2000;
 const AUTO_DISMISS = { timing: { displayDuration: AUTO_DISMISS_MS } };
 
 export const notify = {
