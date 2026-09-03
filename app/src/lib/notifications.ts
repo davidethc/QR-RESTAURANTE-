@@ -1,6 +1,7 @@
 "use client";
 
 import { gooeyToast } from "@/components/ui/goey-toaster";
+import { toast as sonnerToast } from "sonner";
 import { playAlertSound } from "@/lib/alert-sound";
 
 /**
@@ -102,14 +103,41 @@ export const notify = {
     playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} solicita atención`, {
       duration: Infinity,
-      action: onView ? { label: "Ver", onClick: onView } : undefined,
+      // "Ver" no solo cambia de pestaña — también cierra los avisos.
+      // Sin esto se quedan tapando pantalla para siempre (duration:
+      // Infinity es a propósito, ver nota arriba), justo encima de la
+      // pestaña de Solicitudes a la que acaba de saltar.
+      // `gooeyToast.dismiss()` (con o sin id) no lo cierra de forma
+      // confiable en esta versión de la librería — su registro interno
+      // de toasts activos queda desincronizado y el dismiss no tiene
+      // efecto visible aunque no tire error. `sonner` (la librería
+      // real detrás de goey-toast) sí lo hace bien llamada
+      // directamente — es la misma que usa el botón "×" nativo del
+      // toast, que sí cierra.
+      action: onView
+        ? {
+            label: "Ver",
+            onClick: () => {
+              onView();
+              sonnerToast.dismiss();
+            },
+          }
+        : undefined,
     });
   },
   billRequested(tableNumber: number, onView?: () => void) {
     playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} pidió la cuenta`, {
       duration: Infinity,
-      action: onView ? { label: "Ver", onClick: onView } : undefined,
+      action: onView
+        ? {
+            label: "Ver",
+            onClick: () => {
+              onView();
+              sonnerToast.dismiss();
+            },
+          }
+        : undefined,
     });
   },
 };
