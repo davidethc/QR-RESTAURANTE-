@@ -112,6 +112,7 @@ export interface AdminProduct {
   active: boolean;
   available: boolean;
   featured: boolean;
+  paired_drink_id: string | null;
   position: number;
 }
 

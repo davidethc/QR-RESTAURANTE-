@@ -16,6 +16,7 @@ export function CategoryAdminSection({
   category,
   products,
   allCategories,
+  allProducts,
   restaurantId,
   slug,
   isDragging,
@@ -30,6 +31,7 @@ export function CategoryAdminSection({
   category: AdminCategory | null;
   products: AdminProduct[];
   allCategories: AdminCategory[];
+  allProducts: AdminProduct[];
   restaurantId: string;
   slug: string;
   isDragging: boolean;
@@ -113,6 +115,7 @@ export function CategoryAdminSection({
               restaurantId={restaurantId}
               slug={slug}
               categories={allCategories}
+              allProducts={allProducts}
               isDragging={draggedProductId === product.id}
               onDragStart={() => onProductDragStart(product.id)}
               onDragEnd={onProductDragEnd}
@@ -126,6 +129,7 @@ export function CategoryAdminSection({
         restaurantId={restaurantId}
         slug={slug}
         categories={allCategories}
+        allProducts={allProducts}
         defaultCategoryId={category?.id}
       />
     </section>

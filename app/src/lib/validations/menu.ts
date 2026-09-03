@@ -15,5 +15,6 @@ export const productSchema = z.object({
   category_id: z.string().trim().optional(),
   available: z.boolean(),
   featured: z.boolean(),
+  paired_drink_id: z.string().trim().optional(),
 });
 export type ProductInput = z.infer<typeof productSchema>;

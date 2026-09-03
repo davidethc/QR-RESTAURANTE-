@@ -95,6 +95,7 @@ export function MenuAdminBoard({
           category={category}
           products={products.filter((p) => p.category_id === category.id)}
           allCategories={categories}
+          allProducts={products}
           restaurantId={restaurantId}
           slug={slug}
           isDragging={draggedCategoryId === category.id}
@@ -113,6 +114,7 @@ export function MenuAdminBoard({
           category={null}
           products={uncategorized}
           allCategories={categories}
+          allProducts={products}
           restaurantId={restaurantId}
           slug={slug}
           isDragging={false}

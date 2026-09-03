@@ -24,24 +24,46 @@ function suggestionPrice(s: MenuSuggestion): number {
  * "Sugerencias para ti" nunca debe verse vacío ni depender de que el
  * restaurante configure algo primero:
  *
- * 1. Si hay productos marcados "Destacado" a mano, esos mandan (el
- *    restaurante los eligió a propósito) — se muestran como platos
- *    sueltos, sin combinar.
- * 2. Si no hay ninguno, se arman combos automáticos: un plato de cada
- *    categoría (menos la de bebidas) + una bebida, con el precio de
- *    los dos juntos — ordenados de más barato a más caro, como pidió
- *    el usuario ("desde baratos a caros").
- * 3. Si el restaurante no tiene una categoría reconocible como
+ * 1. Si el restaurante armó combos a mano (campo "Bebida del combo" en
+ *    un plato), esos mandan — es la elección más deliberada posible,
+ *    el dueño decidió justo qué bebida va con qué plato.
+ * 2. Si no armó ninguno pero marcó productos "Destacado", esos se
+ *    muestran como platos sueltos, sin combinar.
+ * 3. Si no hay ninguno de los dos, se arman combos automáticos: un
+ *    plato de cada categoría (menos la de bebidas) + una bebida, con
+ *    el precio de los dos juntos — ordenados de más barato a más
+ *    caro, como pidió el usuario ("desde baratos a caros").
+ * 4. Si el restaurante no tiene una categoría reconocible como
  *    bebidas, se cae a mostrar platos sueltos (uno por categoría, por
  *    turnos) en vez de forzar un combo que no tiene sentido.
  */
 export function getMenuSuggestions(
   categories: PublicCategory[],
-  count = 4
+  count = 6
 ): MenuSuggestion[] {
-  const featured = categories
-    .flatMap((c) => c.products)
-    .filter((p) => p.featured && p.available);
+  const allProducts = categories.flatMap((c) => c.products);
+  const byId = new Map(allProducts.map((p) => [p.id, p]));
+
+  const manualCombos: MenuSuggestion[] = [];
+  for (const dish of allProducts) {
+    if (!dish.available || !dish.paired_drink?.available) continue;
+    const drink = byId.get(dish.paired_drink.id);
+    if (!drink) continue;
+    manualCombos.push({
+      type: "combo",
+      dish,
+      drink,
+      comboPrice: dish.price + drink.price,
+    });
+  }
+
+  if (manualCombos.length > 0) {
+    return manualCombos
+      .sort((a, b) => suggestionPrice(a) - suggestionPrice(b))
+      .slice(0, count);
+  }
+
+  const featured = allProducts.filter((p) => p.featured && p.available);
   if (featured.length > 0) {
     return featured.map((product) => ({ type: "single", product }));
   }

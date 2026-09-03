@@ -35,17 +35,20 @@ import { productSchema, type ProductInput } from "@/lib/validations/menu";
 import type { AdminCategory, AdminProduct } from "@/types/staff";
 
 const NO_CATEGORY = "__none__";
+const NO_PAIRED_DRINK = "__none__";
 
 export function ProductDialog({
   restaurantId,
   slug,
   categories,
+  allProducts,
   product,
   defaultCategoryId,
 }: {
   restaurantId: string;
   slug: string;
   categories: AdminCategory[];
+  allProducts: AdminProduct[];
   product?: AdminProduct;
   defaultCategoryId?: string;
 }) {
@@ -71,8 +74,11 @@ export function ProductDialog({
       category_id: product?.category_id ?? defaultCategoryId ?? "",
       available: product?.available ?? true,
       featured: product?.featured ?? false,
+      paired_drink_id: product?.paired_drink_id ?? "",
     },
   });
+
+  const pairedDrinkOptions = allProducts.filter((p) => p.id !== product?.id);
 
   function onSubmit(values: ProductInput) {
     startTransition(async () => {
@@ -231,6 +237,42 @@ export function ProductDialog({
                   />
                 )}
               />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="prod-paired-drink">
+                Bebida del combo (opcional)
+              </FieldLabel>
+              <Controller
+                control={control}
+                name="paired_drink_id"
+                render={({ field }) => (
+                  <Select
+                    value={field.value || NO_PAIRED_DRINK}
+                    onValueChange={(v) =>
+                      field.onChange(v === NO_PAIRED_DRINK ? "" : v)
+                    }
+                  >
+                    <SelectTrigger id="prod-paired-drink" className="w-full">
+                      <SelectValue placeholder="Sin bebida asociada" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_PAIRED_DRINK}>
+                        Sin bebida asociada
+                      </SelectItem>
+                      {pairedDrinkOptions.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Si eliges una bebida, este plato aparecerá en
+                &ldquo;Sugerencias para ti&rdquo; combinado con ella.
+              </p>
             </Field>
 
             <FieldError errors={[errors.root]} />

@@ -18,6 +18,7 @@ export function ProductRow({
   restaurantId,
   slug,
   categories,
+  allProducts,
   isDragging,
   onDragStart,
   onDragEnd,
@@ -27,6 +28,7 @@ export function ProductRow({
   restaurantId: string;
   slug: string;
   categories: AdminCategory[];
+  allProducts: AdminProduct[];
   isDragging: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -99,6 +101,7 @@ export function ProductRow({
         restaurantId={restaurantId}
         slug={slug}
         categories={categories}
+        allProducts={allProducts}
         product={product}
       />
 

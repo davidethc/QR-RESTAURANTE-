@@ -58,6 +58,14 @@ export interface CartItem {
    Deliberadamente más pequeño que Product: al cliente solo viaja
    lo que necesita para decidir. */
 
+export interface PublicPairedDrink {
+  id: string;
+  name: string;
+  price: number;
+  image_url: string | null;
+  available: boolean;
+}
+
 export interface PublicProduct {
   id: string;
   name: string;
@@ -67,6 +75,7 @@ export interface PublicProduct {
   available: boolean;
   featured: boolean;
   position: number;
+  paired_drink: PublicPairedDrink | null;
 }
 
 export interface PublicCategory {

@@ -377,6 +377,7 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          paired_drink_id: string | null
           position: number
           price: number
           restaurant_id: string
@@ -392,6 +393,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          paired_drink_id?: string | null
           position?: number
           price: number
           restaurant_id: string
@@ -407,6 +409,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          paired_drink_id?: string | null
           position?: number
           price?: number
           restaurant_id?: string
@@ -418,6 +421,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_paired_drink_id_fkey"
+            columns: ["paired_drink_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {

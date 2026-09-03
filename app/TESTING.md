@@ -147,6 +147,71 @@ marcado como Destacado: aparecieron 4 combos (\$3,25 a \$9,25, incluido
 Tocar uno agregó los dos productos como líneas separadas en el carrito,
 sin perder ninguno, y el total sumó correctamente.
 
+### Combos manuales (`paired_drink_id`): el dueño elige qué va con qué (2026-09-03)
+
+El usuario pidió ver combos concretos ("lasaña + té helado", "pizza
+pequeña + colas") en vez de lo que armaba la rotación automática — la
+rotación combina por turno, no por qué tiene sentido, y el resultado no
+siempre es atractivo. En vez de que yo hardcodee "qué plato va con qué
+bebida" (una decisión de negocio, no técnica), se agregó un nuevo nivel
+de prioridad **por encima** de Destacado y de los combos automáticos:
+
+**Migración `044_product_paired_drink`**: columna
+`products.paired_drink_id` (FK a `products`, `on delete set null`).
+`get_public_menu` ahora incluye `paired_drink` anidado por producto
+(id/nombre/precio/imagen/disponible o `null`); `get_admin_menu` incluye
+el `paired_drink_id` crudo.
+
+**`getMenuSuggestions` (`lib/suggestions.ts`)**, prioridad actualizada:
+1. **Combos manuales** — productos con `paired_drink_id` asignado (y
+   ambos disponibles) mandan sobre todo lo demás; es la señal más
+   deliberada posible, el dueño decidió justo esa pareja.
+2. Destacado a mano (sin combinar).
+3. Combos automáticos por rotación (como antes).
+4. Platos sueltos por turnos.
+
+**Bug real encontrado y corregido antes de probar**: el filtro de
+combos manuales hacía `.slice(0, count)` **antes** de `.sort(...)` —
+cortaba a los primeros `count` en el orden en que aparecían los
+productos (arbitrario), no a los más baratos, así que "de barato a
+caro" no estaba garantizado si había más combos manuales que el
+`count`. Se invirtió el orden: ordenar primero, cortar después.
+También se subió el `count` por defecto de la función de 4 a 6, para
+que quepa un rango de precio más visible.
+
+**Panel admin**: `ProductDialog` ahora tiene un campo "Bebida del
+combo (opcional)" — un `Select` con todos los demás productos del
+restaurante (no filtrado por categoría "bebidas": el dueño puede
+combinar con lo que tenga sentido, un postre incluido). Requirió pasar
+`allProducts` hacia abajo por `MenuAdminBoard` → `CategoryAdminSection`
+→ `ProductRow`/`ProductDialog`, que antes no existía en esa cadena.
+
+**Curación real cargada para Omm Siri** (a pedido explícito del
+usuario, no una decisión mía): 6 combos, de barato a caro —
+Bolón de chicharrón + huevo + Café con leche (\$3,25), Mote pillo con
+queso + Jugos en agua (\$4,00), Sánduche de pollo + Batido de frutas en
+leche (\$6,00), Lasaña de pollo + Té helado (\$6,50), Pizza pequeña +
+Colas (\$9,00), Pizza mediana + Agua con gas (\$11,00).
+
+**Hallazgo de datos, no de código**: "Tigrillo mixto" (\$6,00) estaba
+con `available = false` y sin entradas en `audit_logs` para ese
+producto — no hay rastro de que fuera una decisión real del dueño
+(probablemente quedó así de una prueba con SQL directo, que no pasa
+por el log de auditoría). Reactivado desde el panel real
+(`toggleProductAvailable`, no SQL) para que de paso invalidara la
+caché de la carta pública vía `updateTag`.
+
+Verificado end-to-end: `tsc --noEmit` y `npm run build` limpios,
+`get_advisors` sin hallazgos nuevos fuera de los ya conocidos. En el
+navegador, Mesa 3: aparecieron los 6 combos en el orden de precio
+correcto; tocar "Lasaña de pollo + Té helado" agregó ambos productos
+como líneas separadas del carrito (verificado en `localStorage`, no
+solo visualmente — el primer screenshot cortaba la lista por scroll y
+parecía que faltaban, pero los 6 ítems estaban en el DOM). En
+`/menu` como `owner@demo.monky.com`, el selector de "Bebida del combo"
+de "Lasaña de pollo" mostró "Té helado" preseleccionado, confirmando
+que el admin lee `paired_drink_id` correctamente.
+
 ### Investigación real + "Sugerencias" y upsell en el carrito (2026-09-03)
 
 El usuario pidió esta vez que la investigación fuera de verdad en internet
