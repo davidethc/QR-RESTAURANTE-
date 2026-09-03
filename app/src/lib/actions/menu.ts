@@ -102,6 +102,7 @@ export async function createProduct(
       description: parsed.data.description || null,
       price: parsed.data.price,
       available: parsed.data.available,
+      featured: parsed.data.featured,
     })
     .select("id")
     .single();
@@ -131,6 +132,7 @@ export async function updateProduct(
       description: parsed.data.description || null,
       price: parsed.data.price,
       available: parsed.data.available,
+      featured: parsed.data.featured,
     })
     .eq("id", productId);
 

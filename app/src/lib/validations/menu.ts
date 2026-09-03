@@ -14,5 +14,6 @@ export const productSchema = z.object({
     .min(0, "El precio no puede ser negativo"),
   category_id: z.string().trim().optional(),
   available: z.boolean(),
+  featured: z.boolean(),
 });
 export type ProductInput = z.infer<typeof productSchema>;

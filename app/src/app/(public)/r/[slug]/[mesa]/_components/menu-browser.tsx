@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
 import { CategorySection } from "./category-section";
+import { SuggestionsRow } from "./suggestions-row";
 import { ProductSheet } from "./product-sheet";
 import { CartSheet } from "./cart-sheet";
 import { ServiceButtons } from "./service-buttons";
@@ -53,6 +54,12 @@ export function MenuBrowser({
     }
     return map;
   }, [cart.items]);
+
+  const featuredProducts = useMemo(
+    () =>
+      categories.flatMap((c) => c.products).filter((p) => p.featured && p.available),
+    [categories]
+  );
 
   const results = useMemo(() => {
     const q = normalize(query.trim());
@@ -114,6 +121,10 @@ export function MenuBrowser({
         )}
       </div>
 
+      {results === null && (
+        <SuggestionsRow products={featuredProducts} onSelect={setSelectedProduct} />
+      )}
+
       <div className="flex flex-col gap-5 px-4">
         {results === null ? (
           categories.map((category) => (
@@ -166,6 +177,11 @@ export function MenuBrowser({
         onClearCart={cart.clearCart}
         slug={slug}
         tableNumber={tableNumber}
+        suggestedProducts={featuredProducts}
+        onAddSuggestion={(product) => {
+          cart.addItem(product, 1, "");
+          notify.itemAdded(product.name);
+        }}
       />
 
       <div className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur">

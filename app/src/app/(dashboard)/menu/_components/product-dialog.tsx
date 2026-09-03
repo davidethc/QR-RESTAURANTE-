@@ -70,6 +70,7 @@ export function ProductDialog({
       price: product?.price ?? 0,
       category_id: product?.category_id ?? defaultCategoryId ?? "",
       available: product?.available ?? true,
+      featured: product?.featured ?? false,
     },
   });
 
@@ -208,6 +209,23 @@ export function ProductDialog({
                 render={({ field }) => (
                   <Switch
                     id="prod-available"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            </Field>
+
+            <Field orientation="horizontal">
+              <FieldLabel htmlFor="prod-featured">
+                Destacado — aparece en "Sugerencias"
+              </FieldLabel>
+              <Controller
+                control={control}
+                name="featured"
+                render={({ field }) => (
+                  <Switch
+                    id="prod-featured"
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />

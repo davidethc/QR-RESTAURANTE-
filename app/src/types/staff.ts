@@ -111,6 +111,7 @@ export interface AdminProduct {
   image_url: string | null;
   active: boolean;
   available: boolean;
+  featured: boolean;
   position: number;
 }
 

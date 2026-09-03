@@ -93,6 +93,51 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### Investigación real + "Sugerencias" y upsell en el carrito (2026-09-03)
+
+El usuario pidió esta vez que la investigación fuera de verdad en internet
+(`WebSearch`), no solo criterio propio. Búsquedas hechas: UX de menús QR,
+patrones de acordeón en apps de comida, upsell/cross-sell en pedidos online,
+filtros de alérgenos. Confirmó dos cosas que Monky ya hacía bien (sin cuenta
+forzada, acordeón para evitar scroll) y encontró una con respaldo fuerte:
+**sugerir algo en el momento del carrito sube el ticket promedio ~15-20%**
+(fuente: Toast, Paytronix — ver el mensaje al usuario para los links). El
+usuario pidió construir eso + una fila de "destacados" arriba de la carta.
+
+**Lo construido**:
+- Columna `products.featured` (boolean, default false) — el restaurante
+  decide qué aparece, no se adivina. Interruptor "Destacado — aparece en
+  'Sugerencias'" en `ProductDialog` (`/menu`), junto a "Disponible".
+- `get_public_menu` y `get_admin_menu` ahora exponen `featured` por producto
+  (`CREATE OR REPLACE` sobre funciones existentes — grants intactos, no
+  aplica el gotcha de `anon` de la migración 041).
+- `SuggestionsRow` — fila horizontal "Sugerencias para ti" debajo de la
+  barra de búsqueda/categorías, antes de la lista de categorías. Muestra
+  todo lo `featured && available`; toca uno y abre el mismo `ProductSheet`
+  de siempre (misma interacción que el resto de la carta).
+- `CartSheet` — sección "¿Agregas algo más?" entre los ítems y el total,
+  solo con destacados que **todavía no están en el carrito** (se filtra por
+  `product.id`, recalculado con cada cambio del carrito). Un toque agrega
+  cantidad 1 directo, sin abrir el sheet de detalle — fricción mínima a
+  propósito, es el momento de upsell, no de explorar.
+
+**Bug de prueba propio, no de la app**: al marcar el primer producto como
+destacado con un script, usé `document.querySelectorAll('button[role="switch"]')`
+sin acotar al diálogo abierto — la página tiene un switch "Disponible" por
+cada fila detrás del overlay, así que el índice `[1]` agarró el switch
+equivocado. Para probar cualquier interruptor dentro de un Dialog/Sheet,
+acotar siempre la búsqueda a `document.querySelector('[role="dialog"]')`
+primero.
+
+Verificado end-to-end: marcar "Tigrillo mixto" y "Café con leche" como
+destacados → confirmado en la base → ambos aparecen en "Sugerencias para
+ti" en la carta pública → agregar un tercer producto normal → abrir
+carrito → aparecen los dos destacados en "¿Agregas algo más?" → tocar uno
+lo agrega con un solo toque y desaparece de esa lista (ya está en el
+carrito) → el otro se queda. Datos de prueba (`featured`) revertidos a
+`false` después — la elección de qué destacar es del restaurante real, no
+mía.
+
 ### 4 mejoras de UX propuestas y construidas (2026-09-02/03)
 
 El usuario pidió mejorar la UX "como profesional" — se buscó primero en las

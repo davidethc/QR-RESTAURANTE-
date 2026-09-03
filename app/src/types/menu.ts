@@ -65,6 +65,7 @@ export interface PublicProduct {
   price: number;
   image_url: string | null;
   available: boolean;
+  featured: boolean;
   position: number;
 }
 

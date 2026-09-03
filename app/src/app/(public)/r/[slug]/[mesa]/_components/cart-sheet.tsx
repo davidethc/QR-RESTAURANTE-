@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { Minus, Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,7 +16,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { notify } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import { createOrder } from "@/lib/actions/orders";
-import type { CartItem } from "@/types/menu";
+import type { CartItem, PublicProduct } from "@/types/menu";
 
 export function CartSheet({
   open,
@@ -26,6 +28,8 @@ export function CartSheet({
   onClearCart,
   slug,
   tableNumber,
+  suggestedProducts,
+  onAddSuggestion,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,8 +40,18 @@ export function CartSheet({
   onClearCart: () => void;
   slug: string;
   tableNumber: number;
+  suggestedProducts: PublicProduct[];
+  onAddSuggestion: (product: PublicProduct) => void;
 }) {
   const router = useRouter();
+
+  const cartProductIds = useMemo(
+    () => new Set(items.map((item) => item.product.id)),
+    [items]
+  );
+  const suggestionsToShow = suggestedProducts.filter(
+    (p) => !cartProductIds.has(p.id)
+  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -103,6 +117,46 @@ export function CartSheet({
                     </Button>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {items.length > 0 && suggestionsToShow.length > 0 && (
+          <div className="flex flex-col gap-2 border-t px-4 pt-3">
+            <p className="text-sm font-medium text-foreground">
+              ¿Agregas algo más?
+            </p>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
+              {suggestionsToShow.map((product) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => onAddSuggestion(product)}
+                  className="flex w-24 shrink-0 flex-col items-center gap-1 rounded-lg border bg-card p-2 text-center active:bg-muted"
+                >
+                  <div className="relative h-12 w-12 overflow-hidden rounded-md bg-muted">
+                    {product.image_url ? (
+                      <Image
+                        src={product.image_url}
+                        alt={product.name}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="line-clamp-1 text-[11px] font-medium text-foreground">
+                    {product.name}
+                  </p>
+                  <p className="text-[11px] font-semibold text-primary">
+                    + {formatPrice(product.price)}
+                  </p>
+                </button>
               ))}
             </div>
           </div>
