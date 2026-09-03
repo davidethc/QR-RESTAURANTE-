@@ -31,21 +31,41 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
 
       {call.type === "BILL" && (
         <div className="mt-3 rounded-lg border bg-muted/40 p-3">
-          {call.session_items.length === 0 ? (
+          {call.session_orders.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No hay pedidos registrados en esta mesa.
             </p>
           ) : (
-            <div className="flex flex-col gap-1">
-              {call.session_items.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between text-sm text-foreground"
-                >
-                  <span>
-                    {item.quantity} × {item.product_name}
-                  </span>
-                  <span>{formatPrice(item.subtotal)}</span>
+            <div className="flex flex-col gap-2">
+              {/* Con un solo pedido en la sesión (el caso normal, una
+                  persona pidiendo) no tiene sentido separar por grupo —
+                  se ve exactamente como antes. Agrupar por pedido solo
+                  aporta cuando varias personas escanearon el mismo QR y
+                  pidieron por rondas distintas: así el mesero ve de un
+                  vistazo qué costó cada tanda, sin tener que preguntar. */}
+              {call.session_orders.map((order, oi) => (
+                <div key={order.order_number} className="flex flex-col gap-1">
+                  {call.session_orders.length > 1 && (
+                    <div className="flex justify-between text-xs font-medium text-muted-foreground">
+                      <span>Pedido #{order.order_number}</span>
+                      <span>{formatPrice(order.subtotal)}</span>
+                    </div>
+                  )}
+                  {order.items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex justify-between text-sm text-foreground"
+                    >
+                      <span>
+                        {item.quantity} × {item.product_name}
+                      </span>
+                      <span>{formatPrice(item.subtotal)}</span>
+                    </div>
+                  ))}
+                  {call.session_orders.length > 1 &&
+                    oi < call.session_orders.length - 1 && (
+                      <div className="mt-1 border-t" />
+                    )}
                 </div>
               ))}
               <div className="mt-1 flex justify-between border-t pt-1 text-sm font-semibold text-wine">

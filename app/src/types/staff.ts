@@ -56,6 +56,13 @@ export interface SessionOrderItemSummary {
   subtotal: number;
 }
 
+export interface SessionOrderGroup {
+  order_number: number;
+  created_at: string;
+  subtotal: number;
+  items: SessionOrderItemSummary[];
+}
+
 export interface StaffWaiterCall {
   id: string;
   type: CallType;
@@ -66,7 +73,7 @@ export interface StaffWaiterCall {
   table_name: string | null;
   handled_by_name: string | null;
   session_total: number;
-  session_items: SessionOrderItemSummary[];
+  session_orders: SessionOrderGroup[];
 }
 
 export interface DashboardSummary {

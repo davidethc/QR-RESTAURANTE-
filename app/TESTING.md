@@ -66,6 +66,37 @@ agregó el RPC `get_session_calls` + `ActiveCallBanner` (mismo patrón de sondeo
 que el tracker de pedidos). Antes de "arreglar" algo de este flujo, confirma
 que ya no sea este gap (ya cerrado).
 
+### Cuenta agrupada por pedido cuando varias personas piden en la misma mesa (2026-09-03)
+
+El usuario preguntó qué pasa si varias personas escanean el mismo QR y
+piden por separado — hoy cada quien ya genera su propio `orders`, pero
+"Pedir cuenta" (`get_waiter_calls` → `CallCard`) juntaba TODOS los
+productos de TODOS los pedidos de la mesa en una sola lista plana, sin
+separación. Se evaluaron 3 opciones (agrupar por pedido sin nombres /
+dejarlo igual / pedir alias al escanear); el usuario eligió agrupar por
+pedido sin nombres — no inventa una función de "división de cuenta"
+(ya excluida del MVP a propósito, ver el plan de fases), solo organiza
+mejor datos que ya existían.
+
+**Migración `049_group_waiter_calls_by_order`**: `session_items` (lista
+plana) → `session_orders` (array agrupado por `order_number`, cada uno
+con su propio `subtotal` e `items`). `session_total` no cambió.
+`StaffWaiterCall.session_items` → `session_orders` +
+`SessionOrderGroup` nuevo en `types/staff.ts`. `CallCard` ahora
+recorre pedido por pedido; **regla de simplicidad**: con un solo
+pedido en la sesión (el caso normal) se ve exactamente igual que
+antes, sin encabezado — el encabezado "Pedido #N" solo aparece cuando
+hay 2 o más.
+
+Verificado end-to-end por el túnel (ambos escenarios reales, no
+simulados por SQL): Mesa 1 con **dos** pedidos por separado ("ronda 1"
+Lasaña+Té helado \$6,50, "ronda 2" Pizza pequeña+Colas \$9,00) → al
+pedir la cuenta, el mesero vio "Pedido #1 \$6,50 / ... · Pedido #2
+\$9,00 / ... · Total \$15,50" agrupado correctamente. Mesa 2 con **un
+solo** pedido → se vio idéntico a como se veía antes (sin encabezado
+de grupo), confirmando que no se rompió el caso común. `tsc --noEmit`,
+`npm run build` y `get_advisors` limpios.
+
 ### Fase 3 — Panel de mesero
 ✅ Verificado 2026-09-02. Login, Realtime real (no sondeo) en `orders` y
 `waiter_calls` con dos pestañas simultáneas, aceptar/rechazar pedido (5 motivos
