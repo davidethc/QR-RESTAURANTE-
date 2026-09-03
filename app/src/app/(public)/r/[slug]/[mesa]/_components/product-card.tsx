@@ -6,9 +6,11 @@ import type { PublicProduct } from "@/types/menu";
 export function ProductCard({
   product,
   onSelect,
+  quantityInCart = 0,
 }: {
   product: PublicProduct;
   onSelect?: (product: PublicProduct) => void;
+  quantityInCart?: number;
 }) {
   const soldOut = !product.available;
 
@@ -50,8 +52,13 @@ export function ProductCard({
 
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="truncate text-sm font-medium text-foreground">
-            {product.name}
+          <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-foreground">
+            <span className="truncate">{product.name}</span>
+            {quantityInCart > 0 && (
+              <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-primary">
+                {quantityInCart} en carrito
+              </span>
+            )}
           </h3>
           <span className="shrink-0 text-sm font-semibold text-wine">
             {formatPrice(product.price)}

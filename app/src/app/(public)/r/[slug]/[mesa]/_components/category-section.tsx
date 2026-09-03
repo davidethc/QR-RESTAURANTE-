@@ -19,12 +19,14 @@ export function CategorySection({
   onToggle,
   sectionRef,
   onSelectProduct,
+  cartQuantities,
 }: {
   category: PublicCategory;
   isOpen: boolean;
   onToggle: () => void;
   sectionRef: (el: HTMLElement | null) => void;
   onSelectProduct: (product: PublicCategory["products"][number]) => void;
+  cartQuantities: Record<string, number>;
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -60,6 +62,7 @@ export function CategorySection({
               key={product.id}
               product={product}
               onSelect={onSelectProduct}
+              quantityInCart={cartQuantities[product.id] ?? 0}
             />
           ))}
 

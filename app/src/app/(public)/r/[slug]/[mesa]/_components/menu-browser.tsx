@@ -42,6 +42,14 @@ export function MenuBrowser({
   const [cartOpen, setCartOpen] = useState(false);
   const cart = useCart(slug, tableNumber);
 
+  const cartQuantities = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const item of cart.items) {
+      map[item.product.id] = (map[item.product.id] ?? 0) + item.quantity;
+    }
+    return map;
+  }, [cart.items]);
+
   const results = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return null;
@@ -111,6 +119,7 @@ export function MenuBrowser({
               isOpen={openCategories.has(category.id)}
               onToggle={() => toggleCategory(category.id)}
               onSelectProduct={setSelectedProduct}
+              cartQuantities={cartQuantities}
               sectionRef={(el) => {
                 sectionRefs.current[category.id] = el;
               }}
@@ -127,6 +136,7 @@ export function MenuBrowser({
                 key={product.id}
                 product={product}
                 onSelect={setSelectedProduct}
+                quantityInCart={cartQuantities[product.id] ?? 0}
               />
             ))}
           </div>

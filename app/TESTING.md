@@ -93,6 +93,66 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### 4 mejoras de UX propuestas y construidas (2026-09-02/03)
+
+El usuario pidió mejorar la UX "como profesional" — se buscó primero en las
+skills habilitadas de la cuenta (`ListSkills`) algo de revisión UX/producto;
+no hay ninguna instalada (solo `doc-coauthoring` y `canvas-design`, que no
+aplican). Se avisó eso explícitamente y se revisó la app real contra
+heurísticas de usabilidad conocidas en su lugar. El usuario eligió 4 de las
+5 propuestas:
+
+1. **Sonido en avisos urgentes de personal** (`src/lib/alert-sound.ts`) —
+   ding-dong de dos tonos con Web Audio API, sin archivo de audio que
+   empaquetar. Se dispara en `notify.newOrder`, `notify.waiterCalled`,
+   `notify.billRequested` — las mismas tres que ya eran persistentes (sin
+   auto-cierre). No se pudo confirmar el sonido a oído en este entorno (sin
+   altavoces/no hay forma de "escuchar" desde aquí) — se verificó que la
+   función no lanza error y que el flujo sigue funcionando con ella
+   conectada; si algún día hace falta confirmar cómo suena, probar en un
+   navegador real.
+2. **Indicador de carrito en cada producto** — `ProductCard` recibe
+   `quantityInCart` y muestra una pastilla "N en carrito" junto al nombre
+   cuando ya hay alguno agregado. Cálculo vía `useMemo` en `MenuBrowser`
+   sobre `cart.items`, sin tocar `use-cart.ts`.
+3. **Clic en una mesa lleva a sus pedidos** — `/tables` envuelve cada
+   tarjeta en un `Link` a `/orders?table=N`; `OrdersBoard` lee
+   `initialTableFilter` y filtra pendientes/preparando/listos/solicitudes
+   por `table_number`, con banner "Viendo solo Mesa N" y botón para
+   limpiarlo (`router.replace("/orders")`). El botón de QR sigue
+   funcionando dentro de la tarjeta clicable (`e.preventDefault()` en su
+   wrapper para no disparar la navegación del Link).
+4. **Reordenar la carta arrastrando** — la más grande. `reorderCategories`
+   y `reorderProducts` en `lib/actions/menu.ts` (sin RPC nuevo, RLS ya
+   cubría esto) reescriben `position` de todos los ids en su nuevo orden.
+   Drag & drop nativo de HTML5 (sin librería) con una asa `GripVertical`
+   dedicada por fila — así arrastrar no interfiere con los botones de
+   editar/eliminar de esa misma fila. `MenuAdminBoard` pasó a ser cliente,
+   con estado local optimista que se revierte con `router.refresh()` si
+   la acción falla.
+
+**Dos hallazgos reales durante la verificación de "reordenar":**
+
+- **Falso positivo de prueba**: la primera vez que probé el drag, la UI
+  cambió pero la base no guardó nada — parecía un bug. Era que la pestaña
+  de prueba había heredado la sesión de `mesero@demo.monky.com` de una
+  prueba anterior (misma cookie de navegador compartida entre pruebas,
+  ver nota de arriba), y mesero no tiene permiso de escritura en
+  `categories`/`products`. Nada raro en el código — hay que fijarse con
+  qué cuenta está logueada la pestaña antes de probar algo de admin.
+- **Bug real, sí corregido**: cuando RLS bloquea un `UPDATE`, Postgres/
+  PostgREST no lanza error — solo actualiza 0 filas en silencio. El
+  código original de `reorderCategories`/`reorderProducts` solo revisaba
+  `result.error`, así que un intento sin permiso se reportaba como éxito
+  aunque no cambiara nada. Corregido agregando `.select('id')` a cada
+  update y revisando que la cantidad de filas devueltas sea la esperada;
+  si no, se reporta error real. **Aplica a cualquier UPDATE futuro
+  protegido por RLS en este proyecto — no confiar solo en `.error`.**
+
+Verificado end-to-end logueado como `owner@demo.monky.com`: arrastrar una
+categoría y un producto, confirmando en la base (`updated_at` cambia,
+`position` correcto) — no solo visualmente en pantalla.
+
 ### "Pedir cuenta" sin detalle del pedido (2026-09-02)
 
 El usuario notó que al recibir una solicitud de cuenta, la tarjeta del

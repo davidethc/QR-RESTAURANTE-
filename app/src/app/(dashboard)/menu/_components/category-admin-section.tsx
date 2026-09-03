@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -9,6 +9,7 @@ import { CategoryDialog } from "./category-dialog";
 import { ProductDialog } from "./product-dialog";
 import { ProductRow } from "./product-row";
 import { deleteCategory } from "@/lib/actions/menu";
+import { cn } from "@/lib/utils";
 import type { AdminCategory, AdminProduct } from "@/types/staff";
 
 export function CategoryAdminSection({
@@ -17,27 +18,60 @@ export function CategoryAdminSection({
   allCategories,
   restaurantId,
   slug,
+  isDragging,
+  onCategoryDragStart,
+  onCategoryDragEnd,
+  onCategoryDrop,
+  draggedProductId,
+  onProductDragStart,
+  onProductDragEnd,
+  onProductDrop,
 }: {
   category: AdminCategory | null;
   products: AdminProduct[];
   allCategories: AdminCategory[];
   restaurantId: string;
   slug: string;
+  isDragging: boolean;
+  onCategoryDragStart?: () => void;
+  onCategoryDragEnd?: () => void;
+  onCategoryDrop?: () => void;
+  draggedProductId: string | null;
+  onProductDragStart: (id: string) => void;
+  onProductDragEnd: () => void;
+  onProductDrop: (targetId: string) => void;
 }) {
   const router = useRouter();
 
   return (
-    <section className="flex flex-col gap-3">
+    <section
+      className={cn("flex flex-col gap-3", isDragging && "opacity-40")}
+      onDragOver={category ? (e) => e.preventDefault() : undefined}
+      onDrop={category ? onCategoryDrop : undefined}
+    >
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            {category?.name ?? "Sin categoría"}
-          </h2>
-          {category?.description && (
-            <p className="text-sm text-muted-foreground">
-              {category.description}
-            </p>
+        <div className="flex items-center gap-2">
+          {category && (
+            <span
+              draggable
+              onDragStart={onCategoryDragStart}
+              onDragEnd={onCategoryDragEnd}
+              className="cursor-grab text-muted-foreground active:cursor-grabbing"
+              aria-label="Arrastrar para reordenar categoría"
+            >
+              <GripVertical className="h-4 w-4" />
+            </span>
           )}
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              {category?.name ?? "Sin categoría"}
+            </h2>
+            {category?.description && (
+              <p className="text-sm text-muted-foreground">
+                {category.description}
+              </p>
+            )}
+          </div>
         </div>
         {category && (
           <div className="flex items-center gap-1">
@@ -79,6 +113,10 @@ export function CategoryAdminSection({
               restaurantId={restaurantId}
               slug={slug}
               categories={allCategories}
+              isDragging={draggedProductId === product.id}
+              onDragStart={() => onProductDragStart(product.id)}
+              onDragEnd={onProductDragEnd}
+              onDrop={() => onProductDrop(product.id)}
             />
           ))
         )}

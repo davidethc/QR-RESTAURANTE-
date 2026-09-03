@@ -170,6 +170,60 @@ export async function toggleProductAvailable(
   return { ok: true, data: undefined };
 }
 
+/**
+ * Reordenar arrastrando: el cliente manda la lista completa de ids en
+ * su nuevo orden, y se reescribe `position` de todos de una vez. Con
+ * pocas decenas de categorías/productos por restaurante, N updates en
+ * paralelo es más simple que armar un UPDATE...FROM con un CASE — y
+ * no hace falta un RPC nuevo, las políticas RLS ya cubren esto.
+ *
+ * `.select('id')` + revisar cuántas filas volvieron es a propósito:
+ * cuando RLS bloquea un UPDATE no lanza error, solo actualiza 0 filas
+ * en silencio — sin esto, un intento sin permiso (o un id que ya no
+ * existe) se reportaría como éxito aunque no haya cambiado nada.
+ */
+export async function reorderCategories(
+  slug: string,
+  orderedIds: string[]
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const results = await Promise.all(
+    orderedIds.map((id, position) =>
+      supabase.from("categories").update({ position }).eq("id", id).select("id")
+    )
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { ok: false, error: failed.error.message };
+  if (results.some((r) => (r.data?.length ?? 0) === 0)) {
+    return { ok: false, error: "No autorizado para reordenar categorías." };
+  }
+
+  revalidatePath("/menu");
+  updateTag(`menu-${slug}`);
+  return { ok: true, data: undefined };
+}
+
+export async function reorderProducts(
+  slug: string,
+  orderedIds: string[]
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const results = await Promise.all(
+    orderedIds.map((id, position) =>
+      supabase.from("products").update({ position }).eq("id", id).select("id")
+    )
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { ok: false, error: failed.error.message };
+  if (results.some((r) => (r.data?.length ?? 0) === 0)) {
+    return { ok: false, error: "No autorizado para reordenar productos." };
+  }
+
+  revalidatePath("/menu");
+  updateTag(`menu-${slug}`);
+  return { ok: true, data: undefined };
+}
+
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 

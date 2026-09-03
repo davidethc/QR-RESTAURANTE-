@@ -10,9 +10,15 @@ import { OrdersBoard } from "./_components/orders-board";
 
 export const metadata: Metadata = { title: "Pedidos" };
 
-export default async function OrdersPage() {
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ table?: string }>;
+}) {
   const session = await getMyRestaurant();
   const restaurantId = session.restaurant.id;
+  const { table } = await searchParams;
+  const initialTableFilter = table ? Number(table) : null;
 
   const [summary, orders, calls] = await Promise.all([
     getDashboardSummary(restaurantId),
@@ -30,6 +36,11 @@ export default async function OrdersPage() {
         restaurantId={restaurantId}
         initialOrders={orders}
         initialCalls={calls}
+        initialTableFilter={
+          initialTableFilter && !Number.isNaN(initialTableFilter)
+            ? initialTableFilter
+            : null
+        }
       />
     </main>
   );

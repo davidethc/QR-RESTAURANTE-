@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { TableStatusBadge } from "@/components/shared/status-badge";
 import { TableQrDialog } from "./_components/table-qr-dialog";
@@ -17,7 +18,11 @@ export default async function TablesPage() {
       <PageHeader title="Mesas" description={`${tables.length} mesas`} />
       <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-3 lg:grid-cols-4">
         {tables.map((table) => (
-          <div key={table.id} className="rounded-xl border bg-card p-4">
+          <Link
+            key={table.id}
+            href={`/orders?table=${table.number}`}
+            className="block rounded-xl border bg-card p-4 transition-colors hover:bg-muted/50"
+          >
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold text-foreground">
                 {table.name ?? `Mesa ${table.number}`}
@@ -51,7 +56,7 @@ export default async function TablesPage() {
             )}
 
             {canManage && (
-              <div className="mt-3">
+              <div className="mt-3" onClick={(e) => e.preventDefault()}>
                 <TableQrDialog
                   restaurantName={session.restaurant.name}
                   tableLabel={table.name ?? `Mesa ${table.number}`}
@@ -59,7 +64,7 @@ export default async function TablesPage() {
                 />
               </div>
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </main>

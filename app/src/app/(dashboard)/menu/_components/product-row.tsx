@@ -3,13 +3,13 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { UtensilsCrossed, Trash2 } from "lucide-react";
+import { UtensilsCrossed, Trash2, GripVertical } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { ProductDialog } from "./product-dialog";
 import { notify } from "@/lib/notifications";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, cn } from "@/lib/utils";
 import { deleteProduct, toggleProductAvailable } from "@/lib/actions/menu";
 import type { AdminCategory, AdminProduct } from "@/types/staff";
 
@@ -18,11 +18,19 @@ export function ProductRow({
   restaurantId,
   slug,
   categories,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+  onDrop,
 }: {
   product: AdminProduct;
   restaurantId: string;
   slug: string;
   categories: AdminCategory[];
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDrop: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -39,7 +47,24 @@ export function ProductRow({
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-xl border bg-card p-3",
+        isDragging && "opacity-40"
+      )}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDrop}
+    >
+      <span
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        className="cursor-grab text-muted-foreground active:cursor-grabbing"
+        aria-label="Arrastrar para reordenar producto"
+      >
+        <GripVertical className="h-4 w-4" />
+      </span>
+
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-muted">
         {product.image_url ? (
           <Image

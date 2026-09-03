@@ -1,6 +1,7 @@
 "use client";
 
 import { gooeyToast } from "@/components/ui/goey-toaster";
+import { playAlertSound } from "@/lib/alert-sound";
 
 /**
  * Notificaciones del sistema, una función por evento real del negocio.
@@ -84,6 +85,7 @@ export const notify = {
   // duración y el toast trae descripción, la librería igual le pone
   // 4s por defecto — hay que decirle "nunca" a propósito.
   newOrder(orderNumber: number, tableNumber: number) {
+    playAlertSound();
     gooeyToast.info(`Nuevo pedido #${orderNumber}`, {
       description: `Mesa ${tableNumber}`,
       duration: Infinity,
@@ -97,11 +99,13 @@ export const notify = {
     });
   },
   waiterCalled(tableNumber: number) {
+    playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} solicita atención`, {
       duration: Infinity,
     });
   },
   billRequested(tableNumber: number) {
+    playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} pidió la cuenta`, {
       duration: Infinity,
     });
