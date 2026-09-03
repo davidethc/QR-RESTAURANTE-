@@ -212,6 +212,72 @@ parecía que faltaban, pero los 6 ítems estaban en el DOM). En
 de "Lasaña de pollo" mostró "Té helado" preseleccionado, confirmando
 que el admin lee `paired_drink_id` correctamente.
 
+### Bug real: el total de una mesa no desaparecía al cobrar la cuenta (2026-09-03)
+
+Reporte del usuario: "cuando a una mesa se le hace ya la cuenta [...]
+debe desaparecer el precio [...] ahora no se va el \$13,25 aunque ya se
+pagó". Dos bugs reales, no uno:
+
+1. **`get_tables_status.active_total`** sumaba `orders.total` de
+   estados `PENDING..DELIVERED` filtrando solo por
+   `created_at >= date_trunc('day', now())` — nunca miraba si la
+   sesión de la mesa seguía abierta. Una orden `DELIVERED` (ya
+   cobrada) seguía sumando hasta la medianoche.
+2. **`handle_waiter_call`**, al marcar una solicitud tipo `BILL` como
+   `ATTENDED`, nunca cerraba la `table_session` — `close_table_session`
+   existía para eso pero era código huérfano, ninguna pantalla lo
+   llamaba.
+
+**Migración `045_close_session_and_fix_active_total`**:
+`handle_waiter_call` ahora cierra la sesión activa de la mesa cuando
+`p_status = 'ATTENDED'` y `type = 'BILL'`, pero solo si no quedan
+pedidos sin entregar (mismo resguardo que ya tenía
+`close_table_session` — si quedan, no falla el clic, solo deja la
+sesión abierta). `get_tables_status.active_total` ahora suma por la
+sesión `ACTIVE` de la mesa (`join table_sessions ... where
+ts.status='ACTIVE'`) en vez de por fecha — se pone en 0 apenas se
+cierra la sesión, sin esperar a la medianoche.
+
+**Segundo bug, más de fondo, encontrado al reproducir el reporte**:
+`resolve_table_qr` insertaba una `table_sessions` nueva **en cada
+escaneo del QR**, sin revisar si la mesa ya tenía una sesión `ACTIVE`.
+Mesa 1 tenía **12 sesiones "activas" simultáneas** acumuladas solo de
+las pruebas de este chat (cada `/scan/<token>` de QA sumaba una más).
+Con el fix #1 solo, el total seguía sin desaparecer: cerraba la sesión
+nueva, pero las viejas huérfanas (con la orden de \$13,25 ya entregada
+y su cuenta ya marcada "Atendida" dos veces en el pasado, sin efecto)
+seguían `ACTIVE` y se seguían sumando. **Migración
+`046_reuse_active_table_session_on_scan`**: `resolve_table_qr` ahora
+reutiliza la sesión `ACTIVE` de la mesa si ya existe (y le actualiza
+`last_activity_at`), en vez de crear una fila nueva siempre — garantiza
+como el resto del sistema ya asumía: como máximo una sesión activa por
+mesa. Limpieza de datos aplicada sobre las 11 sesiones huérfanas
+existentes (cerradas por SQL, quedando solo la más reciente por mesa).
+
+**Bug de frontend encontrado de paso, bloqueaba probar todo lo
+anterior**: `/tables` (Server Component) tiraba 500 en cada carga:
+`Error: Event handlers cannot be passed to Client Component props` —
+`page.tsx` tenía `<div onClick={(e) => e.preventDefault()}>` envolviendo
+`<TableQrDialog>` para evitar que el `<Link>` de la tarjeta navegara al
+tocar "Ver QR". Un Server Component no puede llevar un handler inline.
+Se movió el `onClick` adentro de `table-qr-dialog.tsx` (ya es
+`"use client"`), envolviendo su propio `return`. **`npm run build`
+no lo detectaba** — el chequeo de "no pasar funciones a Client
+Components" solo salta al renderizar con datos reales, no en
+build/type-check estático; quedó invisible hasta que alguien abrió
+`/tables` de verdad con `canManage = true`.
+
+Verificado end-to-end en el navegador, reproduciendo el flujo real:
+Mesa 1 → pedido de \$6,50 → entregado → cliente pide la cuenta →
+mesero "Atender" (PENDING→ACCEPTED) → "Marcar atendida"
+(ACCEPTED→ATTENDED) → `table_sessions` de esa mesa pasó a `CLOSED` en
+la base → `/tables` mostró Mesa 1 como "Disponible" sin ningún monto,
+de inmediato, sin recargar manualmente ni esperar. `tsc --noEmit` y
+`npm run build` limpios, `get_advisors` sin hallazgos nuevos. Datos de
+prueba limpiados al cerrar la ronda (orders/order_items/waiter_calls/
+audit_logs/table_sessions vaciados, tables reseteadas a AVAILABLE,
+secuencia de order_number reiniciada).
+
 ### Investigación real + "Sugerencias" y upsell en el carrito (2026-09-03)
 
 El usuario pidió esta vez que la investigación fuera de verdad en internet

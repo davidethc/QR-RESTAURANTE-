@@ -76,38 +76,43 @@ export function TableQrDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <QrCode className="h-4 w-4" /> Ver QR
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>QR — {tableLabel}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col items-center gap-3 py-2">
-          {dataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={dataUrl} alt={`QR de ${tableLabel}`} className="h-56 w-56" />
-          ) : (
-            <div className="flex h-56 w-56 items-center justify-center text-sm text-muted-foreground">
-              Generando…
-            </div>
-          )}
-          <p className="text-center text-sm text-muted-foreground">
-            Apunta la cámara del celular aquí para probar el enlace.
-          </p>
-        </div>
-        <DialogFooter className="gap-2 sm:justify-center">
-          <Button variant="outline" onClick={handleDownload} disabled={!dataUrl}>
-            <Download className="h-4 w-4" /> Descargar PNG
+    // Esta card completa es un <Link> (tables/page.tsx, Server Component,
+    // no puede llevar onClick): evita que abrir/usar el diálogo del QR
+    // navegue a /orders. Vive acá porque este archivo sí es "use client".
+    <div onClick={(e) => e.preventDefault()}>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <QrCode className="h-4 w-4" /> Ver QR
           </Button>
-          <Button onClick={handlePrint} disabled={!dataUrl}>
-            <Printer className="h-4 w-4" /> Imprimir
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>QR — {tableLabel}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-3 py-2">
+            {dataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={dataUrl} alt={`QR de ${tableLabel}`} className="h-56 w-56" />
+            ) : (
+              <div className="flex h-56 w-56 items-center justify-center text-sm text-muted-foreground">
+                Generando…
+              </div>
+            )}
+            <p className="text-center text-sm text-muted-foreground">
+              Apunta la cámara del celular aquí para probar el enlace.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:justify-center">
+            <Button variant="outline" onClick={handleDownload} disabled={!dataUrl}>
+              <Download className="h-4 w-4" /> Descargar PNG
+            </Button>
+            <Button onClick={handlePrint} disabled={!dataUrl}>
+              <Printer className="h-4 w-4" /> Imprimir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

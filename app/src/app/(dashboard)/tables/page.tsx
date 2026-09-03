@@ -56,7 +56,7 @@ export default async function TablesPage() {
             )}
 
             {canManage && (
-              <div className="mt-3" onClick={(e) => e.preventDefault()}>
+              <div className="mt-3">
                 <TableQrDialog
                   restaurantName={session.restaurant.name}
                   tableLabel={table.name ?? `Mesa ${table.number}`}
