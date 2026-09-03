@@ -31,8 +31,12 @@ export function MenuBrowser({
   tableNumber: number;
 }) {
   const [query, setQuery] = useState("");
+  // Todas las categorías arrancan cerradas — el cliente ve la lista
+  // completa de nombres de un vistazo y toca la que le interesa, en
+  // vez de recibir un scroll larguísimo con los 50 productos abiertos
+  // de una vez apenas escanea el QR.
   const [openCategories, setOpenCategories] = useState<Set<string>>(
-    () => new Set(categories.map((c) => c.id))
+    () => new Set()
   );
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
