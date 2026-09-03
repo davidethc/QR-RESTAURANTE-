@@ -50,6 +50,12 @@ export interface StaffOrder {
   items: StaffOrderItem[];
 }
 
+export interface SessionOrderItemSummary {
+  product_name: string;
+  quantity: number;
+  subtotal: number;
+}
+
 export interface StaffWaiterCall {
   id: string;
   type: CallType;
@@ -59,6 +65,8 @@ export interface StaffWaiterCall {
   table_number: number;
   table_name: string | null;
   handled_by_name: string | null;
+  session_total: number;
+  session_items: SessionOrderItemSummary[];
 }
 
 export interface DashboardSummary {

@@ -5,6 +5,7 @@ import { ActionButton } from "@/components/shared/action-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { handleCall } from "@/lib/actions/waiter-calls";
+import { formatPrice } from "@/lib/utils";
 import type { StaffWaiterCall } from "@/types/staff";
 
 export function CallCard({ call }: { call: StaffWaiterCall }) {
@@ -27,6 +28,34 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
       </div>
 
       <ElapsedTimer since={call.created_at} warnAfterMinutes={5} className="mt-2" />
+
+      {call.type === "BILL" && (
+        <div className="mt-3 rounded-lg border bg-muted/40 p-3">
+          {call.session_items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No hay pedidos registrados en esta mesa.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {call.session_items.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex justify-between text-sm text-foreground"
+                >
+                  <span>
+                    {item.quantity} × {item.product_name}
+                  </span>
+                  <span>{formatPrice(item.subtotal)}</span>
+                </div>
+              ))}
+              <div className="mt-1 flex justify-between border-t pt-1 text-sm font-semibold text-wine">
+                <span>Total</span>
+                <span>{formatPrice(call.session_total)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {call.status === "PENDING" && (
         <div className="mt-3 flex gap-2">

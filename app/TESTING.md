@@ -93,6 +93,29 @@ update orders set status = 'PREPARING', preparing_at = now() where id = '<id>';
 update orders set status = 'READY', ready_at = now() where id = '<id>';
 ```
 
+### "Pedir cuenta" sin detalle del pedido (2026-09-02)
+
+El usuario notó que al recibir una solicitud de cuenta, la tarjeta del
+mesero (`CallCard`) no mostraba qué había pedido esa mesa ni cuánto cobrar —
+solo "Mesa X solicita la cuenta" y los botones Atender/Rechazar. Real, no
+hipotético: para cobrar hace falta saber el detalle.
+
+**Corregido**: `get_waiter_calls` ahora trae, por cada solicitud, todos los
+pedidos del `table_session_id` de esa llamada (excluyendo REJECTED/CANCELLED)
+como `session_items` (producto, cantidad, subtotal) + `session_total`. La
+`CallCard` muestra ese detalle solo cuando `call.type === "BILL"` (una
+llamada de "atención" no lo necesita). **Importante**: se agrupa por
+`table_session_id`, no por mesa a secas — si la mesa ya cerró su sesión y
+empezó una nueva, no arrastra pedidos de la visita anterior.
+
+Verificado con dos pedidos reales en la misma mesa (4 ítems entre ambos):
+la tarjeta de "Pedir cuenta" mostró los 4 ítems y el total correcto ($18,25),
+sumando ambos pedidos de la sesión.
+
+No hizo falta una función nueva ni cambiar permisos — se modificó el cuerpo
+de `get_waiter_calls`, que ya estaba bien configurado (solo `authenticated`,
+sin `anon`) desde antes de esta sesión.
+
 ### Toasts: 5s por defecto, tres persistentes hasta cerrarlas a mano (2026-09-02)
 
 Pedido del usuario: que los toasts desaparezcan solos a los 5 segundos, excepto
