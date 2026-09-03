@@ -273,6 +273,65 @@ ese nombre es ambigua — alias siempre. Verificado con
 con `curl -i` sobre `/scan/<token>` confirmando el `307` a `/r/omm-siri/N`
 con la cookie de sesión seteada, para ambas mesas.
 
+### "Sesión inválida" al llamar al mesero por el túnel — no era un bug de sesión (2026-09-03)
+
+El usuario reportó que, probando por el túnel de Cloudflare, "Llamar
+mesero" le daba "sesión inválida". Reproducido con el navegador
+automatizado apuntando al mismo link público: el diálogo de
+confirmación **no se abría** — sin ningún error de red ni de servidor
+en consola, solo el WebSocket de HMR (`wss://.../\_next/hmr?id=...`)
+fallando y reconectándose en bucle, con un `id` distinto cada vez (señal
+de que el cliente se estaba remontando/recargando repetidamente).
+**Causa real**: el túnel gratuito de `trycloudflare.com` no sostiene
+bien el WebSocket de recarga en caliente de `next dev` — cada
+reconexión fallida dispara un ciclo de recarga que puede cortar una
+interacción (como abrir un diálogo o completar un Server Action) a
+mitad de camino. No es un bug de la app ni de `resolve_table_qr` — es
+una incompatibilidad de infraestructura (dev server + túnel gratuito).
+
+**Solución**: servir la app en modo producción (`npm run build` +
+`npm run start`) en vez de `npm run dev` para cualquier prueba que pase
+por el túnel — sin HMR, no hay WebSocket que falle, no hay recargas
+forzadas. Verificado end-to-end sobre el túnel en modo producción:
+"Llamar mesero" abrió el diálogo, confirmó, mostró el toast "Un mesero
+fue avisado", y quedó registrado en `waiter_calls` como `PENDING`.
+**Regla para pruebas futuras por túnel**: siempre `next start`, nunca
+`next dev`.
+
+### Hueco real de diseño señalado por el usuario: turnover de clientes en la misma mesa (2026-09-03)
+
+El usuario hizo la pregunta correcta: si `resolve_table_qr` ahora
+reutiliza la sesión activa de una mesa (fix de la ronda anterior), ¿qué
+pasa si el cliente A se va **sin pasar por "Pedir cuenta"** (pagó en
+efectivo, o simplemente se levantó) y el cliente B se sienta después y
+escanea el mismo QR? Antes de esta ronda: nada distinguía ese caso —
+B se mezclaría con la sesión (y la cuenta) de A. Dos piezas nuevas,
+migración `048_close_session_roles_and_stale_expiry`:
+
+1. **Botón "Liberar mesa"** (`release-table-button.tsx`, nuevo) en
+   `/tables`, visible para OWNER/ADMIN/WAITER cuando la mesa no está ya
+   `AVAILABLE` — llama a `close_table_session` (existía en la base
+   desde antes, pero era código huérfano: ninguna pantalla lo llamaba).
+   Es la señal humana explícita para el caso que "Pedir cuenta" no
+   cubre.
+2. **Red de seguridad por tiempo** en `resolve_table_qr`: si la sesión
+   `ACTIVE` encontrada lleva más de 4 horas sin actividad
+   (`last_activity_at`), se marca `EXPIRED` (enum que existía sin
+   usarse) y se arranca una sesión nueva en vez de reutilizarla —
+   protege al siguiente cliente aunque nadie haya liberado la mesa a
+   mano.
+3. **Hueco de permisos cerrado de paso**: `close_table_session` solo
+   validaba pertenencia al restaurante, no rol — cualquier staff
+   autenticado (cocina incluida) podía cerrar la sesión de cualquier
+   mesa. Ahora exige OWNER/ADMIN/WAITER, igual que `handle_waiter_call`.
+
+Verificado: `tsc --noEmit`, `npm run build` y `get_advisors` limpios.
+Base de datos reiniciada por completo a pedido del usuario
+(orders/order_items/waiter_calls/audit_logs/table_sessions vacíos,
+tables en AVAILABLE, secuencia de order_number en 1) y confirmado que
+escanear Mesa 1 de nuevo abre una sesión nueva sin arrastrar nada
+viejo.
+
 **Bug de frontend encontrado de paso, bloqueaba probar todo lo
 anterior**: `/tables` (Server Component) tiraba 500 en cada carga:
 `Error: Event handlers cannot be passed to Client Component props` —

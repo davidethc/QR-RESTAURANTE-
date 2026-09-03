@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { TableStatusBadge } from "@/components/shared/status-badge";
 import { TableQrDialog } from "./_components/table-qr-dialog";
+import { ReleaseTableButton } from "./_components/release-table-button";
 import { formatPrice } from "@/lib/utils";
 import { getMyRestaurant, getTablesStatus } from "@/lib/queries/staff";
 
@@ -12,6 +13,10 @@ export default async function TablesPage() {
   const session = await getMyRestaurant();
   const tables = await getTablesStatus(session.restaurant.id);
   const canManage = session.role === "OWNER" || session.role === "ADMIN";
+  const canReleaseTable =
+    session.role === "OWNER" ||
+    session.role === "ADMIN" ||
+    session.role === "WAITER";
 
   return (
     <main>
@@ -61,6 +66,15 @@ export default async function TablesPage() {
                   restaurantName={session.restaurant.name}
                   tableLabel={table.name ?? `Mesa ${table.number}`}
                   qrToken={table.qr_token}
+                />
+              </div>
+            )}
+
+            {canReleaseTable && table.status !== "AVAILABLE" && (
+              <div className="mt-1">
+                <ReleaseTableButton
+                  tableId={table.id}
+                  tableLabel={table.name ?? `Mesa ${table.number}`}
                 />
               </div>
             )}
