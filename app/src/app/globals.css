@@ -5,7 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-display);
+    --font-display: var(--font-display);
     --font-sans: var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -51,31 +52,35 @@
 
 /*
   Identidad de marca — Cafetería Omm Siri.
-  Turquesa (logo) como color principal: botones, estados activos, foco.
-  Granate/vino (nombre del local) como acento: precios, insignias, detalles.
-  No se usa gris puro en fondos: un tinte cálido evita la sensación "genérica".
+
+  Dirección: cerámica cálida. Es una cafetería de comida casera
+  ecuatoriana (tigrillo, bolón, mote), no un panel de banco — así que
+  el fondo es papel cálido, no blanco clínico, y el texto es café
+  oscuro, no negro. Turquesa (logo) para acciones; terracota/granate
+  (nombre del local) para precios y acentos. El blanco puro queda solo
+  para las tarjetas, que así "flotan" sobre el papel.
 */
 :root {
-    --background: oklch(0.995 0.003 80);
-    --foreground: oklch(0.22 0.02 40);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.22 0.02 40);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.22 0.02 40);
-    --primary: oklch(0.55 0.11 192);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.965 0.008 80);
-    --secondary-foreground: oklch(0.3 0.02 40);
-    --muted: oklch(0.965 0.008 80);
-    --muted-foreground: oklch(0.52 0.015 60);
-    --accent: oklch(0.93 0.03 192);
-    --accent-foreground: oklch(0.3 0.07 192);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.9 0.012 70);
-    --input: oklch(0.9 0.012 70);
-    --ring: oklch(0.55 0.11 192);
-    --wine: oklch(0.36 0.12 18);
-    --wine-foreground: oklch(0.99 0 0);
+    --background: oklch(0.973 0.014 76);
+    --foreground: oklch(0.26 0.028 48);
+    --card: oklch(0.995 0.006 80);
+    --card-foreground: oklch(0.26 0.028 48);
+    --popover: oklch(0.995 0.006 80);
+    --popover-foreground: oklch(0.26 0.028 48);
+    --primary: oklch(0.52 0.105 190);
+    --primary-foreground: oklch(0.99 0.005 80);
+    --secondary: oklch(0.945 0.018 76);
+    --secondary-foreground: oklch(0.32 0.03 48);
+    --muted: oklch(0.945 0.018 76);
+    --muted-foreground: oklch(0.53 0.025 58);
+    --accent: oklch(0.925 0.038 190);
+    --accent-foreground: oklch(0.34 0.075 192);
+    --destructive: oklch(0.55 0.2 27);
+    --border: oklch(0.885 0.022 72);
+    --input: oklch(0.885 0.022 72);
+    --ring: oklch(0.52 0.105 190);
+    --wine: oklch(0.43 0.135 24);
+    --wine-foreground: oklch(0.99 0.005 80);
     --chart-1: oklch(0.55 0.11 192);
     --chart-2: oklch(0.36 0.12 18);
     --chart-3: oklch(0.7 0.1 192);
@@ -134,8 +139,98 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* Grano finísimo sobre el fondo: le da textura de papel al color
+       plano. Va en el body (no en un div) para que ninguna pantalla
+       tenga que acordarse de incluirlo. */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
     }
   html {
     @apply font-sans;
+    }
+  /* Fraunces se ve mejor con su eje óptico alto en títulos grandes y
+     un toque de "wonk" — es lo que le da el aire de rótulo pintado en
+     vez de serif de periódico. */
+  .font-display {
+    font-variation-settings: "SOFT" 40, "WONK" 1, "opsz" 40;
+    letter-spacing: -0.015em;
+    }
+}
+
+@layer components {
+  /* Sombra de tarjeta cálida: la sombra gris neutra sobre fondo crema
+     se ve sucia — esta lleva el mismo tinte del papel. */
+  .shadow-card {
+    box-shadow:
+      0 1px 2px oklch(0.4 0.03 50 / 0.05),
+      0 4px 12px -4px oklch(0.4 0.03 50 / 0.08);
+    }
+  .shadow-card-lifted {
+    box-shadow:
+      0 2px 4px oklch(0.4 0.03 50 / 0.06),
+      0 12px 28px -8px oklch(0.4 0.03 50 / 0.14);
+    }
+
+  /*
+    CLAY — solo para acciones (botones +, CTA principal, pill activa).
+    Sombra doble: una oscura abajo que lo despega del fondo y una luz
+    interior arriba que le da el volumen "inflado" de plastilina. Al
+    tocar se hunde. Deliberadamente NO se usa en tarjetas de contenido:
+    ahí el volumen compite con la lectura.
+  */
+  .clay {
+    box-shadow:
+      0 6px 16px -4px var(--clay-shadow, oklch(0.4 0.03 50 / 0.28)),
+      inset 0 2px 0 0 oklch(1 0 0 / 0.22),
+      inset 0 -3px 6px 0 oklch(0.2 0.02 40 / 0.14);
+    transition:
+      transform 160ms cubic-bezier(0.34, 1.3, 0.64, 1),
+      box-shadow 160ms ease;
+    }
+  .clay:active {
+    transform: translateY(2px) scale(0.97);
+    box-shadow:
+      0 2px 6px -2px var(--clay-shadow, oklch(0.4 0.03 50 / 0.24)),
+      inset 0 2px 5px 0 oklch(0.2 0.02 40 / 0.18);
+    }
+  /* Tinte de sombra por color de acción, para que la sombra no se vea
+     gris sucia debajo de un botón de color. */
+  .clay-primary {
+    --clay-shadow: oklch(0.52 0.105 190 / 0.42);
+    }
+  .clay-wine {
+    --clay-shadow: oklch(0.43 0.135 24 / 0.4);
+    }
+
+  /*
+    GLASS — solo dos superficies en toda la app (barra superior fija y
+    barra inferior de acciones), y nunca animadas. `backdrop-filter`
+    obliga al navegador a renderizar la escena de atrás, filtrarla y
+    recomponerla; apilar varias o animarlas es la causa típica del
+    scroll con tirones en Android de gama media. Radio de blur bajo a
+    propósito.
+  */
+  .glass {
+    background-color: oklch(from var(--background) l c h / 0.72);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    }
+
+  /* Susurro de neumorfismo: el único hundido de la app, en el
+     buscador. El neumorfismo completo se descartó a propósito — su
+     bajo contraste lo hace ilegible y ya está en retirada. */
+  .neu-inset {
+    box-shadow:
+      inset 0 2px 4px 0 oklch(0.4 0.03 50 / 0.09),
+      inset 0 -1px 0 0 oklch(1 0 0 / 0.8);
+    }
+
+  /* Oculta la barra de scroll de las filas horizontales sin perder el
+     desplazamiento táctil. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
     }
 }

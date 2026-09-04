@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Search, ShoppingBag } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, ShoppingBag, QrCode } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
@@ -13,7 +13,8 @@ import { ServiceButtons } from "./service-buttons";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
-import { formatPrice } from "@/lib/utils";
+import { getCategoryIcon } from "@/lib/category-icons";
+import { formatPrice, cn } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
 function normalize(text: string): string {
@@ -47,6 +48,37 @@ export function MenuBrowser({
   );
   const [cartOpen, setCartOpen] = useState(false);
   const cart = useCart(slug, tableNumber);
+
+  // Pill activa = categoría que el cliente está mirando. Un solo
+  // IntersectionObserver para todas las secciones (no un listener de
+  // scroll, que dispararía en cada píxel y costaría rendimiento).
+  // Arranca en la primera categoría para que la fila de pills nunca se
+  // vea "sin nada seleccionado" al entrar.
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(
+    categories[0]?.id ?? null
+  );
+
+  useEffect(() => {
+    const sections = Object.values(sectionRefs.current).filter(
+      (el): el is HTMLElement => el !== null
+    );
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) {
+          setActiveCategoryId(visible.target.id.replace("cat-", ""));
+        }
+      },
+      { rootMargin: "-140px 0px -55% 0px" }
+    );
+
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [categories]);
 
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};
@@ -97,30 +129,46 @@ export function MenuBrowser({
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-28">
-      <div className="sticky top-0 z-10 flex flex-col gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur">
+    // pb generoso: la barra inferior es fija y, con el botón "Ver
+    // pedido" visible, ocupa ~9rem. Sin este colchón el último plato
+    // queda tapado y el cliente no puede tocarlo.
+    <div className="flex flex-col gap-5 pb-40">
+      {/* Superficie glass 1 de 2 en toda la app. */}
+      <div className="glass sticky top-0 z-10 flex flex-col gap-3 border-b border-border/50 px-4 py-3">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar en la carta"
-            className="pl-9"
+            placeholder="Buscar en la carta…"
+            className="neu-inset h-11 rounded-full border-transparent bg-secondary/80 pl-10 text-[15px] placeholder:text-muted-foreground/70 focus-visible:border-primary/30"
           />
         </div>
 
         {results === null && (
-          <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => goToCategory(category.id)}
-                className="shrink-0 rounded-full border bg-secondary px-3 py-1.5 text-sm text-secondary-foreground"
-              >
-                {category.name}
-              </button>
-            ))}
+          <nav className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+            {categories.map((category) => {
+              const isActive = activeCategoryId === category.id;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => goToCategory(category.id)}
+                  aria-current={isActive ? "true" : undefined}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200",
+                    isActive
+                      ? "clay clay-primary bg-primary text-primary-foreground"
+                      : "border border-border/70 bg-card text-secondary-foreground active:bg-secondary"
+                  )}
+                >
+                  <span aria-hidden className="text-sm leading-none">
+                    {getCategoryIcon(category.name)}
+                  </span>
+                  {category.name}
+                </button>
+              );
+            })}
           </nav>
         )}
       </div>
@@ -139,7 +187,25 @@ export function MenuBrowser({
         />
       )}
 
-      <div className="flex flex-col gap-5 px-4">
+      {results === null && (
+        <div className="px-4 pt-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-secondary/70 px-4 py-3.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
+              <QrCode className="h-5 w-5" strokeWidth={2} />
+            </span>
+            <span className="flex flex-col gap-0.5">
+              <span className="font-display text-[14px] font-semibold leading-tight text-foreground">
+                Pide fácil, rápido y sin esperas
+              </span>
+              <span className="text-[12px] leading-snug text-muted-foreground">
+                Elige tus platos y nosotros nos encargamos del resto.
+              </span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-6">
         {results === null ? (
           categories.map((category) => (
             <CategorySection
@@ -155,11 +221,11 @@ export function MenuBrowser({
             />
           ))
         ) : results.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
+          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
             No encontramos productos con &ldquo;{query}&rdquo;
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 px-4">
             {results.map((product) => (
               <ProductCard
                 key={product.id}
@@ -198,18 +264,33 @@ export function MenuBrowser({
         }}
       />
 
-      <div className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur">
+      {/* Barra de acciones tipo app nativa: elevada sobre el contenido
+          con sombra propia (no un simple borde) y con respeto por el
+          área segura del iPhone, para que el botón no quede debajo de
+          la barra de gestos. */}
+      <div
+        className="glass fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-border/50 px-4 pt-3"
+        style={{
+          paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+          boxShadow: "0 -8px 24px -12px oklch(0.4 0.03 50 / 0.25)",
+        }}
+      >
         {cart.itemCount > 0 && (
           <Button
             size="lg"
-            className="w-full justify-between"
+            className="clay clay-primary h-12 w-full justify-between rounded-2xl text-[15px]"
             onClick={() => setCartOpen(true)}
           >
             <span className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
-              Ver pedido · {cart.itemCount}
+              Ver pedido
+              <span className="rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-xs font-semibold tabular-nums">
+                {cart.itemCount}
+              </span>
             </span>
-            <span>{formatPrice(cart.total)}</span>
+            <span className="font-display text-base font-semibold tabular-nums">
+              {formatPrice(cart.total)}
+            </span>
           </Button>
         )}
         <ServiceButtons tableNumber={tableNumber} />
