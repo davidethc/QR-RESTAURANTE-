@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Inbox, ChefHat, Bell as BellIcon, PackageCheck, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { OrderCard } from "./order-card";
 import { CallCard } from "./call-card";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
-import { notify } from "@/lib/notifications";
 import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
 import type { OrderStatus } from "@/config/constants";
 import type { StaffOrder, StaffWaiterCall } from "@/types/staff";
@@ -26,58 +25,56 @@ export function OrdersBoard({
   initialOrders,
   initialCalls,
   initialTableFilter,
+  initialView,
 }: {
   restaurantId: string;
   initialOrders: StaffOrder[];
   initialCalls: StaffWaiterCall[];
   initialTableFilter: number | null;
+  initialView?: "calls" | null;
 }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [calls, setCalls] = useState(initialCalls);
   const [tableFilter, setTableFilter] = useState(initialTableFilter);
-  const [activeTab, setActiveTab] = useState("pending");
+  // Al entrar filtrado por una mesa (clic desde /tables), la pestaña
+  // inicial debe ser la que de verdad tiene algo que atender en ESA
+  // mesa — si solo pidió "Llamar mesero"/"Pedir cuenta" sin tener
+  // pedidos activos, arrancar en "Nuevos" la deja vacía y parece un
+  // error. Sin filtro de mesa, se mantiene "Nuevos" por defecto —
+  // salvo que se llegue con `?view=calls` (el "Ver" de un aviso
+  // disparado desde otra pantalla del panel).
+  const [activeTab, setActiveTab] = useState(() => {
+    if (initialView === "calls") return "calls";
+    if (initialTableFilter === null) return "pending";
+    const ordersForTable = initialOrders.filter(
+      (o) => o.table_number === initialTableFilter
+    );
+    const callsForTable = initialCalls.filter(
+      (c) => c.table_number === initialTableFilter
+    );
+    if (callsForTable.length > 0) return "calls";
+    if (ordersForTable.some((o) => o.status === "PENDING")) return "pending";
+    if (
+      ordersForTable.some(
+        (o) => o.status === "ACCEPTED" || o.status === "PREPARING"
+      )
+    )
+      return "progress";
+    if (ordersForTable.some((o) => o.status === "READY")) return "ready";
+    return "pending";
+  });
 
-  const prevStatusRef = useRef<Map<string, OrderStatus>>(
-    new Map(initialOrders.map((o) => [o.id, o.status]))
-  );
-  const prevCallIdsRef = useRef<Set<string>>(
-    new Set(initialCalls.filter((c) => c.status === "PENDING").map((c) => c.id))
-  );
-
+  // Los toasts de "pedido nuevo"/"listo"/"solicitud" ya no se disparan
+  // acá — vive una sola vez en `DashboardNotifier` (layout del
+  // dashboard) para que avisen en cualquier pantalla, no solo en
+  // /orders. Este refetch solo mantiene actualizada la lista visible.
   async function refetch() {
     try {
       const [newOrders, newCalls] = await Promise.all([
         fetchStaffOrders(restaurantId, ACTIVE_ORDER_STATUSES),
         fetchWaiterCalls(restaurantId, ["PENDING", "ACCEPTED"]),
       ]);
-
-      for (const order of newOrders) {
-        const prevStatus = prevStatusRef.current.get(order.id);
-        if (!prevStatus && order.status === "PENDING") {
-          notify.newOrder(order.order_number, order.table_number);
-        } else if (
-          prevStatus &&
-          prevStatus !== order.status &&
-          order.status === "READY"
-        ) {
-          notify.orderReadyForStaff(order.order_number, order.table_number);
-        }
-      }
-      prevStatusRef.current = new Map(newOrders.map((o) => [o.id, o.status]));
-
-      const newCallIds = new Set(
-        newCalls.filter((c) => c.status === "PENDING").map((c) => c.id)
-      );
-      for (const call of newCalls) {
-        if (call.status === "PENDING" && !prevCallIdsRef.current.has(call.id)) {
-          const goToCalls = () => setActiveTab("calls");
-          if (call.type === "BILL") notify.billRequested(call.table_number, goToCalls);
-          else notify.waiterCalled(call.table_number, goToCalls);
-        }
-      }
-      prevCallIdsRef.current = newCallIds;
-
       setOrders(newOrders);
       setCalls(newCalls);
     } catch {

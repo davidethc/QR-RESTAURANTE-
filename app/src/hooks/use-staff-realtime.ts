@@ -24,7 +24,11 @@ import { createClient } from "@/lib/supabase/client";
  * lo rechaza con un error. `cancelled` evita que una invocación
  * obsoleta llegue a crear el canal.
  */
-export function useStaffRealtime(restaurantId: string, onChange: () => void) {
+export function useStaffRealtime(
+  restaurantId: string,
+  onChange: () => void,
+  channelName = "staff"
+) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -52,7 +56,7 @@ export function useStaffRealtime(restaurantId: string, onChange: () => void) {
       }
 
       channel = supabase
-        .channel(`staff:${restaurantId}`)
+        .channel(`${channelName}:${restaurantId}`)
         .on(
           "postgres_changes",
           {
@@ -83,5 +87,5 @@ export function useStaffRealtime(restaurantId: string, onChange: () => void) {
       authListener.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
-  }, [restaurantId]);
+  }, [restaurantId, channelName]);
 }

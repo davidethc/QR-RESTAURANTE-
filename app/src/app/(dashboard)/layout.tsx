@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getMyRestaurant } from "@/lib/queries/staff";
 import { DashboardNav } from "./_components/dashboard-nav";
+import { DashboardNotifier } from "@/components/shared/dashboard-notifier";
 
 export default async function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-full">
+      <DashboardNotifier restaurantId={session.restaurant.id} />
       <DashboardNav session={session} />
       {children}
     </div>

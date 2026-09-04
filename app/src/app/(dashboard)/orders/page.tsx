@@ -13,11 +13,11 @@ export const metadata: Metadata = { title: "Pedidos" };
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ table?: string }>;
+  searchParams: Promise<{ table?: string; view?: string }>;
 }) {
   const session = await getMyRestaurant();
   const restaurantId = session.restaurant.id;
-  const { table } = await searchParams;
+  const { table, view } = await searchParams;
   const initialTableFilter = table ? Number(table) : null;
 
   const [summary, orders, calls] = await Promise.all([
@@ -41,6 +41,7 @@ export default async function OrdersPage({
             ? initialTableFilter
             : null
         }
+        initialView={view === "calls" ? "calls" : null}
       />
     </main>
   );
