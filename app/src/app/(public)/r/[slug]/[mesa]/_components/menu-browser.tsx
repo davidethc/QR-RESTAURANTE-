@@ -14,6 +14,7 @@ import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
+import { getCategoryIcon } from "@/lib/category-icons";
 import { formatPrice, cn } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
@@ -183,10 +184,13 @@ export function MenuBrowser({
                   className={cn(
                     "flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200",
                     isActive
-                      ? "bg-foreground text-background"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-border bg-card text-secondary-foreground active:bg-muted"
                   )}
                 >
+                  <span aria-hidden className="emoji-3d text-[15px] leading-none">
+                    {getCategoryIcon(category.name)}
+                  </span>
                   {category.name}
                 </button>
               );

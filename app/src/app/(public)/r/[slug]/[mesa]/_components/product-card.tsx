@@ -7,6 +7,11 @@ import type { PublicProduct } from "@/types/menu";
 /**
  * Tarjeta compacta para las filas horizontales de cada categoría.
  *
+ * No lleva descripción a propósito. Con ella, un plato con tres líneas
+ * de texto estiraba toda la fila y los que no tienen quedaban con un
+ * hueco; la fila se veía descuadrada. Nombre y precio bastan para
+ * elegir, y la descripción está a un toque de distancia en la ficha.
+ *
  * Sin foto NO se dibuja el hueco de la foto. Antes se rellenaba con un
  * degradado y el emoji de la categoría, y el resultado eran seis
  * bloques grises idénticos ocupando la mitad de cada tarjeta para no
@@ -66,12 +71,6 @@ export function ProductCardCompact({
         <h3 className="font-display line-clamp-2 text-[13.5px] font-semibold leading-snug text-foreground">
           {product.name}
         </h3>
-        {product.description && (
-          <p className="line-clamp-3 text-[11.5px] leading-snug text-muted-foreground">
-            {product.description}
-          </p>
-        )}
-
         <div className="mt-auto flex items-center justify-between gap-1 pt-1.5">
           <span className="font-display text-[15px] font-semibold tabular-nums text-wine">
             {formatPrice(product.price)}

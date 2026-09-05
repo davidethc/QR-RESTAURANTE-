@@ -239,6 +239,30 @@
       inset 0 -1px 0 0 oklch(1 0 0 / 0.8);
     }
 
+  /* Relieve 3D del emoji. Los emojis del sistema ya son ilustraciones
+     a color; lo único que les falta para verse modelados es asentarse
+     sobre la superficie. Dos drop-shadow lo consiguen: una luz de 1px
+     arriba y una sombra corta abajo. Coste: cero bytes y cero
+     peticiones — un set de emojis 3D en imagen serían ~8 KB por
+     categoría. drop-shadow se compone en GPU y nunca se anima. */
+  .emoji-3d {
+    filter:
+      drop-shadow(0 -1px 0 oklch(1 0 0 / 0.55))
+      drop-shadow(0 2px 2px oklch(0.25 0.03 142 / 0.3));
+    }
+
+  /* Azulejo donde vive el emoji: un degradado brevísimo hace que la
+     pieza parezca ligeramente abombada en vez de un cuadro plano. */
+  .emoji-tile {
+    background-image: linear-gradient(
+      160deg,
+      oklch(1 0 0) 0%,
+      var(--secondary) 55%,
+      oklch(0.918 0.018 118) 100%
+    );
+    box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 0.9);
+    }
+
   /* Oculta la barra de scroll de las filas horizontales sin perder el
      desplazamiento táctil. */
   .no-scrollbar {

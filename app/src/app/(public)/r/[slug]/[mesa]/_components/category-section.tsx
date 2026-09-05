@@ -1,6 +1,7 @@
 "use client";
 
 import { cn, formatPrice } from "@/lib/utils";
+import { getCategoryIcon } from "@/lib/category-icons";
 import { ProductCardCompact } from "./product-card";
 import type { PublicCategory } from "@/types/menu";
 
@@ -56,24 +57,38 @@ export function CategorySection({
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className="flex w-full items-start gap-4 border-t border-border px-4 py-4 text-left transition-colors active:bg-muted"
+        className="flex w-full items-center gap-3.5 border-t border-border px-4 py-3.5 text-left transition-colors active:bg-muted"
       >
-        {/* El número es el único indicador de estado: en verde y con el
-            fondo marcado cuando la categoría está abierta. Un chevron
-            haría el mismo trabajo pero delatando el acordeón. */}
+        {/* El emoji en su azulejo abombado. Es lo primero que la vista
+            engancha en una fila de texto, y da a cada categoría una cara
+            propia que ni el número ni el nombre consiguen solos. */}
         <span
+          aria-hidden
           className={cn(
-            "mt-1 shrink-0 text-[12px] font-semibold tabular-nums transition-colors",
-            isOpen ? "text-primary" : "text-muted-foreground/70"
+            "emoji-tile flex size-11 shrink-0 items-center justify-center rounded-2xl text-[24px] leading-none transition-transform duration-200",
+            isOpen && "scale-105"
           )}
         >
-          {String(index + 1).padStart(2, "0")}
+          <span className="emoji-3d">{getCategoryIcon(category.name)}</span>
         </span>
 
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex items-baseline justify-between gap-3">
-            <span className="font-display truncate text-[21px] font-semibold leading-tight text-foreground">
-              {category.name}
+            <span className="flex min-w-0 items-baseline gap-2">
+              {/* El número es además el indicador de abierto/cerrado: se
+                  pone verde. Un chevron haría lo mismo delatando el
+                  acordeón genérico. */}
+              <span
+                className={cn(
+                  "shrink-0 text-[12px] font-semibold tabular-nums transition-colors",
+                  isOpen ? "text-primary" : "text-muted-foreground/60"
+                )}
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="font-display truncate text-[21px] font-semibold leading-tight text-foreground">
+                {category.name}
+              </span>
             </span>
             {fromPrice !== null && (
               <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
@@ -81,7 +96,7 @@ export function CategorySection({
               </span>
             )}
           </span>
-          <span className="truncate text-[13px] leading-snug text-muted-foreground">
+          <span className="truncate pl-[26px] text-[13px] leading-snug text-muted-foreground">
             {previewNames.join(" · ")}
             {remaining > 0 && (
               <span className="text-muted-foreground/60"> +{remaining}</span>
