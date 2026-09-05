@@ -27,7 +27,7 @@ export function MenuHeader({
   tableNumber: number | null;
 }) {
   return (
-    <header className="flex items-center gap-3 bg-[oklch(0.38_0.105_140)] px-4 py-3.5 text-white">
+    <header className="bg-primary-dark text-primary-dark-foreground flex items-center gap-3 px-4 py-3.5">
       {restaurant.logo_url && (
         <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-1 ring-white/25">
           <Image

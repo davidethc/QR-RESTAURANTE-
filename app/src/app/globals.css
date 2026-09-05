@@ -46,7 +46,18 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    --color-primary-dark: var(--primary-dark);
+    --color-primary-dark-foreground: var(--primary-dark-foreground);
+    --color-primary-soft: var(--primary-soft);
+    --color-primary-soft-foreground: var(--primary-soft-foreground);
     --color-honey: var(--honey);
+    --color-honey-soft: var(--honey-soft);
+    --color-honey-soft-foreground: var(--honey-soft-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-destructive-soft: var(--destructive-soft);
     --color-honey-foreground: var(--honey-foreground);
     --color-wine: var(--wine);
     --color-wine-foreground: var(--wine-foreground);
@@ -55,70 +66,90 @@
 /*
   Identidad de marca — Cafetería Omm Siri.
 
-  Dirección: papel blanco, color en la tinta.
+  La paleta la fijó el dueño en hex; aquí va en oklch. De catorce pares
+  texto/fondo, trece pasan WCAG AA. El único que no —precio sobre
+  ámbar— no es un defecto: es la regla de que el precio nunca va sobre
+  el ámbar.
 
-  Tres decisiones que vienen de leer el CSS real de cafeterías
-  premiadas (Origin, Assembly, Coffee Collective), no de una plantilla:
+  Dos correcciones sobre los valores originales:
+  - El precio pasa de #A85F00 a #9A5600. A simple vista es el mismo
+    naranja quemado, pero sobre el fondo crema sube de 4,52 a 5,24; con
+    4,52 bastaba que un celular renderizara distinto para caer bajo el
+    mínimo, y el precio es el dato que nadie puede leer mal.
+  - Se añaden los tokens que una paleta de diez colores no puede
+    cubrir: los estados intermedios de un pedido, el aviso, y el rojo
+    de fondo opaco. Cada uno está justificado donde se usa.
 
-  1. Ninguna usa negro puro sobre blanco puro. El texto es un negro CON
-     color dentro — acá, verde. Eso hace que la página entera se sienta
-     verde sin que haya un solo elemento verde.
-  2. El café va en la TINTA (precios), nunca en el fondo. El fondo beige
-     es lo que apagaba todo.
-  3. El verde vive en hue 132 (oliva/musgo, tira a amarillo), no en 160
-     (salvia/esmeralda). Salvia + serif + crema es la combinación que
-     está catalogada como firma de interfaz generada por IA en 2026.
+  El fondo crema no es decorativo: hace que la tarjeta blanca destaque
+  1,081:1 en vez de 1,019:1. Por eso las tarjetas no llevan borde — se
+  separan por tono, que es un solo tratamiento.
 */
 :root {
-    /* El diagnóstico de la versión anterior: seis de nueve tokens tenían
-       croma < 0.025, o sea eran gris con nombre de color, y los dos
-       únicos con color eran ambos oscuros. Blanco + verde oscuro + café
-       oscuro, sin ningún color claro y vivo en medio: por eso se leía
-       apagada. Aquí sube el croma, los neutros se mueven de matiz 120
-       (verdoso frío) a 85 (cálido), y entra la miel. */
-    --background: oklch(0.995 0.004 95);
-    --foreground: oklch(0.20 0.030 145);
+    --background: oklch(0.973 0.008 91);
+    --foreground: oklch(0.232 0.022 139);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.20 0.030 145);
+    --card-foreground: oklch(0.232 0.022 139);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.20 0.030 145);
-    /* Verde vivo, no militar: L 0.415→0.44 y croma 0.085→0.110. */
-    --primary: oklch(0.44 0.110 138);
+    --popover-foreground: oklch(0.232 0.022 139);
+    --primary: oklch(0.471 0.120 141);
     --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.955 0.035 85);
-    --secondary-foreground: oklch(0.315 0.045 120);
-    --muted: oklch(0.975 0.022 88);
-    /* El texto secundario deja de ser frío: matiz 142 → 60. */
-    --muted-foreground: oklch(0.485 0.035 60);
-    --accent: oklch(0.565 0.168 44);
-    --accent-foreground: oklch(1 0 0);
-    /* MIEL. El único color claro y vivo de la paleta — lo que faltaba.
-       Solo para rellenos (chapa de MESA, etiqueta COMBOS): a L 0.845 no
-       admite texto encima con contraste suficiente. */
-    --honey: oklch(0.845 0.155 82);
-    --honey-foreground: oklch(0.30 0.070 58);
-    --destructive: oklch(0.55 0.2 27);
-    --border: oklch(0.915 0.022 85);
-    --input: oklch(0.915 0.022 85);
-    --ring: oklch(0.44 0.110 138);
-    /* Precios en miel oscura. Eran café-grisáceo (croma 0.052): el
-       precio es lo que más se mira de una carta y estaba apagado. */
-    --wine: oklch(0.52 0.135 70);
+    /* Cabecera. Antes iba escrito a mano dentro del componente. */
+    --primary-dark: oklch(0.379 0.097 140);
+    --primary-dark-foreground: oklch(1 0 0);
+    /* El relleno verde claro que faltaba. Sin él, "seleccionado" y
+       "fondo" se pintaban del mismo crema y nada se leía como estado. */
+    --primary-soft: oklch(0.946 0.018 135);
+    --primary-soft-foreground: oklch(0.379 0.097 140);
+    /* Neutro cálido entre el fondo y el borde: controles que NO son
+       estado (buscador, selector de cantidad, azulejo del emoji). */
+    --secondary: oklch(0.946 0.014 88);
+    --secondary-foreground: oklch(0.232 0.022 139);
+    --muted: oklch(0.955 0.012 86);
+    --muted-foreground: oklch(0.530 0.022 72);
+    /* En shadcn `accent` es la superficie de hover, no un color de
+       marca: por eso apunta al verde suave y no al ámbar. */
+    --accent: oklch(0.946 0.018 135);
+    --accent-foreground: oklch(0.379 0.097 140);
+    /* Ámbar: solo rellenos escasos (chapa de MESA, etiqueta COMBOS). */
+    --honey: oklch(0.817 0.140 80);
+    --honey-foreground: oklch(0.320 0.075 65);
+    /* Ámbar de relleno para "en curso". El ámbar puro a L 0,817 no
+       admite texto con AA; a 0,955 sí. Sin este token, ACCEPTED,
+       PREPARING y PENDING colapsan en el mismo color. */
+    --honey-soft: oklch(0.955 0.032 85);
+    --honey-soft-foreground: oklch(0.430 0.100 70);
+    /* Precios. */
+    --wine: oklch(0.522 0.121 61);
     --wine-foreground: oklch(1 0 0);
-    --chart-1: oklch(0.44 0.110 138);
-    --chart-2: oklch(0.52 0.135 70);
-    --chart-3: oklch(0.845 0.155 82);
-    --chart-4: oklch(0.66 0.130 120);
-    --chart-5: oklch(0.485 0.035 60);
+    /* Reutiliza el verde de marca en vez de meter un verde ajeno. */
+    --success: oklch(0.471 0.120 141);
+    --success-foreground: oklch(1 0 0);
+    /* Entre el verde y el rojo no había nada. Lo usa el botón de
+       servicio cuando una solicitud lleva 5 min sin atender. */
+    --warning: oklch(0.558 0.129 62);
+    --warning-foreground: oklch(1 0 0);
+    --destructive: oklch(0.55 0.2 27);
+    --destructive-foreground: oklch(1 0 0);
+    /* Opaco a propósito: bg-destructive/10 cambia de color según esté
+       sobre la tarjeta blanca o sobre el fondo crema. */
+    --destructive-soft: oklch(0.955 0.020 25);
+    --border: oklch(0.908 0.016 83);
+    --input: oklch(0.908 0.016 83);
+    --ring: oklch(0.471 0.120 141);
+    --chart-1: oklch(0.471 0.120 141);
+    --chart-2: oklch(0.522 0.121 61);
+    --chart-3: oklch(0.817 0.140 80);
+    --chart-4: oklch(0.379 0.097 140);
+    --chart-5: oklch(0.530 0.022 72);
     --radius: 0.5rem;
     --sidebar: oklch(1 0 0);
-    --sidebar-foreground: oklch(0.20 0.030 145);
-    --sidebar-primary: oklch(0.44 0.110 138);
+    --sidebar-foreground: oklch(0.232 0.022 139);
+    --sidebar-primary: oklch(0.471 0.120 141);
     --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.955 0.035 85);
-    --sidebar-accent-foreground: oklch(0.315 0.045 120);
-    --sidebar-border: oklch(0.915 0.022 85);
-    --sidebar-ring: oklch(0.44 0.110 138);
+    --sidebar-accent: oklch(0.946 0.018 135);
+    --sidebar-accent-foreground: oklch(0.379 0.097 140);
+    --sidebar-border: oklch(0.908 0.016 83);
+    --sidebar-ring: oklch(0.471 0.120 141);
 }
 
 .dark {
@@ -205,7 +236,7 @@
   .clay {
     box-shadow:
       0 6px 16px -4px var(--clay-shadow, oklch(0.3 0.03 142 / 0.24)),
-      inset 0 2px 0 0 oklch(1 0 0 / 0.22),
+      inset 0 2px 0 0 oklch(1 0 0 / 0.26),
       inset 0 -3px 6px 0 oklch(0.2 0.02 40 / 0.14);
     transition:
       transform 160ms cubic-bezier(0.34, 1.3, 0.64, 1),
@@ -220,10 +251,10 @@
   /* Tinte de sombra por color de acción, para que la sombra no se vea
      gris sucia debajo de un botón de color. */
   .clay-primary {
-    --clay-shadow: oklch(0.44 0.110 138 / 0.36);
+    --clay-shadow: oklch(0.379 0.097 140 / 0.34);
     }
   .clay-wine {
-    --clay-shadow: oklch(0.52 0.135 70 / 0.34);
+    --clay-shadow: oklch(0.522 0.121 61 / 0.32);
     }
 
   /*
@@ -236,8 +267,8 @@
   */
   .glass {
     background-color: oklch(from var(--background) l c h / 0.72);
-    backdrop-filter: blur(16px) saturate(1.4);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
     }
 
   /* Susurro de neumorfismo: el único hundido de la app, en el
@@ -245,7 +276,7 @@
      bajo contraste lo hace ilegible y ya está en retirada. */
   .neu-inset {
     box-shadow:
-      inset 0 2px 4px 0 oklch(0.3 0.03 142 / 0.08),
+      inset 0 2px 4px 0 oklch(0.35 0.03 90 / 0.07),
       inset 0 -1px 0 0 oklch(1 0 0 / 0.8);
     }
 
@@ -258,7 +289,7 @@
   .emoji-3d {
     filter:
       drop-shadow(0 -1px 0 oklch(1 0 0 / 0.55))
-      drop-shadow(0 2px 2px oklch(0.25 0.03 142 / 0.3));
+      drop-shadow(0 2px 2px oklch(0.232 0.022 139 / 0.28));
     }
 
   /* Azulejo donde vive el emoji: un degradado brevísimo hace que la
@@ -268,7 +299,7 @@
       160deg,
       oklch(1 0 0) 0%,
       var(--secondary) 55%,
-      oklch(0.925 0.030 84) 100%
+      oklch(0.918 0.016 84) 100%
     );
     box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 0.9);
     }

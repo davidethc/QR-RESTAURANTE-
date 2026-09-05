@@ -104,9 +104,14 @@ function ServiceButton({
       disabled={waiting}
       className={cn(
         "h-12 flex-1 rounded-2xl text-[15px] font-semibold",
-        waiting
-          ? "bg-secondary text-secondary-foreground disabled:opacity-100 [&_svg]:text-muted-foreground"
-          : "border border-border bg-card hover:bg-muted [&_svg]:text-primary"
+        waiting &&
+          "bg-primary-soft text-primary-soft-foreground disabled:opacity-100 [&_svg]:text-primary/70",
+        !waiting &&
+          !stale &&
+          "border border-border bg-card hover:bg-muted [&_svg]:text-primary",
+        !waiting &&
+          stale &&
+          "border border-warning/45 bg-card hover:bg-muted [&_svg]:text-warning"
       )}
     >
       {icon} {label}

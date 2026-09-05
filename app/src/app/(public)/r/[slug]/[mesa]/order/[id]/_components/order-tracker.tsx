@@ -97,7 +97,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: CustomerOrder }) 
           )}
         </div>
       ) : (
-        <ol className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-4">
+        <ol className="flex flex-col gap-4 rounded-2xl bg-card p-4">
           {STEPS.map((step, index) => {
             const done =
               index < stepIndex ||

@@ -203,7 +203,7 @@ export function MenuBrowser({
                     "flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                     isActive
                       ? "bg-primary text-primary-foreground"
-                      : "border border-border bg-card text-secondary-foreground active:bg-muted"
+                      : "bg-primary-soft text-primary-soft-foreground active:bg-muted"
                   )}
                 >
                   <span aria-hidden className="emoji-3d text-[15px] leading-none">

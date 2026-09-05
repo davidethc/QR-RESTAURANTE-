@@ -37,7 +37,7 @@ function ProductCardCompactBase({
       disabled={soldOut}
       onClick={() => onSelect?.(product)}
       className={cn(
-        "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-card text-left",
+        "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-card text-left",
         soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
       )}
     >
@@ -114,7 +114,7 @@ function ProductCardBase({
       disabled={soldOut}
       onClick={() => onSelect?.(product)}
       className={cn(
-        "group relative flex items-center gap-3 rounded-2xl border border-border bg-card px-3.5 py-3 text-left transition-colors duration-200",
+        "group relative flex items-center gap-3 rounded-2xl bg-card px-3.5 py-3 text-left transition-colors duration-200",
         soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
       )}
     >

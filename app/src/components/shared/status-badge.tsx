@@ -25,14 +25,22 @@ const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELLED: "Cancelado",
 };
 
+/**
+ * El recorrido de un pedido en tres tramos de color: espera (neutro),
+ * en curso (ámbar suave) y terminado (verde sólido).
+ *
+ * ACCEPTED y PREPARING comparten color a propósito — para el cliente
+ * son el mismo momento, "ya lo están haciendo" — y se separan por peso
+ * tipográfico, no metiendo un color más.
+ */
 const ORDER_STATUS_CLASS: Record<OrderStatus, string> = {
   PENDING: "bg-secondary text-secondary-foreground",
-  ACCEPTED: "bg-accent text-accent-foreground",
-  PREPARING: "bg-accent text-accent-foreground",
-  READY: "bg-primary text-primary-foreground",
+  ACCEPTED: "bg-honey-soft text-honey-soft-foreground",
+  PREPARING: "bg-honey-soft text-honey-soft-foreground font-bold",
+  READY: "bg-success text-success-foreground",
   DELIVERED: "bg-muted text-muted-foreground",
-  REJECTED: "bg-destructive/10 text-destructive",
-  CANCELLED: "bg-destructive/10 text-destructive",
+  REJECTED: "bg-destructive-soft text-destructive",
+  CANCELLED: "bg-destructive-soft text-destructive",
 };
 
 export function OrderStatusBadge({
@@ -59,10 +67,10 @@ const CALL_STATUS_LABEL: Record<CallStatus, string> = {
 
 const CALL_STATUS_CLASS: Record<CallStatus, string> = {
   PENDING: "bg-wine text-wine-foreground",
-  ACCEPTED: "bg-accent text-accent-foreground",
+  ACCEPTED: "bg-honey-soft text-honey-soft-foreground",
   ATTENDED: "bg-muted text-muted-foreground",
-  REJECTED: "bg-destructive/10 text-destructive",
-  CANCELLED: "bg-destructive/10 text-destructive",
+  REJECTED: "bg-destructive-soft text-destructive",
+  CANCELLED: "bg-destructive-soft text-destructive",
 };
 
 export function CallStatusBadge({
@@ -89,7 +97,7 @@ const TABLE_STATUS_LABEL: Record<TableStatus, string> = {
 
 const TABLE_STATUS_CLASS: Record<TableStatus, string> = {
   AVAILABLE: "border-border bg-background text-foreground",
-  OCCUPIED: "bg-accent text-accent-foreground",
+  OCCUPIED: "bg-honey-soft text-honey-soft-foreground",
   // Mismo código de color que la tarjeta de solicitud: turquesa =
   // llama al mesero, granate = pide la cuenta (dinero).
   ATTENTION: "bg-primary text-primary-foreground",
