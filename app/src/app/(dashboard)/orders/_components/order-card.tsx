@@ -20,7 +20,15 @@ import type { StaffOrder } from "@/types/staff";
  * queda reservado al botón que hace avanzar el pedido — uno solo por
  * tarjeta — para que sea obvio dónde tocar sin leer.
  */
-export function OrderCard({ order }: { order: StaffOrder }) {
+export function OrderCard({
+  order,
+  onDone,
+}: {
+  order: StaffOrder;
+  /** Se llama al completar una acción con éxito. El tablero lo usa
+   *  para recargar sin depender de que llegue el evento propio. */
+  onDone?: () => void;
+}) {
   return (
     <div className="shadow-card rounded-2xl border border-border/70 bg-card p-4">
       <div className="flex items-start justify-between gap-3">
@@ -70,18 +78,20 @@ export function OrderCard({ order }: { order: StaffOrder }) {
       {order.status === "PENDING" && (
         <div className="mt-3 flex gap-2">
           <ActionButton
+            onSuccess={onDone}
             action={() => acceptOrder(order.id)}
             successMessage="Pedido aceptado — en preparación"
             className="clay clay-primary h-12 flex-1 rounded-full text-[15px] font-semibold"
           >
             Aceptar
           </ActionButton>
-          <RejectDialog orderId={order.id} />
+          <RejectDialog orderId={order.id} onDone={onDone} />
         </div>
       )}
 
       {order.status === "ACCEPTED" && (
         <ActionButton
+            onSuccess={onDone}
           action={() => startPreparing(order.id)}
           successMessage="En preparación"
           className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
@@ -92,8 +102,8 @@ export function OrderCard({ order }: { order: StaffOrder }) {
 
       {order.status === "PREPARING" && (
         <ActionButton
+            onSuccess={onDone}
           action={() => markReady(order.id)}
-          successMessage="Pedido listo"
           className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
         >
           Marcar listo
@@ -102,6 +112,7 @@ export function OrderCard({ order }: { order: StaffOrder }) {
 
       {order.status === "READY" && (
         <ActionButton
+            onSuccess={onDone}
           action={() => markDelivered(order.id)}
           successMessage="Pedido entregado"
           className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"

@@ -8,6 +8,8 @@ import type { OrderStatus } from "@/config/constants";
 import type { SessionOrderSummary } from "@/types/staff";
 
 const POLL_MS = 4000;
+/** Tras tantos fallos seguidos se corta: algo va mal de verdad. */
+const MAX_FAILURES = 3;
 
 const ACTIVE_ORDER_STATUSES = new Set<OrderStatus>([
   "PENDING",
@@ -69,13 +71,37 @@ export function TableStatusProvider({
 
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let failures = 0;
+
+    // Bucle que se rearma AL TERMINAR cada consulta, no cada 4 s pase
+    // lo que pase. Con setInterval, y como las Server Actions se
+    // serializan en React, una consulta lenta —el 3G de un local a
+    // mediodía— acumulaba una cola que no drenaba nunca y el celular
+    // se quedaba pidiendo para siempre.
+    function schedule() {
+      if (cancelled) return;
+      timer = setTimeout(() => void poll(), POLL_MS);
+    }
 
     async function poll() {
       // Celular en el bolsillo o pestaña de fondo: cero peticiones.
-      if (document.hidden) return;
+      if (document.hidden) return schedule();
 
       const result = await getTableStatus();
-      if (cancelled || !result.ok) return;
+      if (cancelled) return;
+
+      if (!result.ok) {
+        // Antes esto era un `return` a secas: si la sesión expiraba, el
+        // celular seguía sondeando en silencio eternamente, sin cortar
+        // ni decirle nada al cliente.
+        if (++failures >= MAX_FAILURES) {
+          notify.error(result.error);
+          return;
+        }
+        return schedule();
+      }
+      failures = 0;
 
       for (const call of result.data.calls) {
         const prev = prevCalls.current.get(call.id);
@@ -100,18 +126,24 @@ export function TableStatusProvider({
           ACTIVE_CALL_STATUSES.includes(c.status)
         ),
       });
+      schedule();
     }
 
-    poll();
-    const interval = setInterval(poll, POLL_MS);
+    void poll();
     // Al volver a la pestaña se refresca de inmediato en vez de esperar
     // hasta 4 s con datos viejos en pantalla.
-    document.addEventListener("visibilitychange", poll);
+    function onWake() {
+      if (!document.hidden) {
+        clearTimeout(timer);
+        void poll();
+      }
+    }
+    document.addEventListener("visibilitychange", onWake);
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", poll);
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onWake);
     };
   }, []);
 

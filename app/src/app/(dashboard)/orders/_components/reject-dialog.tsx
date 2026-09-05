@@ -26,7 +26,13 @@ const REASONS = [
   "Otro",
 ] as const;
 
-export function RejectDialog({ orderId }: { orderId: string }) {
+export function RejectDialog({
+  orderId,
+  onDone,
+}: {
+  orderId: string;
+  onDone?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(REASONS[0]);
   const [comment, setComment] = useState("");
@@ -44,6 +50,7 @@ export function RejectDialog({ orderId }: { orderId: string }) {
       }
       setOpen(false);
       notify.success("Pedido rechazado");
+      onDone?.();
     });
   }
 

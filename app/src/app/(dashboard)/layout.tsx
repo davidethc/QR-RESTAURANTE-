@@ -17,7 +17,10 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-full">
-      <DashboardNotifier restaurantId={session.restaurant.id} />
+      <DashboardNotifier
+        restaurantId={session.restaurant.id}
+        role={session.role}
+      />
       <DashboardNav session={session} />
       {children}
     </div>

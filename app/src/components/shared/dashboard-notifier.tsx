@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { notify } from "@/lib/notifications";
 import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
-import type { OrderStatus } from "@/config/constants";
+import type { OrderStatus, UserRole } from "@/config/constants";
 
 const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
   "PENDING",
@@ -13,6 +13,15 @@ const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
   "PREPARING",
   "READY",
 ];
+
+/**
+ * Canal entre pestañas del mismo navegador. Sin esto, dos pestañas del
+ * panel abiertas suenan y avisan DOS veces por cada pedido: cada una
+ * monta su propio notificador y ninguna sabe de la otra. La primera
+ * que ve un evento reclama su id aquí y las demás lo saltan.
+ */
+const DEDUPE_CHANNEL = "monky-notify";
+const DEDUPE_TTL_MS = 30_000;
 
 /**
  * Avisa (toast + sonido) de pedidos nuevos, pedidos listos y
@@ -29,8 +38,43 @@ const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
  * siempre montado), Supabase rechaza la segunda suscripción al mismo
  * canal — mismo tipo de problema ya documentado en el hook.
  */
-export function DashboardNotifier({ restaurantId }: { restaurantId: string }) {
+export function DashboardNotifier({
+  restaurantId,
+  role,
+}: {
+  restaurantId: string;
+  /** Cocina no atiende mesas: oír la campana de "Mesa X solicita
+   *  atención" solo la distrae de lo suyo. */
+  role: UserRole;
+}) {
   const router = useRouter();
+  const seen = useRef<Map<string, number>>(new Map());
+  const bus = useRef<BroadcastChannel | null>(null);
+
+  // Devuelve true solo para la primera pestaña que ve este aviso.
+  function claim(key: string): boolean {
+    const now = Date.now();
+    for (const [k, t] of seen.current) {
+      if (now - t > DEDUPE_TTL_MS) seen.current.delete(k);
+    }
+    if (seen.current.has(key)) return false;
+    seen.current.set(key, now);
+    bus.current?.postMessage(key);
+    return true;
+  }
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel(DEDUPE_CHANNEL);
+    channel.onmessage = (e: MessageEvent<string>) => {
+      seen.current.set(e.data, Date.now());
+    };
+    bus.current = channel;
+    return () => {
+      channel.close();
+      bus.current = null;
+    };
+  }, []);
   const prevStatusRef = useRef<Map<string, OrderStatus> | null>(null);
   const prevCallIdsRef = useRef<Set<string> | null>(null);
 
@@ -47,12 +91,17 @@ export function DashboardNotifier({ restaurantId }: { restaurantId: string }) {
       if (prevStatusRef.current) {
         for (const order of orders) {
           const prevStatus = prevStatusRef.current.get(order.id);
-          if (!prevStatus && order.status === "PENDING") {
+          if (
+            !prevStatus &&
+            order.status === "PENDING" &&
+            claim(`new:${order.id}`)
+          ) {
             notify.newOrder(order.order_number, order.table_number);
           } else if (
             prevStatus &&
             prevStatus !== order.status &&
-            order.status === "READY"
+            order.status === "READY" &&
+            claim(`ready:${order.id}`)
           ) {
             notify.orderReadyForStaff(order.order_number, order.table_number);
           }
@@ -60,11 +109,13 @@ export function DashboardNotifier({ restaurantId }: { restaurantId: string }) {
       }
       prevStatusRef.current = new Map(orders.map((o) => [o.id, o.status]));
 
-      if (prevCallIdsRef.current) {
+      // Cocina no ve ni oye las solicitudes de mesa: no son su trabajo.
+      if (prevCallIdsRef.current && role !== "KITCHEN") {
         for (const call of calls) {
           if (
             call.status === "PENDING" &&
-            !prevCallIdsRef.current.has(call.id)
+            !prevCallIdsRef.current.has(call.id) &&
+            claim(`call:${call.id}`)
           ) {
             const goToCalls = () => router.push("/orders?view=calls");
             if (call.type === "BILL") {
@@ -88,7 +139,11 @@ export function DashboardNotifier({ restaurantId }: { restaurantId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
 
-  useStaffRealtime(restaurantId, refetch, "staff-notify");
+  useStaffRealtime(restaurantId, refetch, {
+    channelName: "staff-notify",
+    // Los cambios de estado de una mesa no generan avisos.
+    tables: ["orders", "waiter_calls"],
+  });
 
   return null;
 }

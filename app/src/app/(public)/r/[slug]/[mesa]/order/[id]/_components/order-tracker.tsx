@@ -9,6 +9,7 @@ import type { OrderStatus } from "@/config/constants";
 import type { CustomerOrder } from "@/types/staff";
 
 const POLL_MS = 4000;
+const MAX_FAILURES = 3;
 
 const STEPS: { status: OrderStatus; label: string }[] = [
   { status: "PENDING", label: "Pedido recibido" },
@@ -49,9 +50,34 @@ export function OrderTracker({ initialOrder }: { initialOrder: CustomerOrder }) 
   useEffect(() => {
     if (TERMINAL.includes(statusRef.current)) return;
 
-    const interval = setInterval(async () => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let failures = 0;
+
+    // El bucle se rearma al TERMINAR cada consulta. Con setInterval, y
+    // como las Server Actions se serializan en React, una consulta más
+    // lenta que el intervalo dejaba una cola que no drenaba nunca.
+    function schedule() {
+      if (cancelled) return;
+      timer = setTimeout(() => void poll(), POLL_MS);
+    }
+
+    async function poll() {
+      if (document.hidden) return schedule();
+
       const result = await getOrderStatus(initialOrder.id);
-      if (!result.ok) return;
+      if (cancelled) return;
+
+      if (!result.ok) {
+        // Antes se ignoraba el fallo y se seguía sondeando en silencio
+        // para siempre, incluso con la sesión ya expirada.
+        if (++failures >= MAX_FAILURES) {
+          notify.error(result.error);
+          return;
+        }
+        return schedule();
+      }
+      failures = 0;
 
       if (result.data.status !== statusRef.current) {
         notifyTransition(result.data.status, result.data.order_number);
@@ -59,10 +85,25 @@ export function OrderTracker({ initialOrder }: { initialOrder: CustomerOrder }) 
       }
       setOrder(result.data);
 
-      if (TERMINAL.includes(result.data.status)) clearInterval(interval);
-    }, POLL_MS);
+      // Estado final: no hay nada más que esperar.
+      if (TERMINAL.includes(result.data.status)) return;
+      schedule();
+    }
 
-    return () => clearInterval(interval);
+    void poll();
+    function onWake() {
+      if (!document.hidden) {
+        clearTimeout(timer);
+        void poll();
+      }
+    }
+    document.addEventListener("visibilitychange", onWake);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onWake);
+    };
   }, [initialOrder.id]);
 
   const stepIndex = STEPS.findIndex((s) => s.status === order.status);

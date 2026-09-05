@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { OrderCard } from "./order-card";
 import { CallCard } from "./call-card";
+import { ConnectionStatus } from "@/components/shared/connection-status";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
 import type { OrderStatus } from "@/config/constants";
@@ -83,7 +84,7 @@ export function OrdersBoard({
     }
   }
 
-  useStaffRealtime(restaurantId, refetch);
+  const { connected, refresh } = useStaffRealtime(restaurantId, refetch);
 
   function clearTableFilter() {
     setTableFilter(null);
@@ -118,8 +119,12 @@ export function OrdersBoard({
 
   return (
     <>
+      <div className="flex justify-end px-4 pt-2">
+        <ConnectionStatus connected={connected} />
+      </div>
+
       {tableFilter !== null && (
-        <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-2xl border border-primary/25 bg-accent/40 py-1.5 pl-4 pr-1.5">
+        <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-2xl bg-primary-soft py-1.5 pl-4 pr-1.5">
           <span className="font-display text-[15px] font-semibold text-foreground">
             Viendo solo Mesa {tableFilter}
           </span>
@@ -175,7 +180,9 @@ export function OrdersBoard({
           {pending.length === 0 ? (
             <EmptyState icon={Inbox} title="No hay pedidos nuevos" description="Cuando llegue un pedido aparecerá aquí." />
           ) : (
-            pending.map((order) => <OrderCard key={order.id} order={order} />)
+            pending.map((order) => (
+              <OrderCard key={order.id} order={order} onDone={refresh} />
+            ))
           )}
         </TabsContent>
 
@@ -183,7 +190,9 @@ export function OrdersBoard({
           {inProgress.length === 0 ? (
             <EmptyState icon={ChefHat} title="No hay pedidos en preparación" description="Todo está al día ✓" />
           ) : (
-            inProgress.map((order) => <OrderCard key={order.id} order={order} />)
+            inProgress.map((order) => (
+              <OrderCard key={order.id} order={order} onDone={refresh} />
+            ))
           )}
         </TabsContent>
 
@@ -191,7 +200,9 @@ export function OrdersBoard({
           {ready.length === 0 ? (
             <EmptyState icon={PackageCheck} title="No hay pedidos listos" description="Cocina avisará cuando termine uno." />
           ) : (
-            ready.map((order) => <OrderCard key={order.id} order={order} />)
+            ready.map((order) => (
+              <OrderCard key={order.id} order={order} onDone={refresh} />
+            ))
           )}
         </TabsContent>
 
@@ -199,7 +210,9 @@ export function OrdersBoard({
           {visibleCalls.length === 0 ? (
             <EmptyState icon={BellIcon} title="No hay solicitudes" description="Todo tranquilo." />
           ) : (
-            visibleCalls.map((call) => <CallCard key={call.id} call={call} />)
+            visibleCalls.map((call) => (
+              <CallCard key={call.id} call={call} onDone={refresh} />
+            ))
           )}
         </TabsContent>
       </Tabs>

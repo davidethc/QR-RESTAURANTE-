@@ -825,3 +825,58 @@ tocarlo cambiaría también esa UI.
    lista ya conocida de warnings intencionales (RPCs públicos para `anon`, y
    "Leaked Password Protection Disabled"). Si aparece algo nuevo fuera de esa
    lista, investigar antes de continuar.
+
+---
+
+## [2026-09-05] Actualización en vivo, antes de producción
+
+Auditadas las dos mitades (código del panel y base de datos) y corregidas.
+Probado en navegador real con `mesero@demo.monky.com`.
+
+### Lo que estaba roto
+
+1. **La rejilla de Mesas nunca se actualizaba.** `(dashboard)/tables/page.tsx`
+   era un Server Component puro, sin hook ni sondeo.
+2. **Caída de conexión = silencio total.** `.subscribe()` se llamaba sin
+   callback de estado: no se detectaba `CHANNEL_ERROR`/`TIMED_OUT`/`CLOSED`,
+   los eventos del corte se perdían y no había ninguna señal visible.
+3. **`close_table_session` no emitía evento**: `tables` no estaba en la
+   publicación `supabase_realtime`.
+4. **La acción propia no repintaba la lista** (`useState(initialOrders)`
+   ignora props nuevas): con el socket caído, "Aceptar" no movía la tarjeta.
+5. **Avisos duplicados** con dos pestañas, y sin guardia de "en vuelo".
+6. **Cocina** recibía eventos de `waiter_calls` y oía la campana de mesas.
+7. **Cliente**: `setInterval` sin guardia de solapamiento (cola que no drena)
+   y sondeo silencioso infinito con la sesión expirada.
+
+### Migraciones aplicadas
+- `052_realtime_publish_tables_and_full_identity`: `tables` a la publicación,
+  `REPLICA IDENTITY FULL` en `tables`/`orders`/`waiter_calls`, índice
+  `idx_rm_user_rest_active`.
+
+### Pruebas ejecutadas y resultado
+
+| Prueba | Resultado |
+|---|---|
+| Indicador con red normal | "en vivo" ✓ |
+| Indicador 2 s tras cortar el wifi | "Sin conexión — reintentando…" ✓ |
+| Indicador tras restaurar | vuelve a "en vivo" ✓ |
+| Pedido creado con el wifi caído, tras reconectar | aparece solo, sin recargar ✓ |
+| Red de seguridad (socket vivo) | dispara cada ~20 s, medido en la pestaña de red ✓ |
+| Mesa 1 pasa a OCUPADA en /tables | cambia sola, sin recargar ✓ (antes NO) |
+| Dos pestañas de /orders, un pedido nuevo | **un solo aviso** ✓ |
+
+### Notas de banco de pruebas (para no repetir el tiempo perdido)
+- Sustituir `window.WebSocket` por una función para "matar" Realtime **rompe
+  el cliente de Supabase entero** y da falsos negativos. Usar
+  `context.setOffline(true)`.
+- `page.evaluate` con una **cadena** que contiene una arrow function la
+  evalúa como definición, no la ejecuta. Pasar una función real.
+- Los avisos duran 15 s (`NOTICE_MS`): medirlos 22 s después da 0.
+- Un `MutationObserver` que mira `addedNodes` cuenta el contenedor Y el hijo:
+  para contar toasts, contar elementos hoja visibles en un instante.
+
+### Datos de prueba creados
+Pedidos #6 a #12 en Omm Siri (sin ítems ni sesión, insertados por SQL para
+disparar eventos). **Pendientes de limpiar** — el borrado masivo está
+bloqueado por permisos.

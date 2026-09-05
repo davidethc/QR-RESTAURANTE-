@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TableStatusBadge } from "@/components/shared/status-badge";
 import { TableQrDialog } from "./_components/table-qr-dialog";
 import { ReleaseTableButton } from "./_components/release-table-button";
+import { TablesLive } from "./_components/tables-live";
 import { formatPrice } from "@/lib/utils";
 import { getMyRestaurant, getTablesStatus } from "@/lib/queries/staff";
 
@@ -20,13 +21,17 @@ export default async function TablesPage() {
 
   return (
     <main>
-      <PageHeader title="Mesas" description={`${tables.length} mesas`} />
+      <PageHeader
+        title="Mesas"
+        description={`${tables.length} mesas`}
+        action={<TablesLive restaurantId={session.restaurant.id} />}
+      />
       <div className="grid grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-3 lg:grid-cols-4">
         {tables.map((table) => (
           <Link
             key={table.id}
             href={`/orders?table=${table.number}`}
-            className="shadow-card block rounded-2xl border border-border/70 bg-card p-4 transition-transform duration-200 active:scale-[0.98]"
+            className="block rounded-2xl bg-card p-4 shadow-card transition-transform duration-200 active:scale-[0.98]"
           >
             <div className="flex flex-col gap-2">
               <p className="font-display truncate text-[17px] font-semibold leading-tight text-foreground">

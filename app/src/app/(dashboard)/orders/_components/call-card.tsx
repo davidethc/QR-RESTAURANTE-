@@ -20,7 +20,13 @@ import type { StaffWaiterCall } from "@/types/staff";
  * cuenta va en su propio panel para que se lea como una nota de
  * consumo y no como más contenido de la tarjeta.
  */
-export function CallCard({ call }: { call: StaffWaiterCall }) {
+export function CallCard({
+  call,
+  onDone,
+}: {
+  call: StaffWaiterCall;
+  onDone?: () => void;
+}) {
   const isBill = call.type === "BILL";
   const Icon = isBill ? Receipt : Bell;
   const label = isBill ? "Solicita la cuenta" : "Solicita atención";
@@ -124,6 +130,7 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
       {call.status === "PENDING" && (
         <div className="mt-3 flex gap-2">
           <ActionButton
+            onSuccess={onDone}
             action={() => handleCall(call.id, "ACCEPTED")}
             successMessage="En proceso"
             className="clay clay-primary h-12 flex-1 rounded-full text-[15px] font-semibold"
@@ -150,6 +157,7 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
 
       {call.status === "ACCEPTED" && (
         <ActionButton
+            onSuccess={onDone}
           action={() => handleCall(call.id, "ATTENDED")}
           successMessage="Solicitud atendida"
           className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"

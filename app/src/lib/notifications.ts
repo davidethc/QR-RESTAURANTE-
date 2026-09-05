@@ -15,12 +15,21 @@ import { playAlertSound } from "@/lib/alert-sound";
  * `duration` del <GooeyToaster> global no se aplicaba de forma
  * confiable a los toasts que no traían su propia duración (revisado
  * en el código fuente de goey-toast). Las tres excepciones —
- * `newOrder`, `waiterCalled`, `billRequested` — no se cierran solas:
- * el personal tiene que atenderlas o cerrarlas a mano, para que un
- * pedido nuevo o un llamado de mesa no se pierdan de vista sin querer.
+ * `newOrder`, `waiterCalled`, `billRequested` — duran 15s
+ * (`NOTICE_MS`), lo suficiente para verlas desde el otro lado del
+ * salón.
  */
 const AUTO_DISMISS_MS = 2000;
 const AUTO_DISMISS = { timing: { displayDuration: AUTO_DISMISS_MS } };
+
+/**
+ * Un aviso de pedido o solicitud dura lo suficiente para verlo desde el
+ * otro lado del salón, pero se va solo. Antes era `Infinity`: si el
+ * mesero no tocaba "Ver", los avisos se apilaban durante todo el
+ * servicio hasta tapar la pantalla. Lo que no se puede perder no se
+ * confía a un toast — vive en la lista, que es donde el mesero mira.
+ */
+const NOTICE_MS = 15_000;
 
 // La sesión de mesa (la cookie que guarda el escaneo del QR) puede
 // vencer o quedar inválida — el mensaje genérico de error ("Comprueba
@@ -100,15 +109,15 @@ export const notify = {
     );
   },
 
-  // ── Personal: eventos que exigen atención — no se cierran solas ──
-  // `duration: Infinity` explícito y sin `timing`: si se deja sin
-  // duración y el toast trae descripción, la librería igual le pone
-  // 4s por defecto — hay que decirle "nunca" a propósito.
+  // ── Personal: eventos que exigen atención ──
+  // Duración explícita: si se deja sin `duration` y el toast trae
+  // descripción, la librería le pone 4 s por defecto, que no alcanza
+  // para verlo desde el otro lado del salón.
   newOrder(orderNumber: number, tableNumber: number) {
     playAlertSound();
     gooeyToast.info(`Nuevo pedido #${orderNumber}`, {
       description: `Mesa ${tableNumber}`,
-      duration: Infinity,
+      duration: NOTICE_MS,
     });
   },
   orderReadyForStaff(orderNumber: number, tableNumber: number) {
@@ -121,11 +130,10 @@ export const notify = {
   waiterCalled(tableNumber: number, onView?: () => void) {
     playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} solicita atención`, {
-      duration: Infinity,
-      // "Ver" no solo cambia de pestaña — también cierra los avisos.
-      // Sin esto se quedan tapando pantalla para siempre (duration:
-      // Infinity es a propósito, ver nota arriba), justo encima de la
-      // pestaña de Solicitudes a la que acaba de saltar.
+      duration: NOTICE_MS,
+      // "Ver" no solo cambia de pestaña — también cierra el aviso, que
+      // si no se queda 15 s justo encima de la pestaña de Solicitudes a
+      // la que el mesero acaba de saltar.
       // `gooeyToast.dismiss()` (con o sin id) no lo cierra de forma
       // confiable en esta versión de la librería — su registro interno
       // de toasts activos queda desincronizado y el dismiss no tiene
@@ -147,7 +155,7 @@ export const notify = {
   billRequested(tableNumber: number, onView?: () => void) {
     playAlertSound();
     gooeyToast.info(`Mesa ${tableNumber} pidió la cuenta`, {
-      duration: Infinity,
+      duration: NOTICE_MS,
       action: onView
         ? {
             label: "Ver",

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ChefHat, Flame, PackageCheck } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { KitchenOrderCard } from "./kitchen-order-card";
+import { ConnectionStatus } from "@/components/shared/connection-status";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { fetchStaffOrders } from "@/lib/actions/staff";
 import type { OrderStatus } from "@/config/constants";
@@ -16,7 +17,9 @@ function Column({
   icon: Icon,
   orders,
   emptyText,
+  onDone,
 }: {
+  onDone?: () => void;
   title: string;
   icon: typeof ChefHat;
   orders: StaffOrder[];
@@ -33,7 +36,7 @@ function Column({
           <EmptyState title={emptyText} description="Todo está al día ✓" />
         ) : (
           orders.map((order) => (
-            <KitchenOrderCard key={order.id} order={order} />
+            <KitchenOrderCard key={order.id} order={order} onDone={onDone} />
           ))
         )}
       </div>
@@ -59,7 +62,9 @@ export function KitchenBoard({
     }
   }
 
-  useStaffRealtime(restaurantId, refetch);
+  const { connected, refresh } = useStaffRealtime(restaurantId, refetch, {
+    tables: ["orders"],
+  });
 
   const { accepted, preparing, ready } = useMemo(
     () => ({
@@ -71,25 +76,33 @@ export function KitchenBoard({
   );
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-x-auto px-4 py-4 md:flex-row">
+    <>
+      <div className="flex justify-end px-4 pt-2">
+        <ConnectionStatus connected={connected} />
+      </div>
+      <div className="flex flex-1 flex-col gap-4 overflow-x-auto px-4 py-4 md:flex-row">
       <Column
         title="Nuevos"
         icon={Flame}
         orders={accepted}
         emptyText="No hay pedidos nuevos"
+        onDone={refresh}
       />
       <Column
         title="En preparación"
         icon={ChefHat}
         orders={preparing}
         emptyText="Nada en preparación"
+        onDone={refresh}
       />
       <Column
         title="Listos"
         icon={PackageCheck}
         orders={ready}
         emptyText="No hay pedidos listos"
+        onDone={refresh}
       />
-    </div>
+      </div>
+    </>
   );
 }

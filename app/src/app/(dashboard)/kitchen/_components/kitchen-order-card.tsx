@@ -8,7 +8,13 @@ import type { StaffOrder } from "@/types/staff";
  * cocinar. Letra grande y un solo botón por tarjeta: la pantalla vive
  * colgada, se mira desde lejos, no hay tiempo de leer texto chico.
  */
-export function KitchenOrderCard({ order }: { order: StaffOrder }) {
+export function KitchenOrderCard({
+  order,
+  onDone,
+}: {
+  order: StaffOrder;
+  onDone?: () => void;
+}) {
   return (
     <div className="shadow-card flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-5">
       <div className="flex items-center justify-between gap-3">
@@ -46,6 +52,7 @@ export function KitchenOrderCard({ order }: { order: StaffOrder }) {
 
       {order.status === "ACCEPTED" && (
         <ActionButton
+          onSuccess={onDone}
           action={() => startPreparing(order.id)}
           successMessage="En preparación"
           size="lg"
@@ -57,8 +64,8 @@ export function KitchenOrderCard({ order }: { order: StaffOrder }) {
 
       {order.status === "PREPARING" && (
         <ActionButton
+          onSuccess={onDone}
           action={() => markReady(order.id)}
-          successMessage="Pedido listo"
           size="lg"
           className="clay clay-primary h-16 rounded-full text-xl font-semibold"
         >
