@@ -64,19 +64,19 @@ export function ProductCardCompact({
 
       <div className="relative flex flex-1 flex-col gap-1 p-3">
         {quantityInCart > 0 && (
-          <span className="absolute right-2.5 top-2.5 rounded-full bg-primary px-1.5 py-0.5 text-[10.5px] font-bold leading-tight text-primary-foreground">
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-tight text-primary-foreground">
             {quantityInCart}
           </span>
         )}
-        <h3 className="font-display line-clamp-2 text-[13.5px] font-semibold leading-snug text-foreground">
+        <h3 className="font-display line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
           {product.name}
         </h3>
         <div className="mt-auto flex items-center justify-between gap-1 pt-1.5">
-          <span className="font-display text-[15px] font-semibold tabular-nums text-wine">
+          <span className="font-display text-[15px] font-bold tabular-nums text-wine">
             {formatPrice(product.price)}
           </span>
           {soldOut ? (
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
               Agotado
             </span>
           ) : (
@@ -151,7 +151,7 @@ export function ProductCard({
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-baseline gap-2">
-          <h3 className="font-display text-[15px] font-semibold leading-snug text-foreground">
+          <h3 className="font-display text-[15px] font-bold leading-snug text-foreground">
             {product.name}
           </h3>
           {/* Línea de puntos de carta impresa: une nombre y precio sin
@@ -160,13 +160,13 @@ export function ProductCard({
             aria-hidden
             className="mb-1 min-w-4 flex-1 border-b border-dotted border-border"
           />
-          <span className="font-display shrink-0 text-[15px] font-semibold tabular-nums text-wine">
+          <span className="font-display shrink-0 text-[15px] font-bold tabular-nums text-wine">
             {formatPrice(product.price)}
           </span>
         </div>
 
         {product.description && (
-          <p className="line-clamp-2 pr-2 text-xs leading-relaxed text-muted-foreground">
+          <p className="line-clamp-2 pr-2 text-[13px] leading-relaxed text-muted-foreground">
             {product.description}
           </p>
         )}

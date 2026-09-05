@@ -248,7 +248,7 @@ export function MenuBrowser({
             />
           ))
         ) : results.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+          <p className="px-4 py-8 text-center text-[13px] text-muted-foreground">
             No encontramos productos con &ldquo;{query}&rdquo;
           </p>
         ) : (
@@ -317,11 +317,11 @@ export function MenuBrowser({
             <span className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
               Ver pedido
-              <span className="rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-xs font-semibold tabular-nums">
+              <span className="rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[11px] font-bold tabular-nums">
                 {cart.itemCount}
               </span>
             </span>
-            <span className="font-display text-base font-semibold tabular-nums">
+            <span className="font-display text-[20px] font-bold tabular-nums">
               {formatPrice(cart.total)}
             </span>
           </Button>
@@ -337,7 +337,7 @@ export function MenuBrowser({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card text-[14px] font-semibold text-foreground active:bg-muted"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card text-[15px] font-semibold text-foreground active:bg-muted"
             >
               <MessageCircle className="h-4 w-4 text-primary" strokeWidth={2.25} />
               Hablar por WhatsApp

@@ -39,7 +39,7 @@ export async function ActiveOrdersBanner({
           href={`/r/${slug}/${tableNumber}/order/${order.id}`}
           className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2"
         >
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-[15px] font-medium text-foreground">
             Pedido #{order.order_number}
           </span>
           <span className="flex items-center gap-1.5">

@@ -27,7 +27,7 @@ export function SuggestionsRow({
 
   return (
     <section className="flex flex-col gap-2.5 px-4">
-      <p className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-wine">
+      <p className="flex w-fit items-center gap-1.5 rounded-md bg-honey px-2 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-honey-foreground">
         <Sparkles className="h-3.5 w-3.5" strokeWidth={2.5} />
         Combos del día
       </p>
@@ -42,7 +42,7 @@ export function SuggestionsRow({
               className="group flex w-[190px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
               <span className="flex flex-col gap-1">
-                <span className="font-display text-[15px] font-semibold leading-snug text-foreground">
+                <span className="font-display text-[15px] font-bold leading-snug text-foreground">
                   {s.dish.name}
                 </span>
                 <span className="flex items-center gap-1 text-[13px] leading-snug text-muted-foreground">
@@ -53,10 +53,10 @@ export function SuggestionsRow({
 
               <span className="flex items-end justify-between gap-2">
                 <span className="flex items-baseline gap-1.5 leading-none">
-                  <span className="font-display text-xl font-semibold tabular-nums text-wine">
+                  <span className="font-display text-[20px] font-bold tabular-nums text-wine">
                     {formatPrice(s.comboPrice)}
                   </span>
-                  <span className="text-[10.5px] font-medium text-muted-foreground">
+                  <span className="text-[11px] font-medium text-muted-foreground">
                     los dos
                   </span>
                 </span>
@@ -72,11 +72,11 @@ export function SuggestionsRow({
               onClick={() => onSelectProduct(s.product)}
               className="group flex w-[150px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
-              <span className="font-display text-[15px] font-semibold leading-snug text-foreground">
+              <span className="font-display text-[15px] font-bold leading-snug text-foreground">
                 {s.product.name}
               </span>
               <span className="flex items-end justify-between gap-2">
-                <span className="font-display text-xl font-semibold tabular-nums text-wine">
+                <span className="font-display text-[20px] font-bold tabular-nums text-wine">
                   {formatPrice(s.product.price)}
                 </span>
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center clay clay-primary rounded-full bg-primary text-primary-foreground">

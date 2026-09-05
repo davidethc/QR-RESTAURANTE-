@@ -11,7 +11,7 @@ export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
     <div className="flex gap-2">
       <ConfirmDialog
         trigger={
-          <Button variant="ghost" className="h-12 flex-1 rounded-2xl border border-border bg-card text-[14px] font-semibold hover:bg-muted">
+          <Button variant="ghost" className="h-12 flex-1 rounded-2xl border border-border bg-card text-[15px] font-semibold hover:bg-muted">
             <Bell className="text-primary" /> Llamar mesero
           </Button>
         }
@@ -23,7 +23,7 @@ export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
       />
       <ConfirmDialog
         trigger={
-          <Button variant="ghost" className="h-12 flex-1 rounded-2xl border border-border bg-card text-[14px] font-semibold hover:bg-muted">
+          <Button variant="ghost" className="h-12 flex-1 rounded-2xl border border-border bg-card text-[15px] font-semibold hover:bg-muted">
             <Receipt className="text-primary" /> Pedir cuenta
           </Button>
         }

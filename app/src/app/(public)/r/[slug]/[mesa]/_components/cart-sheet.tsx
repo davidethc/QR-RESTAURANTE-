@@ -69,13 +69,13 @@ export function CartSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="flex max-h-[85vh] flex-col">
         <SheetHeader className="text-left">
-          <SheetTitle className="font-display text-[19px]">
+          <SheetTitle className="font-display text-[20px] font-bold">
             {inTable ? `Mi pedido — Mesa ${tableNumber}` : "Mi pedido"}
           </SheetTitle>
         </SheetHeader>
 
         {items.length === 0 ? (
-          <p className="px-4 pb-6 text-sm text-muted-foreground">
+          <p className="px-4 pb-6 text-[13px] text-muted-foreground">
             Tu carrito está vacío.
           </p>
         ) : (
@@ -87,15 +87,15 @@ export function CartSheet({
                   className="flex items-start justify-between gap-3 border-b pb-3 last:border-0"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
+                    <p className="truncate text-[15px] font-medium text-foreground">
                       {item.product.name}
                     </p>
                     {item.notes && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[13px] text-muted-foreground">
                         {item.notes}
                       </p>
                     )}
-                    <p className="mt-1 text-sm font-semibold text-wine">
+                    <p className="font-display mt-1 text-[15px] font-bold text-wine">
                       {formatPrice(item.subtotal)}
                     </p>
                   </div>
@@ -110,7 +110,7 @@ export function CartSheet({
                     >
                       <Minus />
                     </Button>
-                    <span className="w-6 text-center text-sm font-semibold tabular-nums">
+                    <span className="w-6 text-center text-[15px] font-semibold tabular-nums">
                       {item.quantity}
                     </span>
                     <Button
@@ -143,7 +143,7 @@ export function CartSheet({
 
         {items.length > 0 && suggestionsToShow.length > 0 && (
           <div className="flex flex-col gap-2 border-t px-4 pt-3">
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-[15px] font-medium text-foreground">
               ¿Agregas algo más?
             </p>
             <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -154,11 +154,11 @@ export function CartSheet({
                   onClick={() => onAddSuggestion(product)}
                   className="flex min-h-16 w-[132px] shrink-0 flex-col justify-between gap-1.5 rounded-2xl border border-border bg-card px-3 py-2.5 text-left active:bg-muted"
                 >
-                  <span className="font-display line-clamp-2 text-[13px] font-semibold leading-snug text-foreground">
+                  <span className="font-display line-clamp-2 text-[13px] font-bold leading-snug text-foreground">
                     {product.name}
                   </span>
                   <span className="flex items-center justify-between gap-1">
-                    <span className="font-display text-[13px] font-semibold tabular-nums text-wine">
+                    <span className="font-display text-[15px] font-bold tabular-nums text-wine">
                       {formatPrice(product.price)}
                     </span>
                     <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -173,7 +173,7 @@ export function CartSheet({
 
         {items.length > 0 && (
           <SheetFooter className="gap-3 border-t pt-3">
-            <div className="flex items-center justify-between text-base font-semibold">
+            <div className="font-display flex items-center justify-between text-[20px] font-bold">
               <span>Total</span>
               <span>{formatPrice(total)}</span>
             </div>

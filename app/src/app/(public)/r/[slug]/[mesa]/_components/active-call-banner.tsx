@@ -66,10 +66,10 @@ export function ActiveCallBanner() {
             className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2"
           >
             <Icon className="h-4 w-4 shrink-0 text-wine" />
-            <span className="flex-1 text-sm font-medium text-foreground">
+            <span className="flex-1 text-[15px] font-medium text-foreground">
               {label}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[13px] text-muted-foreground">
               {statusLabel}
             </span>
           </div>

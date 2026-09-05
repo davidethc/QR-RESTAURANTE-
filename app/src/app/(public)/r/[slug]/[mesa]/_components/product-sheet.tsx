@@ -89,11 +89,11 @@ export function ProductSheet({
               )}
 
               <div className="flex flex-col gap-2 px-5 pt-6">
-                <SheetTitle className="font-display text-[22px] font-semibold leading-tight">
+                <SheetTitle className="font-display text-[30px] font-bold leading-[1.05]">
                   {product.name}
                 </SheetTitle>
                 {product.description && (
-                  <p className="text-[14.5px] leading-relaxed text-muted-foreground">
+                  <p className="text-[13px] leading-relaxed text-muted-foreground">
                     {product.description}
                   </p>
                 )}
@@ -105,16 +105,16 @@ export function ProductSheet({
                   "Cantidad" y sabe exactamente qué está mirando, sin
                   tener que deducirlo de la posición. */}
               <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
-                <span className="text-[14px] font-semibold text-foreground">
+                <span className="text-[15px] font-semibold text-foreground">
                   Precio
                 </span>
-                <span className="font-display text-xl font-semibold tabular-nums text-wine">
+                <span className="font-display text-[20px] font-bold tabular-nums text-wine">
                   {formatPrice(product.price)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[14px] font-semibold text-foreground">
+                <span className="text-[15px] font-semibold text-foreground">
                   Cantidad
                 </span>
                 <div className="neu-inset flex items-center gap-1 rounded-full bg-secondary p-1">
@@ -170,7 +170,7 @@ export function ProductSheet({
                 <button
                   type="button"
                   onClick={() => setNotesOpen(true)}
-                  className="flex min-h-11 w-full items-center gap-2 rounded-2xl border border-dashed border-border px-3.5 text-left text-[13.5px] font-medium text-muted-foreground active:bg-secondary"
+                  className="flex min-h-11 w-full items-center gap-2 rounded-2xl border border-dashed border-border px-3.5 text-left text-[13px] font-medium text-muted-foreground active:bg-secondary"
                 >
                   <PencilLine className="h-4 w-4 shrink-0" strokeWidth={2} />
                   {notes.trim() ? notes : "Agregar una indicación (opcional)"}
@@ -198,7 +198,7 @@ export function ProductSheet({
                   <ShoppingBag className="h-4 w-4" strokeWidth={2.25} />
                   Agregar al pedido
                 </span>
-                <span className="font-display text-base font-semibold tabular-nums">
+                <span className="font-display text-[20px] font-bold tabular-nums">
                   {formatPrice(product.price * quantity)}
                 </span>
               </Button>

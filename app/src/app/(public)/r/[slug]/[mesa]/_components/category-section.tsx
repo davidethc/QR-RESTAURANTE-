@@ -80,18 +80,18 @@ export function CategorySection({
                   acordeón genérico. */}
               <span
                 className={cn(
-                  "shrink-0 text-[12px] font-semibold tabular-nums transition-colors",
+                  "shrink-0 text-[11px] font-bold tabular-nums transition-colors",
                   isOpen ? "text-primary" : "text-muted-foreground/60"
                 )}
               >
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="font-display truncate text-[21px] font-semibold leading-tight text-foreground">
+              <span className="font-display truncate text-[20px] font-bold leading-tight text-foreground">
                 {category.name}
               </span>
             </span>
             {fromPrice !== null && (
-              <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
+              <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
                 desde {formatPrice(fromPrice)}
               </span>
             )}

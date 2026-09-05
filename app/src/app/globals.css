@@ -46,6 +46,8 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    --color-honey: var(--honey);
+    --color-honey-foreground: var(--honey-foreground);
     --color-wine: var(--wine);
     --color-wine-foreground: var(--wine-foreground);
 }
@@ -68,46 +70,55 @@
      está catalogada como firma de interfaz generada por IA en 2026.
 */
 :root {
-    /* Blanco cálido homeopático: chroma 0.0035, diez veces menos que un
-       crema. Se lee blanco, no beige. Las tarjetas son blanco PURO
-       encima — esa diferencia de 1.3:1 las separa sin borde ni sombra. */
-    --background: oklch(0.9925 0.0035 95);
-    --foreground: oklch(0.21 0.022 142);
+    /* El diagnóstico de la versión anterior: seis de nueve tokens tenían
+       croma < 0.025, o sea eran gris con nombre de color, y los dos
+       únicos con color eran ambos oscuros. Blanco + verde oscuro + café
+       oscuro, sin ningún color claro y vivo en medio: por eso se leía
+       apagada. Aquí sube el croma, los neutros se mueven de matiz 120
+       (verdoso frío) a 85 (cálido), y entra la miel. */
+    --background: oklch(0.995 0.004 95);
+    --foreground: oklch(0.20 0.030 145);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.21 0.022 142);
+    --card-foreground: oklch(0.20 0.030 145);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.21 0.022 142);
-    /* Oliva, no salvia. Es el cambio de color más importante del tema. */
-    --primary: oklch(0.415 0.085 132);
+    --popover-foreground: oklch(0.20 0.030 145);
+    /* Verde vivo, no militar: L 0.415→0.44 y croma 0.085→0.110. */
+    --primary: oklch(0.44 0.110 138);
     --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.945 0.014 120);
-    --secondary-foreground: oklch(0.30 0.024 140);
-    --muted: oklch(0.97 0.008 110);
-    --muted-foreground: oklch(0.515 0.018 142);
-    --accent: oklch(0.46 0.078 55);
+    --secondary: oklch(0.955 0.035 85);
+    --secondary-foreground: oklch(0.315 0.045 120);
+    --muted: oklch(0.975 0.022 88);
+    /* El texto secundario deja de ser frío: matiz 142 → 60. */
+    --muted-foreground: oklch(0.485 0.035 60);
+    --accent: oklch(0.565 0.168 44);
     --accent-foreground: oklch(1 0 0);
+    /* MIEL. El único color claro y vivo de la paleta — lo que faltaba.
+       Solo para rellenos (chapa de MESA, etiqueta COMBOS): a L 0.845 no
+       admite texto encima con contraste suficiente. */
+    --honey: oklch(0.845 0.155 82);
+    --honey-foreground: oklch(0.30 0.070 58);
     --destructive: oklch(0.55 0.2 27);
-    --border: oklch(0.908 0.009 120);
-    --input: oklch(0.908 0.009 120);
-    --ring: oklch(0.415 0.085 132);
-    /* Precios: café oscuro. Antes era granate, que sobre blanco compite
-       con el verde en vez de acompañarlo. */
-    --wine: oklch(0.36 0.052 60);
+    --border: oklch(0.915 0.022 85);
+    --input: oklch(0.915 0.022 85);
+    --ring: oklch(0.44 0.110 138);
+    /* Precios en miel oscura. Eran café-grisáceo (croma 0.052): el
+       precio es lo que más se mira de una carta y estaba apagado. */
+    --wine: oklch(0.52 0.135 70);
     --wine-foreground: oklch(1 0 0);
-    --chart-1: oklch(0.415 0.085 132);
-    --chart-2: oklch(0.46 0.078 55);
-    --chart-3: oklch(0.60 0.07 132);
-    --chart-4: oklch(0.62 0.06 55);
-    --chart-5: oklch(0.515 0.018 142);
+    --chart-1: oklch(0.44 0.110 138);
+    --chart-2: oklch(0.52 0.135 70);
+    --chart-3: oklch(0.845 0.155 82);
+    --chart-4: oklch(0.66 0.130 120);
+    --chart-5: oklch(0.485 0.035 60);
     --radius: 0.5rem;
     --sidebar: oklch(1 0 0);
-    --sidebar-foreground: oklch(0.21 0.022 142);
-    --sidebar-primary: oklch(0.415 0.085 132);
+    --sidebar-foreground: oklch(0.20 0.030 145);
+    --sidebar-primary: oklch(0.44 0.110 138);
     --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.945 0.014 120);
-    --sidebar-accent-foreground: oklch(0.30 0.024 140);
-    --sidebar-border: oklch(0.908 0.009 120);
-    --sidebar-ring: oklch(0.415 0.085 132);
+    --sidebar-accent: oklch(0.955 0.035 85);
+    --sidebar-accent-foreground: oklch(0.315 0.045 120);
+    --sidebar-border: oklch(0.915 0.022 85);
+    --sidebar-ring: oklch(0.44 0.110 138);
 }
 
 .dark {
@@ -160,12 +171,11 @@
   html {
     @apply font-sans;
     }
-  /* Fraunces se ve mejor con su eje óptico alto en títulos grandes y
-     un toque de "wonk" — es lo que le da el aire de rótulo pintado en
-     vez de serif de periódico. */
+  /* Bricolage con el eje óptico alto y algo de ancho extra: así los
+     titulares grandes ganan cuerpo en vez de estirarse. */
   .font-display {
-    font-variation-settings: "SOFT" 40, "WONK" 1, "opsz" 40;
-    letter-spacing: -0.015em;
+    font-variation-settings: "opsz" 32, "wdth" 105;
+    letter-spacing: -0.02em;
     }
 }
 
@@ -210,10 +220,10 @@
   /* Tinte de sombra por color de acción, para que la sombra no se vea
      gris sucia debajo de un botón de color. */
   .clay-primary {
-    --clay-shadow: oklch(0.415 0.085 132 / 0.38);
+    --clay-shadow: oklch(0.44 0.110 138 / 0.36);
     }
   .clay-wine {
-    --clay-shadow: oklch(0.36 0.052 60 / 0.36);
+    --clay-shadow: oklch(0.52 0.135 70 / 0.34);
     }
 
   /*
@@ -258,7 +268,7 @@
       160deg,
       oklch(1 0 0) 0%,
       var(--secondary) 55%,
-      oklch(0.918 0.018 118) 100%
+      oklch(0.925 0.030 84) 100%
     );
     box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 0.9);
     }
