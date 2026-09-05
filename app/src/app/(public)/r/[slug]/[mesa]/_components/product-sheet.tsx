@@ -70,8 +70,12 @@ export function ProductSheet({
         {product && (
           <>
             <SheetHeader className="gap-0 space-y-0 p-0 text-left">
-              {product.image_url ? (
-                <div className="relative h-44 w-full overflow-hidden">
+              {/* La foto manda: es lo que hace que un plato se antoje.
+                  Sin foto se reserva el mismo espacio con el emoji de
+                  la categoría, para que la ficha no cambie de forma
+                  cuando el restaurante suba las suyas. */}
+              <div className="relative h-56 w-full shrink-0 overflow-hidden bg-gradient-to-br from-accent/50 via-secondary to-secondary">
+                {product.image_url ? (
                   <Image
                     src={product.image_url}
                     alt={product.name}
@@ -80,29 +84,27 @@ export function ProductSheet({
                     priority
                     className="object-cover"
                   />
-                </div>
-              ) : (
-                <div className="relative h-14 w-full overflow-hidden bg-gradient-to-br from-accent/50 via-secondary to-secondary">
+                ) : (
                   <span
                     aria-hidden
-                    className="absolute -bottom-2 right-3 select-none text-5xl opacity-[0.16]"
+                    className="absolute inset-0 flex select-none items-center justify-center text-7xl opacity-[0.18]"
                   >
                     {getCategoryIcon(categoryName ?? "")}
                   </span>
-                </div>
-              )}
+                )}
+              </div>
 
-              <div className="flex flex-col gap-1.5 px-5 pb-1 pt-4">
+              <div className="flex flex-col gap-2 px-5 pb-1 pt-5">
                 <div className="flex items-start justify-between gap-3">
-                  <SheetTitle className="font-display text-[21px] font-semibold leading-tight">
+                  <SheetTitle className="font-display text-[22px] font-semibold leading-tight">
                     {product.name}
                   </SheetTitle>
-                  <span className="font-display shrink-0 pt-0.5 text-[19px] font-semibold tabular-nums text-wine">
+                  <span className="font-display shrink-0 pt-1 text-xl font-semibold tabular-nums text-wine">
                     {formatPrice(product.price)}
                   </span>
                 </div>
                 {product.description && (
-                  <p className="text-[13.5px] leading-relaxed text-muted-foreground">
+                  <p className="text-[14.5px] leading-relaxed text-muted-foreground">
                     {product.description}
                   </p>
                 )}

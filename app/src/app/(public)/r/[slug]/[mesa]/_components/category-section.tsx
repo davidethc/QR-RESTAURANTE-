@@ -1,23 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
-import { ProductCard, ProductCardCompact } from "./product-card";
+import { ProductCardCompact } from "./product-card";
 import type { PublicCategory } from "@/types/menu";
 
 /**
  * Una categoría de la carta, en acordeón.
  *
- * Cerrada solo muestra su encabezado — pero un encabezado que ya
+ * Cerrada muestra solo su encabezado — pero un encabezado que ya
  * informa (cuántos platos y desde qué precio), para que el cliente
  * decida si le interesa sin tener que abrirla a ciegas.
  *
- * Al abrirse, los platos salen en una fila horizontal deslizable: se
- * ven varios de un vistazo y la categoría no empuja el resto de la
- * carta hacia abajo. Como un carrusel esconde lo que queda a la
- * derecha, queda "Ver todos" para pasar a la lista vertical completa.
+ * Abierta, los platos salen únicamente en fila horizontal: se ven
+ * varios de un vistazo y la categoría no empuja el resto de la carta
+ * hacia abajo. Para encontrar un plato concreto sin deslizar está el
+ * buscador de arriba, que además dice a qué categoría pertenece cada
+ * resultado.
  */
 export function CategorySection({
   category,
@@ -34,8 +34,6 @@ export function CategorySection({
   onSelectProduct: (product: PublicCategory["products"][number]) => void;
   cartQuantities: Record<string, number>;
 }) {
-  const [showAll, setShowAll] = useState(false);
-
   const count = category.products.length;
   const availablePrices = category.products
     .filter((p) => p.available)
@@ -78,53 +76,22 @@ export function CategorySection({
         </span>
       </button>
 
-      {isOpen &&
-        (showAll ? (
-          <div className="flex flex-col gap-2 px-4 pt-2">
-            {category.products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onSelect={onSelectProduct}
-                quantityInCart={cartQuantities[product.id] ?? 0}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={() => setShowAll(false)}
-              className="min-h-10 rounded-xl border border-dashed border-primary/40 text-[13px] font-semibold text-primary active:bg-primary/5"
-            >
-              Ver en fila
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* scroll-pl-4: sin esto, scroll-snap alinea la primera
-                tarjeta al borde del scrollport e ignora el padding. */}
-            <div className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 gap-2.5 overflow-x-auto px-4 pb-1 pt-2">
-              {category.products.map((product) => (
-                <ProductCardCompact
-                  key={product.id}
-                  product={product}
-                  categoryName={category.name}
-                  onSelect={onSelectProduct}
-                  quantityInCart={cartQuantities[product.id] ?? 0}
-                />
-              ))}
-            </div>
-            {count > 2 && (
-              <div className="px-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAll(true)}
-                  className="min-h-10 w-full rounded-xl border border-border/70 bg-card text-[13px] font-semibold text-primary active:bg-secondary"
-                >
-                  Ver los {count} en lista
-                </button>
-              </div>
-            )}
-          </>
-        ))}
+      {isOpen && (
+        // scroll-pl-4 / scroll-pr-4: sin esto, scroll-snap alinea las
+        // tarjetas al borde del scrollport e ignora el padding, así que
+        // la primera y la última quedan pegadas al filo de la pantalla.
+        <div className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-2.5 overflow-x-auto px-4 pb-1 pt-2">
+          {category.products.map((product) => (
+            <ProductCardCompact
+              key={product.id}
+              product={product}
+              categoryName={category.name}
+              onSelect={onSelectProduct}
+              quantityInCart={cartQuantities[product.id] ?? 0}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

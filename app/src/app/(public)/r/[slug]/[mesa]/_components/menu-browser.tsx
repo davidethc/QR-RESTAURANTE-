@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, ShoppingBag, QrCode } from "lucide-react";
+import { Search, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
@@ -195,24 +195,6 @@ export function MenuBrowser({
             notify.itemAdded(`${dish.name} + ${drink.name}`);
           }}
         />
-      )}
-
-      {results === null && (
-        <div className="px-4 pt-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-secondary/70 px-4 py-3.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
-              <QrCode className="h-5 w-5" strokeWidth={2} />
-            </span>
-            <span className="flex flex-col gap-0.5">
-              <span className="font-display text-[14px] font-semibold leading-tight text-foreground">
-                Pide fácil, rápido y sin esperas
-              </span>
-              <span className="text-[12px] leading-snug text-muted-foreground">
-                Elige tus platos y nosotros nos encargamos del resto.
-              </span>
-            </span>
-          </div>
-        </div>
       )}
 
       <div className="flex flex-col gap-6">
