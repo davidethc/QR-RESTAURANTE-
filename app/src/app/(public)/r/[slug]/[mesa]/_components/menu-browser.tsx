@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, ShoppingBag } from "lucide-react";
+import { Search, ShoppingBag, MessageCircle, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
@@ -14,6 +14,7 @@ import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { getCategoryIcon } from "@/lib/category-icons";
+import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { formatPrice, cn } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
@@ -28,11 +29,17 @@ export function MenuBrowser({
   categories,
   slug,
   tableNumber,
+  restaurantName,
+  whatsappPhone,
 }: {
   categories: PublicCategory[];
   slug: string;
-  tableNumber: number;
+  /** null = modo carta: sin mesa, el pedido se envía por WhatsApp. */
+  tableNumber: number | null;
+  restaurantName: string;
+  whatsappPhone: string | null;
 }) {
+  const inTable = tableNumber !== null;
   const [query, setQuery] = useState("");
   // Todas las categorías arrancan cerradas — el cliente ve la lista
   // completa de nombres de un vistazo y toca la que le interesa, en
@@ -47,7 +54,16 @@ export function MenuBrowser({
     null
   );
   const [cartOpen, setCartOpen] = useState(false);
-  const cart = useCart(slug, tableNumber);
+  // Mesa 0 = carrito del modo carta. Las mesas reales empiezan en 1,
+  // así que nunca se pisa con el carrito de una mesa de verdad.
+  const cart = useCart(slug, tableNumber ?? 0);
+
+  // Enlace de "solo conversar", sin pedido: el que lleva el pedido
+  // redactado vive en el carrito.
+  const whatsappUrl = buildWhatsappUrl(
+    whatsappPhone,
+    `Hola ${restaurantName}, vi su carta y quisiera hacer una consulta.`
+  );
 
   // Pill activa = categoría que el cliente está mirando. Un solo
   // IntersectionObserver para todas las secciones (no un listener de
@@ -183,6 +199,24 @@ export function MenuBrowser({
         )}
       </div>
 
+      {!inTable && (
+        <div className="px-4">
+          <div className="flex items-start gap-2.5 rounded-2xl border border-primary/25 bg-primary/8 px-3.5 py-3">
+            <Info
+              className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+              strokeWidth={2.25}
+            />
+            <p className="text-[13px] leading-snug text-foreground">
+              Estás viendo la carta.{" "}
+              <span className="text-muted-foreground">
+                Arma tu pedido y lo envías por WhatsApp. Si estás en el local,
+                escanea el QR de tu mesa para pedir desde ahí.
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
       {results === null && (
         <SuggestionsRow
           suggestions={suggestions}
@@ -253,6 +287,8 @@ export function MenuBrowser({
         onClearCart={cart.clearCart}
         slug={slug}
         tableNumber={tableNumber}
+        restaurantName={restaurantName}
+        whatsappPhone={whatsappPhone}
         suggestedProducts={suggestedProducts}
         onAddSuggestion={(product) => {
           cart.addItem(product, 1, "");
@@ -289,7 +325,24 @@ export function MenuBrowser({
             </span>
           </Button>
         )}
-        <ServiceButtons tableNumber={tableNumber} />
+        {/* Llamar mesero / Pedir cuenta solo tienen sentido sentado en
+            una mesa. Desde casa, la vía de contacto es WhatsApp y vive
+            dentro del carrito. */}
+        {tableNumber !== null ? (
+          <ServiceButtons tableNumber={tableNumber} />
+        ) : (
+          whatsappUrl && (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-card text-[14px] font-semibold text-foreground active:bg-secondary"
+            >
+              <MessageCircle className="h-4 w-4 text-primary" strokeWidth={2.25} />
+              Hablar por WhatsApp
+            </a>
+          )
+        )}
       </div>
     </div>
   );

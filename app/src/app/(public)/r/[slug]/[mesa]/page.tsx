@@ -15,18 +15,6 @@ export async function generateMetadata({
   return { title: slug };
 }
 
-function ScanRequired() {
-  return (
-    <main className="flex min-h-full flex-col items-center justify-center gap-3 px-6 text-center">
-      <h1 className="text-xl font-semibold">Escanea el código de tu mesa</h1>
-      <p className="max-w-xs text-muted-foreground">
-        Para ver la carta y hacer tu pedido, escanea el código QR que está en
-        tu mesa.
-      </p>
-    </main>
-  );
-}
-
 export default async function MenuPage({
   params,
 }: {
@@ -34,25 +22,42 @@ export default async function MenuPage({
 }) {
   const { slug } = await params;
   const session = await getTableSession();
-
-  if (!session || session.restaurantSlug !== slug) {
-    return <ScanRequired />;
-  }
-
   const menu = await getPublicMenu(slug);
+
+  /**
+   * Dos modos, decididos por si hay sesión de mesa viva:
+   *
+   * - "mesa": el cliente escaneó el QR y está sentado. Pide normal y
+   *   el pedido entra al panel del mesero en tiempo real.
+   * - "carta": no hay sesión (se llevó la carta a casa, abrió un link
+   *   compartido, o la sesión ya venció). Ve la carta completa y puede
+   *   armar su pedido, pero se envía por WhatsApp — NO a una mesa.
+   *
+   * Deliberadamente la sesión sigue siendo corta y atada a la mesa: si
+   * no expirara, alguien pidiendo desde su casa mandaría comida a una
+   * mesa donde ya está sentada otra gente, y la cuenta le caería a
+   * ellos.
+   */
+  const inTable = Boolean(session && session.restaurantSlug === slug);
 
   return (
     <main className="min-h-full">
       <MenuHeader
         restaurant={menu.restaurant}
-        tableNumber={session.tableNumber}
+        tableNumber={inTable ? session!.tableNumber : null}
       />
-      <ActiveOrdersBanner slug={slug} tableNumber={session.tableNumber} />
-      <ActiveCallBanner />
+      {inTable && (
+        <>
+          <ActiveOrdersBanner slug={slug} tableNumber={session!.tableNumber} />
+          <ActiveCallBanner />
+        </>
+      )}
       <MenuBrowser
         categories={menu.categories}
         slug={slug}
-        tableNumber={session.tableNumber}
+        tableNumber={inTable ? session!.tableNumber : null}
+        restaurantName={menu.restaurant.name}
+        whatsappPhone={menu.restaurant.phone}
       />
     </main>
   );

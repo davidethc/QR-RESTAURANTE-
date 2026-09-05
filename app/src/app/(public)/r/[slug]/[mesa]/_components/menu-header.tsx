@@ -13,7 +13,9 @@ export function MenuHeader({
   tableNumber,
 }: {
   restaurant: PublicRestaurant;
-  tableNumber: number;
+  /** null = el cliente no está en una mesa (se llevó la carta a casa
+   *  o abrió un link compartido). Sin mesa no se muestra la ficha. */
+  tableNumber: number | null;
 }) {
   return (
     <header className="relative overflow-hidden border-b border-border/60 bg-card px-4 pb-6 pt-7">
@@ -53,14 +55,16 @@ export function MenuHeader({
           </div>
         </div>
 
-        <span className="flex shrink-0 flex-col items-center rounded-xl border border-primary/25 bg-primary/10 px-3 py-1.5 leading-none">
-          <span className="text-[9px] font-semibold uppercase tracking-widest text-primary/70">
-            Mesa
+        {tableNumber !== null && (
+          <span className="flex shrink-0 flex-col items-center rounded-xl border border-primary/25 bg-primary/10 px-3 py-1.5 leading-none">
+            <span className="text-[9px] font-semibold uppercase tracking-widest text-primary/70">
+              Mesa
+            </span>
+            <span className="font-display mt-0.5 text-lg font-semibold text-primary">
+              {tableNumber}
+            </span>
           </span>
-          <span className="font-display mt-0.5 text-lg font-semibold text-primary">
-            {tableNumber}
-          </span>
-        </span>
+        )}
       </div>
     </header>
   );

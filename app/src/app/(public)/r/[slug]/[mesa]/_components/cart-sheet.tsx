@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, MessageCircle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { notify } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import { createOrder } from "@/lib/actions/orders";
+import { buildWhatsappUrl, composeOrderMessage } from "@/lib/whatsapp";
 import type { CartItem, PublicProduct } from "@/types/menu";
 
 export function CartSheet({
@@ -27,6 +28,8 @@ export function CartSheet({
   onClearCart,
   slug,
   tableNumber,
+  restaurantName,
+  whatsappPhone,
   suggestedProducts,
   onAddSuggestion,
 }: {
@@ -38,11 +41,21 @@ export function CartSheet({
   onRemove: (index: number) => void;
   onClearCart: () => void;
   slug: string;
-  tableNumber: number;
+  /** null = modo carta: el pedido no va a una mesa, se manda por
+   *  WhatsApp al restaurante. */
+  tableNumber: number | null;
+  restaurantName: string;
+  whatsappPhone: string | null;
   suggestedProducts: PublicProduct[];
   onAddSuggestion: (product: PublicProduct) => void;
 }) {
   const router = useRouter();
+  const inTable = tableNumber !== null;
+
+  const whatsappOrderUrl = buildWhatsappUrl(
+    whatsappPhone,
+    composeOrderMessage(restaurantName, items, total)
+  );
 
   const cartProductIds = useMemo(
     () => new Set(items.map((item) => item.product.id)),
@@ -57,7 +70,7 @@ export function CartSheet({
       <SheetContent side="bottom" className="flex max-h-[85vh] flex-col">
         <SheetHeader className="text-left">
           <SheetTitle className="font-display text-[19px]">
-            Mi pedido — Mesa {tableNumber}
+            {inTable ? `Mi pedido — Mesa ${tableNumber}` : "Mi pedido"}
           </SheetTitle>
         </SheetHeader>
 
@@ -164,26 +177,46 @@ export function CartSheet({
               <span>Total</span>
               <span>{formatPrice(total)}</span>
             </div>
-            <ConfirmDialog
-              trigger={
-                <Button
-                  size="lg"
-                  className="clay clay-primary h-12 w-full rounded-2xl text-[15px]"
-                >
-                  Enviar pedido
-                </Button>
-              }
-              title="¿Confirmar pedido?"
-              description={`Mesa ${tableNumber} · ${formatPrice(total)} · Revisa tu pedido antes de enviarlo.`}
-              confirmLabel="Enviar pedido"
-              action={() => createOrder(items)}
-              onSuccess={(orderId) => {
-                notify.orderPlaced();
-                onClearCart();
-                onOpenChange(false);
-                router.push(`/r/${slug}/${tableNumber}/order/${orderId}`);
-              }}
-            />
+            {/* En mesa el pedido entra al panel del mesero. Fuera del
+                local no hay mesa a la que mandarlo, así que el mismo
+                botón se convierte en "Pedir por WhatsApp" y viaja como
+                mensaje ya redactado al número del restaurante. */}
+            {inTable ? (
+              <ConfirmDialog
+                trigger={
+                  <Button
+                    size="lg"
+                    className="clay clay-primary h-12 w-full rounded-2xl text-[15px]"
+                  >
+                    Enviar pedido
+                  </Button>
+                }
+                title="¿Confirmar pedido?"
+                description={`Mesa ${tableNumber} · ${formatPrice(total)} · Revisa tu pedido antes de enviarlo.`}
+                confirmLabel="Enviar pedido"
+                action={() => createOrder(items)}
+                onSuccess={(orderId) => {
+                  notify.orderPlaced();
+                  onClearCart();
+                  onOpenChange(false);
+                  router.push(`/r/${slug}/${tableNumber}/order/${orderId}`);
+                }}
+              />
+            ) : whatsappOrderUrl ? (
+              <a
+                href={whatsappOrderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground"
+              >
+                <MessageCircle className="h-4 w-4" strokeWidth={2.25} />
+                Pedir por WhatsApp
+              </a>
+            ) : (
+              <p className="rounded-xl bg-secondary px-3 py-2.5 text-center text-[13px] text-muted-foreground">
+                Este restaurante todavía no cargó su número de WhatsApp.
+              </p>
+            )}
           </SheetFooter>
         )}
       </SheetContent>
