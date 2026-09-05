@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Minus, Plus, PencilLine } from "lucide-react";
+import { Minus, Plus, PencilLine, ShoppingBag } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -70,39 +70,36 @@ export function ProductSheet({
         {product && (
           <>
             <SheetHeader className="gap-0 space-y-0 p-0 text-left">
-              {/* La foto manda: es lo que hace que un plato se antoje.
-                  Sin foto se reserva el mismo espacio con el emoji de
-                  la categoría, para que la ficha no cambie de forma
-                  cuando el restaurante suba las suyas. */}
-              <div className="relative h-56 w-full shrink-0 overflow-hidden bg-gradient-to-br from-accent/50 via-secondary to-secondary">
-                {product.image_url ? (
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    fill
-                    sizes="100vw"
-                    priority
-                    className="object-cover"
-                  />
-                ) : (
-                  <span
-                    aria-hidden
-                    className="absolute inset-0 flex select-none items-center justify-center text-7xl opacity-[0.18]"
-                  >
-                    {getCategoryIcon(categoryName ?? "")}
-                  </span>
-                )}
+              {/* Foto enmarcada, no a sangre: con marco y esquinas
+                  redondeadas se lee como una pieza compuesta a
+                  propósito. A sangre y sin imagen, el degradado ocupaba
+                  todo el ancho y la ficha parecía rota. */}
+              <div className="px-5 pt-5">
+                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-accent/50 via-secondary to-secondary">
+                  {product.image_url ? (
+                    <Image
+                      src={product.image_url}
+                      alt={product.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, 600px"
+                      priority
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 flex select-none items-center justify-center text-6xl opacity-[0.22]"
+                    >
+                      {getCategoryIcon(categoryName ?? "")}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2 px-5 pb-1 pt-5">
-                <div className="flex items-start justify-between gap-3">
-                  <SheetTitle className="font-display text-[22px] font-semibold leading-tight">
-                    {product.name}
-                  </SheetTitle>
-                  <span className="font-display shrink-0 pt-1 text-xl font-semibold tabular-nums text-wine">
-                    {formatPrice(product.price)}
-                  </span>
-                </div>
+              <div className="flex flex-col gap-2 px-5 pt-4">
+                <SheetTitle className="font-display text-[22px] font-semibold leading-tight">
+                  {product.name}
+                </SheetTitle>
                 {product.description && (
                   <p className="text-[14.5px] leading-relaxed text-muted-foreground">
                     {product.description}
@@ -111,7 +108,54 @@ export function ProductSheet({
               </div>
             </SheetHeader>
 
-            <div className="px-5 pb-4 pt-3">
+            <div className="flex flex-col gap-3 px-5 pb-4 pt-4">
+              {/* Filas etiquetadas: el cliente lee "Precio" y
+                  "Cantidad" y sabe exactamente qué está mirando, sin
+                  tener que deducirlo de la posición. */}
+              <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                <span className="text-[14px] font-semibold text-foreground">
+                  Precio
+                </span>
+                <span className="font-display text-xl font-semibold tabular-nums text-wine">
+                  {formatPrice(product.price)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[14px] font-semibold text-foreground">
+                  Cantidad
+                </span>
+                <div className="flex items-center gap-1 rounded-full border border-border/70 bg-secondary/60 p-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Quitar uno"
+                    className="size-10 rounded-full hover:bg-card"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    <Minus className="h-4 w-4" strokeWidth={2.5} />
+                  </Button>
+                  <span
+                    aria-live="polite"
+                    className="w-7 text-center text-[15px] font-semibold tabular-nums"
+                  >
+                    {quantity}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Agregar uno"
+                    className="size-10 rounded-full hover:bg-card"
+                    onClick={() => setQuantity((q) => q + 1)}
+                  >
+                    <Plus className="h-4 w-4" strokeWidth={2.5} />
+                  </Button>
+                </div>
+              </div>
+
               {notesOpen ? (
                 <div>
                   <label
@@ -142,53 +186,26 @@ export function ProductSheet({
               )}
             </div>
 
-            {/* Barra de acción fija: cantidad + agregar, siempre al
-                alcance del pulgar aunque la descripción sea larga. */}
+            {/* CTA fijo abajo: aunque la descripción sea larga, el
+                botón queda siempre en la zona del pulgar. */}
             <div
-              className="sticky bottom-0 flex items-center gap-3 border-t border-border/60 bg-card px-5 pt-3"
+              className="sticky bottom-0 border-t border-border/60 bg-card px-5 pt-3"
               style={{
                 paddingBottom:
                   "calc(0.875rem + env(safe-area-inset-bottom, 0px))",
               }}
             >
-              <div className="flex shrink-0 items-center gap-1 rounded-full border border-border/70 bg-secondary/60 p-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Quitar uno"
-                  className="size-10 rounded-full hover:bg-card"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
-                >
-                  <Minus className="h-4 w-4" strokeWidth={2.5} />
-                </Button>
-                <span
-                  aria-live="polite"
-                  className="w-6 text-center text-[15px] font-semibold tabular-nums"
-                >
-                  {quantity}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Agregar uno"
-                  className="size-10 rounded-full hover:bg-card"
-                  onClick={() => setQuantity((q) => q + 1)}
-                >
-                  <Plus className="h-4 w-4" strokeWidth={2.5} />
-                </Button>
-              </div>
-
               <Button
                 size="lg"
                 onClick={handleAdd}
                 className={cn(
-                  "clay clay-primary h-12 flex-1 justify-between rounded-2xl px-4 text-[15px]"
+                  "clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-[15px]"
                 )}
               >
-                <span>Agregar</span>
+                <span className="flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4" strokeWidth={2.25} />
+                  Agregar al pedido
+                </span>
                 <span className="font-display text-base font-semibold tabular-nums">
                   {formatPrice(product.price * quantity)}
                 </span>
