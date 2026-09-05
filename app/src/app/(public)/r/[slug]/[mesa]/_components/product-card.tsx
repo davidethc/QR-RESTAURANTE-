@@ -123,10 +123,15 @@ export function ProductCardCompact({
  */
 export function ProductCard({
   product,
+  categoryName,
   onSelect,
   quantityInCart = 0,
 }: {
   product: PublicProduct;
+  /** Solo se pinta en resultados de búsqueda: fuera de su categoría,
+   *  "Café con leche" o "Pizza pequeña" necesitan contexto para saber
+   *  de dónde salieron. Dentro de una categoría sería ruido. */
+  categoryName?: string;
   onSelect?: (product: PublicProduct) => void;
   quantityInCart?: number;
 }) {
@@ -189,6 +194,12 @@ export function ProductCard({
         )}
 
         <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
+          {categoryName && (
+            <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium leading-tight text-muted-foreground">
+              <span aria-hidden>{getCategoryIcon(categoryName)}</span>
+              {categoryName}
+            </span>
+          )}
           {quantityInCart > 0 && (
             <span className="rounded-full bg-primary/12 px-2 py-0.5 text-[11px] font-semibold leading-tight text-primary">
               {quantityInCart} en tu pedido

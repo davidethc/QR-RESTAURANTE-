@@ -240,6 +240,7 @@ export function MenuBrowser({
               <ProductCard
                 key={product.id}
                 product={product}
+                categoryName={product.categoryName}
                 onSelect={setSelectedProduct}
                 quantityInCart={cartQuantities[product.id] ?? 0}
               />

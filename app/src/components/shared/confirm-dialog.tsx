@@ -13,6 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { notify } from "@/lib/notifications";
 import type { ActionResult } from "@/types/actions";
 
@@ -69,14 +70,25 @@ export function ConfirmDialog<T>({
             <AlertDialogDescription>{description}</AlertDialogDescription>
           )}
         </AlertDialogHeader>
+        {/* 44px de alto: es el mínimo cómodo de Apple HIG y el nivel
+            AAA de WCAG 2.2. Acá importa de verdad — del lado del
+            cliente se toca con una mano y comiendo, y del lado del
+            personal con prisa y a veces sin mirar. */}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>
+          <AlertDialogCancel
+            disabled={isPending}
+            className="min-h-11 rounded-xl text-[15px]"
+          >
             {cancelLabel}
           </AlertDialogCancel>
           <Button
             variant={destructive ? "destructive" : "default"}
             disabled={isPending}
             onClick={handleConfirm}
+            className={cn(
+              "clay min-h-11 rounded-xl text-[15px]",
+              destructive ? "clay-wine" : "clay-primary"
+            )}
           >
             {isPending && <Loader2 className="animate-spin" />}
             {confirmLabel}
