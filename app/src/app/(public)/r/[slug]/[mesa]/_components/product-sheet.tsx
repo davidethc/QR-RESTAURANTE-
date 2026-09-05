@@ -123,7 +123,7 @@ export function ProductSheet({
                     variant="ghost"
                     size="icon"
                     aria-label="Quitar uno"
-                    className="size-10 rounded-full hover:bg-card"
+                    className="size-11 rounded-full hover:bg-card"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                     disabled={quantity <= 1}
                   >
@@ -140,7 +140,7 @@ export function ProductSheet({
                     variant="ghost"
                     size="icon"
                     aria-label="Agregar uno"
-                    className="size-10 rounded-full hover:bg-card"
+                    className="size-11 rounded-full hover:bg-card"
                     onClick={() => setQuantity((q) => q + 1)}
                   >
                     <Plus className="h-4 w-4" strokeWidth={2.5} />

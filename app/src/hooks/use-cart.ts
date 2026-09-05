@@ -62,12 +62,44 @@ export function useCart(slug: string, tableNumber: number) {
     [key]
   );
 
+  /**
+   * Agrega el mismo plato a una línea existente en vez de crear otra.
+   *
+   * Antes, pedir "Tigrillo mixto" dos veces dejaba dos líneas de $5,00
+   * en el carrito aunque el contador de la barra dijera 2. Al ajustar
+   * cantidades el cliente no sabía cuál de las dos tocar.
+   *
+   * Se fusiona solo si además coincide la indicación para cocina: un
+   * "sin cebolla" y un "normal" son platos distintos para el cocinero y
+   * tienen que viajar en líneas separadas.
+   */
+  function mergeInto(
+    list: CartItem[],
+    entry: { product: PublicProduct; quantity: number; notes: string }
+  ): CartItem[] {
+    const i = list.findIndex(
+      (item) =>
+        item.product.id === entry.product.id && item.notes === entry.notes
+    );
+    if (i === -1) {
+      return [
+        ...list,
+        { ...entry, subtotal: entry.product.price * entry.quantity },
+      ];
+    }
+    const merged = [...list];
+    const quantity = merged[i].quantity + entry.quantity;
+    merged[i] = {
+      ...merged[i],
+      quantity,
+      subtotal: entry.product.price * quantity,
+    };
+    return merged;
+  }
+
   const addItem = useCallback(
     (product: PublicProduct, quantity: number, notes: string) => {
-      persist([
-        ...items,
-        { product, quantity, notes, subtotal: product.price * quantity },
-      ]);
+      persist(mergeInto(items, { product, quantity, notes }));
     },
     [items, persist]
   );
@@ -78,13 +110,7 @@ export function useCart(slug: string, tableNumber: number) {
   // antes de que la primera termine de actualizar el estado.
   const addItems = useCallback(
     (entries: { product: PublicProduct; quantity: number; notes: string }[]) => {
-      persist([
-        ...items,
-        ...entries.map((e) => ({
-          ...e,
-          subtotal: e.product.price * e.quantity,
-        })),
-      ]);
+      persist(entries.reduce(mergeInto, items));
     },
     [items, persist]
   );

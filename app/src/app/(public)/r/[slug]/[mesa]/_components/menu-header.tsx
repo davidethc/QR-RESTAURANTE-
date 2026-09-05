@@ -46,7 +46,7 @@ export function MenuHeader({
 
       {tableNumber !== null && (
         <span className="flex shrink-0 items-baseline gap-1.5 rounded-lg bg-honey px-2.5 py-1 text-honey-foreground">
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-70">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-90">
             Mesa
           </span>
           <span className="font-display text-[20px] font-bold leading-none">

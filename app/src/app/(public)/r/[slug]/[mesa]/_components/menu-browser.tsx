@@ -120,7 +120,9 @@ export function MenuBrowser({
         category.products.map((product) => ({
           product,
           categoryName: category.name,
-          haystack: normalizeText(product.name),
+          haystack: normalizeText(
+            `${product.name} ${product.description ?? ""}`
+          ),
         }))
       ),
     [categories]
@@ -180,12 +182,15 @@ export function MenuBrowser({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar en la carta…"
-            className="neu-inset h-11 rounded-full border-transparent bg-secondary/80 pl-10 text-[15px] placeholder:text-muted-foreground/70 focus-visible:border-primary/30"
+            className="neu-inset h-11 rounded-full border-transparent bg-secondary/80 pl-10 text-[15px] placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
           />
         </div>
 
         {results === null && (
-          <nav className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+          <nav
+            aria-label="Categorías de la carta"
+            className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
+          >
             {categories.map((category) => {
               const isActive = activeCategoryId === category.id;
               return (
@@ -195,7 +200,7 @@ export function MenuBrowser({
                   onClick={() => goToCategory(category.id)}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
-                    "flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200",
+                    "flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                     isActive
                       ? "bg-primary text-primary-foreground"
                       : "border border-border bg-card text-secondary-foreground active:bg-muted"

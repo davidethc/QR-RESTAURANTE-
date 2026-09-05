@@ -32,20 +32,10 @@ function ProductCardCompactBase({
   const soldOut = !product.available;
 
   return (
-    <article
-      role={soldOut ? undefined : "button"}
-      tabIndex={soldOut ? undefined : 0}
-      onClick={soldOut ? undefined : () => onSelect?.(product)}
-      onKeyDown={
-        soldOut
-          ? undefined
-          : (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onSelect?.(product);
-              }
-            }
-      }
+    <button
+      type="button"
+      disabled={soldOut}
+      onClick={() => onSelect?.(product)}
       className={cn(
         "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-card text-left",
         soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
@@ -87,7 +77,7 @@ function ProductCardCompactBase({
           )}
         </div>
       </div>
-    </article>
+    </button>
   );
 }
 
@@ -119,20 +109,10 @@ function ProductCardBase({
   const soldOut = !product.available;
 
   return (
-    <article
-      role={soldOut ? undefined : "button"}
-      tabIndex={soldOut ? undefined : 0}
-      onClick={soldOut ? undefined : () => onSelect?.(product)}
-      onKeyDown={
-        soldOut
-          ? undefined
-          : (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onSelect?.(product);
-              }
-            }
-      }
+    <button
+      type="button"
+      disabled={soldOut}
+      onClick={() => onSelect?.(product)}
       className={cn(
         "group relative flex items-center gap-3 rounded-2xl border border-border bg-card px-3.5 py-3 text-left transition-colors duration-200",
         soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
@@ -197,7 +177,7 @@ function ProductCardBase({
           <Plus className="h-[18px] w-[18px]" strokeWidth={2.5} />
         </div>
       )}
-    </article>
+    </button>
   );
 }
 

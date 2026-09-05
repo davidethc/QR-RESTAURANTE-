@@ -75,9 +75,34 @@ export function CartSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="flex max-h-[85vh] flex-col">
         <SheetHeader className="text-left">
-          <SheetTitle className="font-display text-[20px] font-bold">
-            {inTable ? `Mi pedido — Mesa ${tableNumber}` : "Mi pedido"}
-          </SheetTitle>
+          <div className="flex items-center justify-between gap-3 pr-10">
+            <SheetTitle className="font-display text-[20px] font-bold">
+              {inTable ? `Mi pedido — Mesa ${tableNumber}` : "Mi pedido"}
+            </SheetTitle>
+            {/* Vaciar de una vez. Antes solo se podía quitar plato a
+                plato con la papelera; con seis líneas eran seis toques y
+                seis oportunidades de borrar el equivocado. Va con
+                confirmación porque rehacer un pedido cuesta. */}
+            {items.length > 0 && (
+              <ConfirmDialog
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-11 shrink-0 px-3 text-[13px] font-semibold text-muted-foreground"
+                  >
+                    Vaciar
+                  </Button>
+                }
+                title="¿Vaciar el pedido?"
+                description="Se quitarán todos los platos que agregaste."
+                confirmLabel="Vaciar"
+                destructive
+                action={async () => ({ ok: true as const, data: null })}
+                onSuccess={onClearCart}
+              />
+            )}
+          </div>
         </SheetHeader>
 
         {items.length === 0 ? (
@@ -111,7 +136,7 @@ export function CartSheet({
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="size-10 rounded-full"
+                      className="size-11 rounded-full"
                       onClick={() => onUpdateQuantity(index, item.quantity - 1)}
                     >
                       <Minus />
@@ -123,7 +148,7 @@ export function CartSheet({
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="size-10 rounded-full"
+                      className="size-11 rounded-full"
                       onClick={() => onUpdateQuantity(index, item.quantity + 1)}
                     >
                       <Plus />
@@ -134,7 +159,7 @@ export function CartSheet({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="ml-1 size-10 rounded-full"
+                      className="ml-1 size-11 rounded-full"
                       onClick={() => onRemove(index)}
                       aria-label="Quitar"
                     >
