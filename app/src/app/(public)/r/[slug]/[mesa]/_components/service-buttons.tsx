@@ -5,34 +5,124 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { notify } from "@/lib/notifications";
 import { callWaiter } from "@/lib/actions/waiter-calls";
+import { useTableStatus } from "./table-status-provider";
+import { cn } from "@/lib/utils";
+import type { SessionCall } from "@/types/orders";
 
+// Pasado este tiempo, una solicitud sin atender vuelve a permitir
+// insistir. Sin esto el cliente queda encerrado justo cuando más
+// necesita llamar: cuando nadie le hizo caso.
+const REOPEN_AFTER_MS = 5 * 60 * 1000;
+
+/**
+ * Llamar al mesero y pedir la cuenta.
+ *
+ * Cada botón muestra el estado de su propia solicitud. Antes ese estado
+ * vivía en dos filas aparte, arriba de la carta, mientras el botón de
+ * aquí seguía diciendo "Llamar mesero" como si no hubieras llamado —
+ * información repetida en un sitio y ausente donde hacía falta. El
+ * control que provoca el estado es el que debe mostrarlo.
+ */
 export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
+  const { calls } = useTableStatus();
+
   return (
     <div className="flex gap-2">
-      <ConfirmDialog
-        trigger={
-          <Button variant="ghost" className="h-12 flex-1 rounded-2xl border border-border bg-card text-[15px] font-semibold hover:bg-muted">
-            <Bell className="text-primary" /> Llamar mesero
-          </Button>
-        }
-        title="¿Llamar al mesero?"
-        description={`Un mesero irá a la Mesa ${tableNumber}.`}
+      <ServiceButton
+        call={calls.find((c) => c.type === "WAITER")}
+        icon={<Bell />}
+        idleLabel="Llamar mesero"
+        pendingLabel="Mesero avisado"
+        acceptedLabel="Mesero en camino"
+        staleLabel="Volver a llamar"
+        confirmTitle="¿Llamar al mesero?"
+        confirmDescription={`Un mesero irá a la Mesa ${tableNumber}.`}
         confirmLabel="Llamar"
-        action={() => callWaiter("WAITER")}
-        onSuccess={() => notify.callAcknowledged()}
+        onConfirm={() => callWaiter("WAITER")}
       />
-      <ConfirmDialog
-        trigger={
-          <Button variant="ghost" className="h-12 flex-1 rounded-2xl border border-border bg-card text-[15px] font-semibold hover:bg-muted">
-            <Receipt className="text-primary" /> Pedir cuenta
-          </Button>
-        }
-        title="¿Solicitar la cuenta?"
-        description={`El mesero llevará la cuenta a la Mesa ${tableNumber}.`}
+      <ServiceButton
+        call={calls.find((c) => c.type === "BILL")}
+        icon={<Receipt />}
+        idleLabel="Pedir cuenta"
+        pendingLabel="Cuenta pedida"
+        acceptedLabel="Cuenta en camino"
+        staleLabel="Pedirla de nuevo"
+        confirmTitle="¿Solicitar la cuenta?"
+        confirmDescription={`El mesero llevará la cuenta a la Mesa ${tableNumber}.`}
         confirmLabel="Solicitar"
-        action={() => callWaiter("BILL")}
-        onSuccess={() => notify.callAcknowledged()}
+        onConfirm={() => callWaiter("BILL")}
       />
     </div>
+  );
+}
+
+function ServiceButton({
+  call,
+  icon,
+  idleLabel,
+  pendingLabel,
+  acceptedLabel,
+  staleLabel,
+  confirmTitle,
+  confirmDescription,
+  confirmLabel,
+  onConfirm,
+}: {
+  call: SessionCall | undefined;
+  icon: React.ReactNode;
+  idleLabel: string;
+  pendingLabel: string;
+  acceptedLabel: string;
+  /** Tras 5 min sin atender. Tiene que decir QUÉ se vuelve a pedir: con
+   *  un "Volver a llamar" idéntico en los dos botones, el cliente no
+   *  sabe cuál es cuál. */
+  staleLabel: string;
+  confirmTitle: string;
+  confirmDescription: string;
+  confirmLabel: string;
+  onConfirm: () => ReturnType<typeof callWaiter>;
+}) {
+  const stale =
+    call?.status === "PENDING" &&
+    Date.now() - new Date(call.created_at).getTime() > REOPEN_AFTER_MS;
+
+  const waiting = call !== undefined && !stale;
+  const label = !waiting
+    ? stale
+      ? staleLabel
+      : idleLabel
+    : call!.status === "ACCEPTED"
+      ? acceptedLabel
+      : pendingLabel;
+
+  // En espera el botón se apaga por tono y el ícono pierde el verde:
+  // deja de leerse como algo que se pueda tocar. Un solo tratamiento,
+  // sin borde ni sombra encima.
+  const trigger = (
+    <Button
+      variant="ghost"
+      disabled={waiting}
+      className={cn(
+        "h-12 flex-1 rounded-2xl text-[15px] font-semibold",
+        waiting
+          ? "bg-secondary text-secondary-foreground disabled:opacity-100 [&_svg]:text-muted-foreground"
+          : "border border-border bg-card hover:bg-muted [&_svg]:text-primary"
+      )}
+    >
+      {icon} {label}
+    </Button>
+  );
+
+  if (waiting) return trigger;
+
+  return (
+    <ConfirmDialog
+      trigger={trigger}
+      title={confirmTitle}
+      description={confirmDescription}
+      confirmLabel={confirmLabel}
+      action={onConfirm}
+      onSuccess={() => notify.callAcknowledged()}
+    />
   );
 }

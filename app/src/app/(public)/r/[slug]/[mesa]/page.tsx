@@ -1,11 +1,11 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getTableSession } from "@/lib/session";
 import { getPublicMenu } from "@/lib/queries/menu";
+import { getSessionOrders } from "@/lib/actions/orders";
 import { MenuHeader } from "./_components/menu-header";
 import { MenuBrowser } from "./_components/menu-browser";
-import { ActiveOrdersBanner } from "./_components/active-orders-banner";
-import { ActiveCallBanner } from "./_components/active-call-banner";
+import { TableStatusProvider } from "./_components/table-status-provider";
+import { ActiveOrderStrip } from "./_components/active-order-strip";
 
 export async function generateMetadata({
   params,
@@ -45,34 +45,45 @@ export default async function MenuPage({
    */
   const inTable = Boolean(session && session.restaurantSlug === slug);
 
+  // Los pedidos en curso se resuelven en el servidor para que la franja
+  // salga ya pintada en el primer HTML; a partir de ahí los refresca el
+  // sondeo del provider. Antes se pintaban una vez y se quedaban
+  // congelados: un pedido podía estar LISTO y seguir diciendo PENDIENTE
+  // hasta que el cliente recargara a mano.
+  const initialOrders = inTable ? await getSessionOrders() : null;
+
   return (
     <main className="min-h-full">
       <MenuHeader
         restaurant={menu.restaurant}
         tableNumber={inTable ? session!.tableNumber : null}
       />
-      {inTable && (
-        <>
-          {/* Suspense: el banner de pedidos activos hace su propia
-              consulta a Postgres. Sin esta frontera bloqueaba el HTML de
-              toda la carta hasta resolverse — el cliente se quedaba
-              mirando una pantalla vacía por un aviso secundario. */}
-          <Suspense fallback={null}>
-            <ActiveOrdersBanner
-              slug={slug}
-              tableNumber={session!.tableNumber}
-            />
-          </Suspense>
-          <ActiveCallBanner />
-        </>
+      {/* Un solo latido alimenta la franja de arriba y los botones de
+          la barra inferior — son el mismo dato: qué tiene esta mesa en
+          curso. Fuera de una mesa no se monta, así que la carta a
+          domicilio no hace ni un sondeo. */}
+      {inTable ? (
+        <TableStatusProvider
+          initialOrders={initialOrders?.ok ? initialOrders.data : []}
+        >
+          <ActiveOrderStrip slug={slug} tableNumber={session!.tableNumber} />
+          <MenuBrowser
+            categories={menu.categories}
+            slug={slug}
+            tableNumber={session!.tableNumber}
+            restaurantName={menu.restaurant.name}
+            whatsappPhone={menu.restaurant.phone}
+          />
+        </TableStatusProvider>
+      ) : (
+        <MenuBrowser
+          categories={menu.categories}
+          slug={slug}
+          tableNumber={null}
+          restaurantName={menu.restaurant.name}
+          whatsappPhone={menu.restaurant.phone}
+        />
       )}
-      <MenuBrowser
-        categories={menu.categories}
-        slug={slug}
-        tableNumber={inTable ? session!.tableNumber : null}
-        restaurantName={menu.restaurant.name}
-        whatsappPhone={menu.restaurant.phone}
-      />
     </main>
   );
 }
