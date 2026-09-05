@@ -72,11 +72,14 @@ export function OrderTracker({ initialOrder }: { initialOrder: CustomerOrder }) 
   return (
     <div className="flex flex-col gap-6 px-4 py-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">
+        <h1 className="font-display text-2xl font-semibold text-foreground">
           Pedido #{order.order_number}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Mesa {order.table_number} · {formatPrice(order.total)}
+          Mesa {order.table_number} ·{" "}
+          <span className="font-medium tabular-nums text-foreground">
+            {formatPrice(order.total)}
+          </span>
         </p>
       </div>
 
@@ -94,7 +97,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: CustomerOrder }) 
           )}
         </div>
       ) : (
-        <ol className="flex flex-col gap-4">
+        <ol className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-4">
           {STEPS.map((step, index) => {
             const done =
               index < stepIndex ||
@@ -149,7 +152,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: CustomerOrder }) 
             </div>
           ))}
         </div>
-        <div className="mt-3 flex justify-between border-t pt-2 text-sm font-semibold">
+        <div className="mt-3 flex justify-between border-t pt-2 text-sm font-semibold tabular-nums">
           <span>Total</span>
           <span>{formatPrice(order.total)}</span>
         </div>

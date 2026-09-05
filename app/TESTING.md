@@ -777,6 +777,46 @@ Lo único explícitamente fuera de scope (por decisión, no olvido):
 crear/renombrar mesas desde la UI (hoy solo se editan por SQL) y
 personalizar colores del restaurante.
 
+## Vista del cliente — rediseño "clay + glass" (2026-09-04)
+
+✅ Verificado con Playwright headless (Chromium, viewport 375x812, iPhone UA,
+touch) contra el build de producción, no `next run dev`.
+
+**Ojo al reiniciar el servidor**: `pkill -f "next start"` NO mata el proceso
+real — se llama `next-server`. Si no muere, el puerto sigue ocupado, el
+`npm run start` nuevo falla con EADDRINUSE y sigues probando el build viejo
+(se ve como una página sin CSS, porque el hash del chunk cambió). Usa
+`lsof -ti:3000 | xargs kill -9` y confirma con `tail /tmp/next.log`.
+
+Probado y funcionando: scroll-spy de las pills, tocar una pill hace scroll y
+despliega su categoría, "Ver todos (N)"/"Ver menos", filas horizontales
+deslizables, buscador sin tilde ("cafe" → los 3 Café; oculta pills y combos),
+ficha de producto (cantidad, notas, precio en vivo), carrito (±, quitar,
+sugerencias, total), envío con confirmación → redirección al tracker, los 5
+pasos del tracker, "Volver a la carta", Llamar mesero y Pedir cuenta, y los
+combos del día (agregan los DOS productos). Cero errores de consola en todo
+el recorrido.
+
+Arreglado en esta ronda (solo estilos/estructura, ninguna lógica):
+- `scroll-snap` se comía el `px-4` de las filas horizontales: con
+  `snap-mandatory` + `snap-start` el navegador alinea la primera tarjeta al
+  borde del scrollport, no al padding, y auto-scrolleaba 16px. Se corrige con
+  `scroll-pl-4` en category-section y suggestions-row.
+- Áreas táctiles bajo 40px: pills (34), "Ver todos" (28), Llamar mesero /
+  Pedir cuenta (32), ±/Agregar de la ficha (32/36), ±/papelera/Enviar del
+  carrito (28/36).
+- La ficha de producto abría con foco en el textarea → en móvil real el
+  teclado tapa la ficha al abrirla (`onOpenAutoFocus` prevenido).
+- Placeholder de foto con ícono de cubiertos (se leía como foto rota) en la
+  ficha de producto y en las sugerencias del carrito → mismo lenguaje que las
+  tarjetas: degradado cálido + emoji de la categoría como marca de agua.
+- La banda de foto de la ficha usaba `-mx-6` sobre un contenedor con `p-4`,
+  desbordando 8px por lado.
+
+Pendiente / no arreglado a propósito: los botones de `ConfirmDialog` miden
+32px de alto, pero es un componente compartido con el panel de personal y
+tocarlo cambiaría también esa UI.
+
 ## Verificación estándar antes de dar por cerrada una ronda de QA
 
 1. `cd app && npx tsc --noEmit` — limpio.

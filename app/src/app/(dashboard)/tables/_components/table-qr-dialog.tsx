@@ -82,7 +82,11 @@ export function TableQrDialog({
     <div onClick={(e) => e.preventDefault()}>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 w-full rounded-full border-border/70 text-[13px] font-semibold"
+          >
             <QrCode className="h-4 w-4" /> Ver QR
           </Button>
         </DialogTrigger>

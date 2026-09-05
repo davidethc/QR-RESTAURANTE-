@@ -30,7 +30,11 @@ export function ReleaseTableButton({
     <div onClick={(e) => e.preventDefault()}>
       <ConfirmDialog
         trigger={
-          <Button variant="ghost" size="sm" className="w-full justify-start">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-full rounded-full text-[13px] font-semibold text-muted-foreground"
+          >
             <DoorOpen className="h-4 w-4" /> Liberar mesa
           </Button>
         }

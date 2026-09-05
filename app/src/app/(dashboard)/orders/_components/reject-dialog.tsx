@@ -50,13 +50,16 @@ export function RejectDialog({ orderId }: { orderId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex-1">
+        <Button
+          variant="outline"
+          className="h-12 flex-1 rounded-full border-border/70 text-[15px] font-semibold"
+        >
           Rechazar
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rechazar pedido</DialogTitle>
+          <DialogTitle className="font-display">Rechazar pedido</DialogTitle>
           <DialogDescription>
             Selecciona un motivo. El cliente lo verá.
           </DialogDescription>

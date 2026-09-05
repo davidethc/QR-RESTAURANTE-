@@ -21,22 +21,22 @@ export default async function TablesPage() {
   return (
     <main>
       <PageHeader title="Mesas" description={`${tables.length} mesas`} />
-      <div className="grid grid-cols-2 gap-3 px-4 py-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-3 lg:grid-cols-4">
         {tables.map((table) => (
           <Link
             key={table.id}
             href={`/orders?table=${table.number}`}
-            className="block rounded-xl border bg-card p-4 transition-colors hover:bg-muted/50"
+            className="shadow-card block rounded-2xl border border-border/70 bg-card p-4 transition-transform duration-200 active:scale-[0.98]"
           >
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold text-foreground">
+            <div className="flex flex-col gap-2">
+              <p className="font-display truncate text-[17px] font-semibold leading-tight text-foreground">
                 {table.name ?? `Mesa ${table.number}`}
               </p>
-              <TableStatusBadge status={table.status} />
+              <TableStatusBadge status={table.status} className="self-start" />
             </div>
 
             {(table.active_orders > 0 || table.pending_calls > 0) && (
-              <div className="mt-2 flex flex-col gap-0.5 text-sm text-muted-foreground">
+              <div className="mt-2.5 flex flex-col gap-0.5 text-[13px] leading-snug text-muted-foreground">
                 {table.active_orders > 0 && (
                   <span>
                     {table.active_orders} pedido
@@ -55,13 +55,13 @@ export default async function TablesPage() {
             )}
 
             {table.active_total > 0 && (
-              <p className="mt-2 text-sm font-semibold text-wine">
+              <p className="font-display mt-2 text-lg font-semibold tabular-nums text-wine">
                 {formatPrice(table.active_total)}
               </p>
             )}
 
             {canManage && (
-              <div className="mt-3">
+              <div className="mt-3 border-t border-border/60 pt-3">
                 <TableQrDialog
                   restaurantName={session.restaurant.name}
                   tableLabel={table.name ?? `Mesa ${table.number}`}

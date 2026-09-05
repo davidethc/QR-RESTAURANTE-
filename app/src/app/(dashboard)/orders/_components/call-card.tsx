@@ -5,34 +5,67 @@ import { ActionButton } from "@/components/shared/action-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { handleCall } from "@/lib/actions/waiter-calls";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, cn } from "@/lib/utils";
 import type { StaffWaiterCall } from "@/types/staff";
 
+/**
+ * Tarjeta de solicitud (llamar al mesero / pedir la cuenta).
+ *
+ * Antes se veía igual que un pedido y se perdía entre ellos. Ahora se
+ * lee como un aviso: un disco de color con el ícono a la izquierda
+ * dice de un vistazo QUÉ pide la mesa (campana = atención, recibo =
+ * cuenta) sin necesidad de leer, y mientras está pendiente la tarjeta
+ * lleva un anillo del color de ese aviso — así en una lista mixta el
+ * ojo va primero a lo que nadie ha atendido todavía. El detalle de la
+ * cuenta va en su propio panel para que se lea como una nota de
+ * consumo y no como más contenido de la tarjeta.
+ */
 export function CallCard({ call }: { call: StaffWaiterCall }) {
-  const Icon = call.type === "BILL" ? Receipt : Bell;
-  const label = call.type === "BILL" ? "Solicita la cuenta" : "Solicita atención";
+  const isBill = call.type === "BILL";
+  const Icon = isBill ? Receipt : Bell;
+  const label = isBill ? "Solicita la cuenta" : "Solicita atención";
+  const pending = call.status === "PENDING";
 
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-wine" />
-          <div>
-            <p className="font-semibold text-foreground">
+    <div
+      className={cn(
+        "shadow-card rounded-2xl border bg-card p-4",
+        pending
+          ? isBill
+            ? "border-wine/30 ring-1 ring-wine/15"
+            : "border-primary/30 ring-1 ring-primary/15"
+          : "border-border/70"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+              isBill
+                ? "bg-wine/12 text-wine"
+                : "bg-primary/12 text-primary"
+            )}
+          >
+            <Icon className="h-[22px] w-[22px]" strokeWidth={2.25} />
+          </span>
+          <div className="min-w-0">
+            <p className="font-display truncate text-[17px] font-semibold leading-tight text-foreground">
               {call.table_name ?? `Mesa ${call.table_number}`}
             </p>
-            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] leading-tight text-muted-foreground">
+              <span className="font-medium text-foreground/80">{label}</span>
+              <ElapsedTimer since={call.created_at} warnAfterMinutes={5} />
+            </p>
           </div>
         </div>
         <CallStatusBadge status={call.status} />
       </div>
 
-      <ElapsedTimer since={call.created_at} warnAfterMinutes={5} className="mt-2" />
-
-      {call.type === "BILL" && (
-        <div className="mt-3 rounded-lg border bg-muted/40 p-3">
+      {isBill && (
+        <div className="mt-3 rounded-xl border border-border/60 bg-secondary/50 p-3">
           {call.session_orders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               No hay pedidos registrados en esta mesa.
             </p>
           ) : (
@@ -46,31 +79,42 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
               {call.session_orders.map((order, oi) => (
                 <div key={order.order_number} className="flex flex-col gap-1">
                   {call.session_orders.length > 1 && (
-                    <div className="flex justify-between text-xs font-medium text-muted-foreground">
+                    <div className="flex justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       <span>Pedido #{order.order_number}</span>
-                      <span>{formatPrice(order.subtotal)}</span>
+                      <span className="tabular-nums">
+                        {formatPrice(order.subtotal)}
+                      </span>
                     </div>
                   )}
                   {order.items.map((item, i) => (
                     <div
                       key={i}
-                      className="flex justify-between text-sm text-foreground"
+                      className="flex justify-between gap-3 text-[14px] leading-snug text-foreground"
                     >
                       <span>
-                        {item.quantity} × {item.product_name}
+                        <span className="font-semibold tabular-nums">
+                          {item.quantity}×
+                        </span>{" "}
+                        {item.product_name}
                       </span>
-                      <span>{formatPrice(item.subtotal)}</span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">
+                        {formatPrice(item.subtotal)}
+                      </span>
                     </div>
                   ))}
                   {call.session_orders.length > 1 &&
                     oi < call.session_orders.length - 1 && (
-                      <div className="mt-1 border-t" />
+                      <div className="mt-1 border-t border-border/60" />
                     )}
                 </div>
               ))}
-              <div className="mt-1 flex justify-between border-t pt-1 text-sm font-semibold text-wine">
-                <span>Total</span>
-                <span>{formatPrice(call.session_total)}</span>
+              <div className="mt-1 flex items-baseline justify-between border-t border-border/60 pt-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Total
+                </span>
+                <span className="font-display text-xl font-semibold tabular-nums text-wine">
+                  {formatPrice(call.session_total)}
+                </span>
               </div>
             </div>
           )}
@@ -82,13 +126,16 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
           <ActionButton
             action={() => handleCall(call.id, "ACCEPTED")}
             successMessage="En proceso"
-            className="flex-1"
+            className="clay clay-primary h-12 flex-1 rounded-full text-[15px] font-semibold"
           >
             Atender
           </ActionButton>
           <ConfirmDialog
             trigger={
-              <Button variant="outline" className="flex-1">
+              <Button
+                variant="outline"
+                className="h-12 flex-1 rounded-full border-border/70 text-[15px] font-semibold"
+              >
                 Rechazar
               </Button>
             }
@@ -105,7 +152,7 @@ export function CallCard({ call }: { call: StaffWaiterCall }) {
         <ActionButton
           action={() => handleCall(call.id, "ATTENDED")}
           successMessage="Solicitud atendida"
-          className="mt-3 w-full"
+          className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
         >
           Marcar atendida
         </ActionButton>

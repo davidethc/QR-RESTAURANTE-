@@ -13,11 +13,15 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-6">
-      <div>
-        <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+    <div className="flex items-end justify-between gap-4 px-4 pb-3 pt-5 sm:px-6">
+      <div className="min-w-0">
+        <h1 className="font-display text-[24px] font-semibold leading-tight tracking-tight text-foreground">
+          {title}
+        </h1>
         {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
+            {description}
+          </p>
         )}
       </div>
       {action}

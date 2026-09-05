@@ -2,8 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { Minus, Plus, Trash2, UtensilsCrossed } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -57,7 +56,9 @@ export function CartSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="flex max-h-[85vh] flex-col">
         <SheetHeader className="text-left">
-          <SheetTitle>Mi pedido — Mesa {tableNumber}</SheetTitle>
+          <SheetTitle className="font-display text-[19px]">
+            Mi pedido — Mesa {tableNumber}
+          </SheetTitle>
         </SheetHeader>
 
         {items.length === 0 ? (
@@ -86,30 +87,35 @@ export function CartSheet({
                     </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     <Button
                       type="button"
                       variant="outline"
-                      size="icon-sm"
+                      size="icon"
+                      className="size-10 rounded-full"
                       onClick={() => onUpdateQuantity(index, item.quantity - 1)}
                     >
                       <Minus />
                     </Button>
-                    <span className="w-5 text-center text-sm tabular-nums">
+                    <span className="w-6 text-center text-sm font-semibold tabular-nums">
                       {item.quantity}
                     </span>
                     <Button
                       type="button"
                       variant="outline"
-                      size="icon-sm"
+                      size="icon"
+                      className="size-10 rounded-full"
                       onClick={() => onUpdateQuantity(index, item.quantity + 1)}
                     >
                       <Plus />
                     </Button>
+                    {/* Separada del "+": pegada, un dedo la toca por error
+                        y el plato desaparece sin aviso. */}
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon"
+                      className="ml-1 size-10 rounded-full"
                       onClick={() => onRemove(index)}
                       aria-label="Quitar"
                     >
@@ -127,35 +133,25 @@ export function CartSheet({
             <p className="text-sm font-medium text-foreground">
               ¿Agregas algo más?
             </p>
-            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
+            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
               {suggestionsToShow.map((product) => (
                 <button
                   key={product.id}
                   type="button"
                   onClick={() => onAddSuggestion(product)}
-                  className="flex w-24 shrink-0 flex-col items-center gap-1 rounded-lg border bg-card p-2 text-center active:bg-muted"
+                  className="flex min-h-16 w-[132px] shrink-0 flex-col justify-between gap-1.5 rounded-xl border border-border/70 bg-card px-3 py-2.5 text-left active:bg-muted"
                 >
-                  <div className="relative h-12 w-12 overflow-hidden rounded-md bg-muted">
-                    {product.image_url ? (
-                      <Image
-                        src={product.image_url}
-                        alt={product.name}
-                        fill
-                        sizes="48px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="line-clamp-1 text-[11px] font-medium text-foreground">
+                  <span className="font-display line-clamp-2 text-[13px] font-semibold leading-snug text-foreground">
                     {product.name}
-                  </p>
-                  <p className="text-[11px] font-semibold text-primary">
-                    + {formatPrice(product.price)}
-                  </p>
+                  </span>
+                  <span className="flex items-center justify-between gap-1">
+                    <span className="font-display text-[13px] font-semibold tabular-nums text-wine">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Plus className="size-3.5" strokeWidth={2.75} />
+                    </span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -169,7 +165,14 @@ export function CartSheet({
               <span>{formatPrice(total)}</span>
             </div>
             <ConfirmDialog
-              trigger={<Button size="lg" className="w-full">Enviar pedido</Button>}
+              trigger={
+                <Button
+                  size="lg"
+                  className="clay clay-primary h-12 w-full rounded-2xl text-[15px]"
+                >
+                  Enviar pedido
+                </Button>
+              }
               title="¿Confirmar pedido?"
               description={`Mesa ${tableNumber} · ${formatPrice(total)} · Revisa tu pedido antes de enviarlo.`}
               confirmLabel="Enviar pedido"

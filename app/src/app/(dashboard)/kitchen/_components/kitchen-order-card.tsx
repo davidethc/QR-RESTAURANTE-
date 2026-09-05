@@ -10,25 +10,27 @@ import type { StaffOrder } from "@/types/staff";
  */
 export function KitchenOrderCard({ order }: { order: StaffOrder }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border bg-card p-5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-2xl font-bold text-foreground">
+    <div className="shadow-card flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-display text-[26px] font-semibold leading-tight text-foreground">
           {order.table_name ?? `Mesa ${order.table_number}`}
         </p>
         <ElapsedTimer
           since={order.created_at}
           warnAfterMinutes={10}
-          className="text-base font-semibold"
+          className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-base font-semibold"
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 border-t border-border/60 pt-3">
         {order.items.map((item) => (
-          <p key={item.id} className="text-lg text-foreground">
-            <span className="font-bold">{item.quantity}×</span>{" "}
+          <p key={item.id} className="text-xl leading-snug text-foreground">
+            <span className="font-display font-semibold tabular-nums text-primary">
+              {item.quantity}×
+            </span>{" "}
             {item.product_name}
             {item.notes && (
-              <span className="block text-base italic text-muted-foreground">
+              <span className="block text-lg italic leading-snug text-muted-foreground">
                 {item.notes}
               </span>
             )}
@@ -37,7 +39,7 @@ export function KitchenOrderCard({ order }: { order: StaffOrder }) {
       </div>
 
       {order.notes && (
-        <p className="text-base italic text-muted-foreground">
+        <p className="rounded-xl bg-secondary/70 px-3 py-2 text-lg italic leading-snug text-muted-foreground">
           Nota: {order.notes}
         </p>
       )}
@@ -47,7 +49,7 @@ export function KitchenOrderCard({ order }: { order: StaffOrder }) {
           action={() => startPreparing(order.id)}
           successMessage="En preparación"
           size="lg"
-          className="h-14 text-lg font-bold"
+          className="clay clay-primary h-16 rounded-full text-xl font-semibold"
         >
           Preparar
         </ActionButton>
@@ -58,14 +60,14 @@ export function KitchenOrderCard({ order }: { order: StaffOrder }) {
           action={() => markReady(order.id)}
           successMessage="Pedido listo"
           size="lg"
-          className="h-14 text-lg font-bold"
+          className="clay clay-primary h-16 rounded-full text-xl font-semibold"
         >
           Marcar listo
         </ActionButton>
       )}
 
       {order.status === "READY" && (
-        <p className="rounded-lg bg-primary/10 py-3 text-center text-lg font-semibold text-primary">
+        <p className="font-display rounded-full bg-primary/10 py-3.5 text-center text-lg font-semibold text-primary">
           Listo — esperando al mesero
         </p>
       )}

@@ -11,6 +11,7 @@ import { CallCard } from "./call-card";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
 import type { OrderStatus } from "@/config/constants";
+import { cn } from "@/lib/utils";
 import type { StaffOrder, StaffWaiterCall } from "@/types/staff";
 
 const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
@@ -118,22 +119,56 @@ export function OrdersBoard({
   return (
     <>
       {tableFilter !== null && (
-        <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-lg border bg-accent/40 px-3 py-2 text-sm">
-          <span className="font-medium text-foreground">
+        <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-2xl border border-primary/25 bg-accent/40 py-1.5 pl-4 pr-1.5">
+          <span className="font-display text-[15px] font-semibold text-foreground">
             Viendo solo Mesa {tableFilter}
           </span>
-          <Button variant="ghost" size="sm" onClick={clearTableFilter}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearTableFilter}
+            className="h-9 rounded-full px-3 text-[13px] font-semibold text-primary hover:bg-primary/10"
+          >
             <X className="h-4 w-4" /> Ver todas
           </Button>
         </div>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 py-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pending">Nuevos ({pending.length})</TabsTrigger>
-          <TabsTrigger value="progress">Preparando ({inProgress.length})</TabsTrigger>
-          <TabsTrigger value="ready">Listos ({ready.length})</TabsTrigger>
-          <TabsTrigger value="calls">Solicitudes ({visibleCalls.length})</TabsTrigger>
+        {/* Píldoras deslizables en vez de una rejilla de 4: con
+            "Preparando (12)" la rejilla parte las etiquetas en dos
+            líneas en un celular. La activa es la única con volumen
+            (clay) — el resto queda plano para que no compita. */}
+        <TabsList className="no-scrollbar h-auto w-full justify-start gap-1.5 overflow-x-auto rounded-full bg-secondary/70 p-1">
+          {[
+            { value: "pending", label: "Nuevos", count: pending.length },
+            { value: "progress", label: "Preparando", count: inProgress.length },
+            { value: "ready", label: "Listos", count: ready.length },
+            { value: "calls", label: "Solicitudes", count: visibleCalls.length },
+          ].map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className={cn(
+                "h-10 shrink-0 flex-none gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13px] font-semibold",
+                activeTab === tab.value
+                  ? "clay clay-primary data-active:bg-primary data-active:text-primary-foreground dark:data-active:bg-primary dark:data-active:text-primary-foreground"
+                  : "text-muted-foreground"
+              )}
+            >
+              {tab.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[11px] leading-tight tabular-nums",
+                  activeTab === tab.value
+                    ? "bg-primary-foreground/20"
+                    : "bg-foreground/10"
+                )}
+              >
+                {tab.count}
+              </span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="pending" className="flex flex-col gap-3 pt-4">

@@ -32,7 +32,7 @@ export function SuggestionsRow({
         Combos del día
       </p>
 
-      <div className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+      <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-2.5 overflow-x-auto px-4 pb-1">
         {suggestions.map((s, i) =>
           s.type === "combo" ? (
             <button

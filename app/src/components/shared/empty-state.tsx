@@ -16,11 +16,15 @@ export function EmptyState({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-      <Icon className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-      <p className="text-sm font-medium text-foreground">{title}</p>
+    <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+      <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+        <Icon className="h-7 w-7" strokeWidth={1.75} />
+      </span>
+      <p className="font-display text-[17px] font-semibold leading-tight text-foreground">
+        {title}
+      </p>
       {description && (
-        <p className="max-w-xs text-sm text-muted-foreground">
+        <p className="max-w-xs text-[13px] leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}

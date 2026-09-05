@@ -37,18 +37,22 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
   const initials = (session.user.full_name ?? "?").slice(0, 1).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-      <div className="flex items-center justify-between gap-4 px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
+    /* Superficie glass 1 de 2 del panel (la otra es la barra de
+       pestañas de /orders). No se anima: sobre tablets de gama media
+       animar un backdrop-filter es lo que provoca el scroll con
+       tirones. */
+    <header className="glass sticky top-0 z-20 border-b border-border/50">
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+        <div className="min-w-0">
+          <p className="font-display truncate text-[15px] font-semibold leading-tight text-foreground">
             {session.restaurant.name}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {ROLE_LABEL[session.role]}
           </p>
         </div>
 
-        <nav className="flex items-center gap-1">
+        <nav className="no-scrollbar flex items-center gap-1 overflow-x-auto">
           {NAV_LINKS.filter((link) => link.roles.includes(session.role)).map(
             (link) => {
               const active = pathname.startsWith(link.href);
@@ -57,13 +61,16 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
+                    // Píldoras: alto de 40px para que sean tocables con
+                    // el dedo y con prisa. Solo la activa lleva clay —
+                    // es la única "acción" con volumen de la barra.
+                    "flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-colors duration-200",
                     active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted"
+                      ? "clay clay-primary bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-secondary active:bg-secondary"
                   )}
                 >
-                  <link.icon className="h-4 w-4" />
+                  <link.icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
                   <span className="hidden sm:inline">{link.label}</span>
                 </Link>
               );
@@ -73,14 +80,16 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="shrink-0">
-              <Avatar>
-                <AvatarFallback>{initials}</AvatarFallback>
+            <button type="button" className="shrink-0 rounded-full">
+              <Avatar className="h-10 w-10 border border-border/60">
+                <AvatarFallback className="font-display bg-secondary text-[15px] font-semibold text-foreground">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>
+            <DropdownMenuLabel className="font-display text-[15px]">
               {session.user.full_name ?? "Usuario"}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

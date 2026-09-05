@@ -80,6 +80,16 @@ export function MenuBrowser({
     return () => observer.disconnect();
   }, [categories]);
 
+  // El emoji de la ficha de producto sale de su categoría, y
+  // PublicProduct no la lleva encima — se resuelve con este índice.
+  const categoryByProductId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const category of categories) {
+      for (const product of category.products) map[product.id] = category.name;
+    }
+    return map;
+  }, [categories]);
+
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};
     for (const item of cart.items) {
@@ -156,7 +166,7 @@ export function MenuBrowser({
                   onClick={() => goToCategory(category.id)}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200",
+                    "flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200",
                     isActive
                       ? "clay clay-primary bg-primary text-primary-foreground"
                       : "border border-border/70 bg-card text-secondary-foreground active:bg-secondary"
@@ -240,6 +250,9 @@ export function MenuBrowser({
 
       <ProductSheet
         product={selectedProduct}
+        categoryName={
+          selectedProduct ? categoryByProductId[selectedProduct.id] : undefined
+        }
         onOpenChange={(open) => !open && setSelectedProduct(null)}
         onAdd={(product, quantity, notes) => {
           cart.addItem(product, quantity, notes);
