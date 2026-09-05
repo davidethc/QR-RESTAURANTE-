@@ -13,7 +13,6 @@ import { ServiceButtons } from "./service-buttons";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
-import { getCategoryIcon } from "@/lib/category-icons";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { formatPrice, cn } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
@@ -158,7 +157,7 @@ export function MenuBrowser({
     // pb generoso: la barra inferior es fija y, con el botón "Ver
     // pedido" visible, ocupa ~9rem. Sin este colchón el último plato
     // queda tapado y el cliente no puede tocarlo.
-    <div className="flex flex-col gap-5 pb-40">
+    <div className="flex flex-col gap-7 pb-40">
       {/* Superficie glass 1 de 2 en toda la app. */}
       <div className="glass sticky top-0 z-10 flex flex-col gap-3 border-b border-border/50 px-4 py-3">
         <div className="relative">
@@ -184,13 +183,10 @@ export function MenuBrowser({
                   className={cn(
                     "flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200",
                     isActive
-                      ? "clay clay-primary bg-primary text-primary-foreground"
-                      : "bg-card text-secondary-foreground shadow-card active:bg-secondary"
+                      ? "bg-foreground text-background"
+                      : "border border-border bg-card text-secondary-foreground active:bg-muted"
                   )}
                 >
-                  <span aria-hidden className="text-sm leading-none">
-                    {getCategoryIcon(category.name)}
-                  </span>
                   {category.name}
                 </button>
               );
@@ -231,12 +227,13 @@ export function MenuBrowser({
         />
       )}
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col border-b border-border">
         {results === null ? (
-          categories.map((category) => (
+          categories.map((category, i) => (
             <CategorySection
               key={category.id}
               category={category}
+              index={i}
               isOpen={openCategories.has(category.id)}
               onToggle={() => toggleCategory(category.id)}
               onSelectProduct={setSelectedProduct}
@@ -336,7 +333,7 @@ export function MenuBrowser({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-card text-[14px] font-semibold text-foreground shadow-card active:bg-secondary"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card text-[14px] font-semibold text-foreground active:bg-muted"
             >
               <MessageCircle className="h-4 w-4 text-primary" strokeWidth={2.25} />
               Hablar por WhatsApp

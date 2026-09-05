@@ -53,55 +53,61 @@
 /*
   Identidad de marca — Cafetería Omm Siri.
 
-  Dirección: cerámica cálida. Es una cafetería de comida casera
-  ecuatoriana (tigrillo, bolón, mote), no un panel de banco — así que
-  el fondo es papel cálido, no blanco clínico, y el texto es café
-  oscuro, no negro. Turquesa (logo) para acciones; terracota/granate
-  (nombre del local) para precios y acentos. El blanco puro queda solo
-  para las tarjetas, que así "flotan" sobre el papel.
+  Dirección: papel blanco, color en la tinta.
+
+  Tres decisiones que vienen de leer el CSS real de cafeterías
+  premiadas (Origin, Assembly, Coffee Collective), no de una plantilla:
+
+  1. Ninguna usa negro puro sobre blanco puro. El texto es un negro CON
+     color dentro — acá, verde. Eso hace que la página entera se sienta
+     verde sin que haya un solo elemento verde.
+  2. El café va en la TINTA (precios), nunca en el fondo. El fondo beige
+     es lo que apagaba todo.
+  3. El verde vive en hue 132 (oliva/musgo, tira a amarillo), no en 160
+     (salvia/esmeralda). Salvia + serif + crema es la combinación que
+     está catalogada como firma de interfaz generada por IA en 2026.
 */
 :root {
-    /* Cerámica: el fondo es barro claro, no blanco. Las tarjetas son
-       un crema más pálido que el fondo — esa diferencia de tono es la
-       que las separa, para no necesitar borde NI sombra. Un borde fino
-       junto a una sombra difusa es la firma más reconocible de una
-       interfaz generada automáticamente; acá se usa una sola cosa. */
-    --background: oklch(0.951 0.019 74);
-    --foreground: oklch(0.245 0.03 46);
-    --card: oklch(0.988 0.008 82);
-    --card-foreground: oklch(0.245 0.03 46);
-    --popover: oklch(0.988 0.008 82);
-    --popover-foreground: oklch(0.245 0.03 46);
-    /* Verde pino apagado, no turquesa saturado: el turquesa brillante
-       sobre crema se lee a panel de software; este se lee a local. */
-    --primary: oklch(0.455 0.072 169);
-    --primary-foreground: oklch(0.985 0.008 85);
-    --secondary: oklch(0.925 0.022 74);
-    --secondary-foreground: oklch(0.31 0.032 46);
-    --muted: oklch(0.925 0.022 74);
-    --muted-foreground: oklch(0.505 0.028 56);
-    --accent: oklch(0.912 0.032 172);
-    --accent-foreground: oklch(0.33 0.06 170);
+    /* Blanco cálido homeopático: chroma 0.0035, diez veces menos que un
+       crema. Se lee blanco, no beige. Las tarjetas son blanco PURO
+       encima — esa diferencia de 1.3:1 las separa sin borde ni sombra. */
+    --background: oklch(0.9925 0.0035 95);
+    --foreground: oklch(0.21 0.022 142);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.21 0.022 142);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.21 0.022 142);
+    /* Oliva, no salvia. Es el cambio de color más importante del tema. */
+    --primary: oklch(0.415 0.085 132);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.945 0.014 120);
+    --secondary-foreground: oklch(0.30 0.024 140);
+    --muted: oklch(0.97 0.008 110);
+    --muted-foreground: oklch(0.515 0.018 142);
+    --accent: oklch(0.46 0.078 55);
+    --accent-foreground: oklch(1 0 0);
     --destructive: oklch(0.55 0.2 27);
-    --border: oklch(0.878 0.024 72);
-    --input: oklch(0.878 0.024 72);
-    --ring: oklch(0.455 0.072 169);
-    --wine: oklch(0.428 0.132 26);
-    --wine-foreground: oklch(0.985 0.008 85);
-    --chart-1: oklch(0.55 0.11 192);
-    --chart-2: oklch(0.36 0.12 18);
-    --chart-3: oklch(0.7 0.1 192);
-    --chart-4: oklch(0.55 0.1 18);
-    --chart-5: oklch(0.52 0.015 60);
-    --radius: 0.75rem;
-    --sidebar: oklch(0.99 0 0);
-    --sidebar-foreground: oklch(0.22 0.02 40);
-    --sidebar-primary: oklch(0.55 0.11 192);
-    --sidebar-primary-foreground: oklch(0.99 0 0);
-    --sidebar-accent: oklch(0.93 0.03 192);
-    --sidebar-accent-foreground: oklch(0.3 0.07 192);
-    --sidebar-border: oklch(0.9 0.012 70);
-    --sidebar-ring: oklch(0.55 0.11 192);
+    --border: oklch(0.908 0.009 120);
+    --input: oklch(0.908 0.009 120);
+    --ring: oklch(0.415 0.085 132);
+    /* Precios: café oscuro. Antes era granate, que sobre blanco compite
+       con el verde en vez de acompañarlo. */
+    --wine: oklch(0.36 0.052 60);
+    --wine-foreground: oklch(1 0 0);
+    --chart-1: oklch(0.415 0.085 132);
+    --chart-2: oklch(0.46 0.078 55);
+    --chart-3: oklch(0.60 0.07 132);
+    --chart-4: oklch(0.62 0.06 55);
+    --chart-5: oklch(0.515 0.018 142);
+    --radius: 0.5rem;
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.21 0.022 142);
+    --sidebar-primary: oklch(0.415 0.085 132);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.945 0.014 120);
+    --sidebar-accent-foreground: oklch(0.30 0.024 140);
+    --sidebar-border: oklch(0.908 0.009 120);
+    --sidebar-ring: oklch(0.415 0.085 132);
 }
 
 .dark {
@@ -149,7 +155,7 @@
     /* Grano finísimo sobre el fondo: le da textura de papel al color
        plano. Va en el body (no en un div) para que ninguna pantalla
        tenga que acordarse de incluirlo. */
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
     }
   html {
     @apply font-sans;
@@ -171,7 +177,7 @@
      apoya la pieza sobre el papel en vez de hacerla flotar. Va SIN
      borde: la tarjeta ya se separa por tono. */
   .shadow-card {
-    box-shadow: 0 1px 2px oklch(0.35 0.04 48 / 0.07);
+    box-shadow: 0 1px 2px oklch(0.25 0.03 142 / 0.06);
     }
   .shadow-card-lifted {
     box-shadow:
@@ -188,7 +194,7 @@
   */
   .clay {
     box-shadow:
-      0 6px 16px -4px var(--clay-shadow, oklch(0.4 0.03 50 / 0.28)),
+      0 6px 16px -4px var(--clay-shadow, oklch(0.3 0.03 142 / 0.24)),
       inset 0 2px 0 0 oklch(1 0 0 / 0.22),
       inset 0 -3px 6px 0 oklch(0.2 0.02 40 / 0.14);
     transition:
@@ -198,16 +204,16 @@
   .clay:active {
     transform: translateY(2px) scale(0.97);
     box-shadow:
-      0 2px 6px -2px var(--clay-shadow, oklch(0.4 0.03 50 / 0.24)),
+      0 2px 6px -2px var(--clay-shadow, oklch(0.3 0.03 142 / 0.2)),
       inset 0 2px 5px 0 oklch(0.2 0.02 40 / 0.18);
     }
   /* Tinte de sombra por color de acción, para que la sombra no se vea
      gris sucia debajo de un botón de color. */
   .clay-primary {
-    --clay-shadow: oklch(0.52 0.105 190 / 0.42);
+    --clay-shadow: oklch(0.415 0.085 132 / 0.38);
     }
   .clay-wine {
-    --clay-shadow: oklch(0.43 0.135 24 / 0.4);
+    --clay-shadow: oklch(0.36 0.052 60 / 0.36);
     }
 
   /*
@@ -229,7 +235,7 @@
      bajo contraste lo hace ilegible y ya está en retirada. */
   .neu-inset {
     box-shadow:
-      inset 0 2px 4px 0 oklch(0.4 0.03 50 / 0.09),
+      inset 0 2px 4px 0 oklch(0.3 0.03 142 / 0.08),
       inset 0 -1px 0 0 oklch(1 0 0 / 0.8);
     }
 

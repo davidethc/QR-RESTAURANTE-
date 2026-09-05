@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { getCategoryIcon } from "@/lib/category-icons";
 import { cn, formatPrice } from "@/lib/utils";
 import type { PublicProduct } from "@/types/menu";
 
@@ -70,13 +69,13 @@ export function ProductSheet({
         {product && (
           <>
             <SheetHeader className="gap-0 space-y-0 p-0 text-left">
-              {/* Foto enmarcada, no a sangre: con marco y esquinas
-                  redondeadas se lee como una pieza compuesta a
-                  propósito. A sangre y sin imagen, el degradado ocupaba
-                  todo el ancho y la ficha parecía rota. */}
-              <div className="px-5 pt-5">
-                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-accent/50 via-secondary to-secondary">
-                  {product.image_url ? (
+              {/* Sin foto no se dibuja el marco. Un rectángulo de
+                  200px con un emoji al 22% no es "un placeholder
+                  elegante": es un hueco que empuja el nombre del plato
+                  fuera de la primera pantalla para no decir nada. */}
+              {product.image_url && (
+                <div className="px-5 pt-5">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-muted">
                     <Image
                       src={product.image_url}
                       alt={product.name}
@@ -85,18 +84,11 @@ export function ProductSheet({
                       priority
                       className="object-cover"
                     />
-                  ) : (
-                    <span
-                      aria-hidden
-                      className="absolute inset-0 flex select-none items-center justify-center text-6xl opacity-[0.22]"
-                    >
-                      {getCategoryIcon(categoryName ?? "")}
-                    </span>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex flex-col gap-2 px-5 pt-4">
+              <div className="flex flex-col gap-2 px-5 pt-6">
                 <SheetTitle className="font-display text-[22px] font-semibold leading-tight">
                   {product.name}
                 </SheetTitle>
@@ -125,7 +117,7 @@ export function ProductSheet({
                 <span className="text-[14px] font-semibold text-foreground">
                   Cantidad
                 </span>
-                <div className="flex items-center gap-1 rounded-full border border-border/70 bg-secondary/60 p-1">
+                <div className="neu-inset flex items-center gap-1 rounded-full bg-secondary p-1">
                   <Button
                     type="button"
                     variant="ghost"
@@ -171,14 +163,14 @@ export function ProductSheet({
                     placeholder="Ej: sin cebolla, término medio…"
                     rows={2}
                     autoFocus
-                    className="rounded-xl text-[15px]"
+                    className="rounded-2xl text-[15px]"
                   />
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setNotesOpen(true)}
-                  className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed border-border px-3.5 text-left text-[13.5px] font-medium text-muted-foreground active:bg-secondary"
+                  className="flex min-h-11 w-full items-center gap-2 rounded-2xl border border-dashed border-border px-3.5 text-left text-[13.5px] font-medium text-muted-foreground active:bg-secondary"
                 >
                   <PencilLine className="h-4 w-4 shrink-0" strokeWidth={2} />
                   {notes.trim() ? notes : "Agregar una indicación (opcional)"}

@@ -1,26 +1,25 @@
 import Image from "next/image";
 import { Plus } from "lucide-react";
-import { formatPrice, cn } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
+import { formatPrice, cn } from "@/lib/utils";
 import type { PublicProduct } from "@/types/menu";
 
 /**
  * Tarjeta compacta para las filas horizontales de cada categoría.
  *
- * Mientras no haya fotos, el hueco de imagen no se deja vacío ni con
- * un ícono de "imagen rota": se llena con un degradado cálido y el
- * emoji de la categoría, que se lee como decisión y no como error.
- * En cuanto el restaurante suba la foto, ocupa ese mismo espacio sin
- * mover nada de sitio.
+ * Sin foto NO se dibuja el hueco de la foto. Antes se rellenaba con un
+ * degradado y el emoji de la categoría, y el resultado eran seis
+ * bloques grises idénticos ocupando la mitad de cada tarjeta para no
+ * decir nada — se leía como fotos que no cargaron. Sin ese hueco la
+ * tarjeta es puro texto y se sostiene sola; cuando el restaurante suba
+ * la foto, aparece encima y la tarjeta crece.
  */
 export function ProductCardCompact({
   product,
-  categoryName,
   onSelect,
   quantityInCart = 0,
 }: {
   product: PublicProduct;
-  categoryName: string;
   onSelect?: (product: PublicProduct) => void;
   quantityInCart?: number;
 }) {
@@ -42,12 +41,12 @@ export function ProductCardCompact({
             }
       }
       className={cn(
-        "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-card text-left",
-        soldOut ? "opacity-55" : "shadow-card cursor-pointer"
+        "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-card text-left",
+        soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
       )}
     >
-      <div className="relative h-[92px] w-full overflow-hidden bg-gradient-to-br from-accent/50 via-secondary to-secondary">
-        {product.image_url ? (
+      {product.image_url && (
+        <div className="relative h-[92px] w-full overflow-hidden bg-muted">
           <Image
             src={product.image_url}
             alt={product.name}
@@ -55,38 +54,20 @@ export function ProductCardCompact({
             sizes="158px"
             className="object-cover"
           />
-        ) : (
-          <>
-            {/* Sin foto: el emoji va como sello decorativo saliéndose
-                de la esquina, no centrado. Centrado y opaco se
-                convierte en el protagonista y, como es el mismo para
-                toda la categoría, se ven 16 tarjetas idénticas. Como
-                marca de agua da textura sin competir con el nombre. */}
-            <span
-              aria-hidden
-              className="absolute -bottom-3 -right-2 select-none text-6xl opacity-[0.13]"
-            >
-              {getCategoryIcon(categoryName)}
-            </span>
-            <span
-              aria-hidden
-              className="absolute inset-x-0 bottom-0 h-px bg-border/50"
-            />
-          </>
-        )}
+        </div>
+      )}
+
+      <div className="relative flex flex-1 flex-col gap-1 p-3">
         {quantityInCart > 0 && (
-          <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold leading-tight text-primary-foreground shadow-sm">
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-primary px-1.5 py-0.5 text-[10.5px] font-bold leading-tight text-primary-foreground">
             {quantityInCart}
           </span>
         )}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-1 p-2.5">
         <h3 className="font-display line-clamp-2 text-[13.5px] font-semibold leading-snug text-foreground">
           {product.name}
         </h3>
         {product.description && (
-          <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+          <p className="line-clamp-3 text-[11.5px] leading-snug text-muted-foreground">
             {product.description}
           </p>
         )}
@@ -153,14 +134,12 @@ export function ProductCard({
             }
       }
       className={cn(
-        "group relative flex items-center gap-3 rounded-2xl bg-card px-3.5 py-3 text-left transition-all duration-200",
-        soldOut
-          ? "opacity-55"
-          : "shadow-card cursor-pointer active:scale-[0.99] active:shadow-none"
+        "group relative flex items-center gap-3 rounded-2xl border border-border bg-card px-3.5 py-3 text-left transition-colors duration-200",
+        soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
       )}
     >
       {product.image_url && (
-        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted">
           <Image
             src={product.image_url}
             alt={product.name}
@@ -214,7 +193,7 @@ export function ProductCard({
       </div>
 
       {!soldOut && (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-active:scale-90">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center clay clay-primary rounded-full bg-primary text-primary-foreground">
           <Plus className="h-[18px] w-[18px]" strokeWidth={2.5} />
         </div>
       )}

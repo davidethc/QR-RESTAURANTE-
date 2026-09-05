@@ -26,8 +26,8 @@ export function SuggestionsRow({
   if (suggestions.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-2.5 border-y border-border/60 bg-accent/25 px-4 py-4">
-      <p className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-accent-foreground">
+    <section className="flex flex-col gap-2.5 px-4">
+      <p className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-wine">
         <Sparkles className="h-3.5 w-3.5" strokeWidth={2.5} />
         Combos del día
       </p>
@@ -39,7 +39,7 @@ export function SuggestionsRow({
               key={`combo-${s.dish.id}-${s.drink.id}`}
               type="button"
               onClick={() => onAddCombo(s.dish, s.drink)}
-              className="shadow-card group flex w-[190px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
+              className="group flex w-[190px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
               <span className="flex flex-col gap-1">
                 <span className="font-display text-[15px] font-semibold leading-snug text-foreground">
@@ -52,15 +52,15 @@ export function SuggestionsRow({
               </span>
 
               <span className="flex items-end justify-between gap-2">
-                <span className="flex flex-col leading-none">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Los dos
-                  </span>
-                  <span className="font-display mt-1 text-xl font-semibold tabular-nums text-wine">
+                <span className="flex items-baseline gap-1.5 leading-none">
+                  <span className="font-display text-xl font-semibold tabular-nums text-wine">
                     {formatPrice(s.comboPrice)}
                   </span>
+                  <span className="text-[10.5px] font-medium text-muted-foreground">
+                    los dos
+                  </span>
                 </span>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-active:scale-90">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center clay clay-primary rounded-full bg-primary text-primary-foreground">
                   <Plus className="h-4 w-4" strokeWidth={2.5} />
                 </span>
               </span>
@@ -70,7 +70,7 @@ export function SuggestionsRow({
               key={s.product.id ?? i}
               type="button"
               onClick={() => onSelectProduct(s.product)}
-              className="shadow-card group flex w-[150px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
+              className="group flex w-[150px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
               <span className="font-display text-[15px] font-semibold leading-snug text-foreground">
                 {s.product.name}
@@ -79,7 +79,7 @@ export function SuggestionsRow({
                 <span className="font-display text-xl font-semibold tabular-nums text-wine">
                   {formatPrice(s.product.price)}
                 </span>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-active:scale-90">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center clay clay-primary rounded-full bg-primary text-primary-foreground">
                   <Plus className="h-4 w-4" strokeWidth={2.5} />
                 </span>
               </span>
