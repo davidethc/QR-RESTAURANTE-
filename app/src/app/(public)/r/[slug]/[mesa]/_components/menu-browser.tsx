@@ -185,7 +185,7 @@ export function MenuBrowser({
                     "flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors duration-200",
                     isActive
                       ? "clay clay-primary bg-primary text-primary-foreground"
-                      : "border border-border/70 bg-card text-secondary-foreground active:bg-secondary"
+                      : "bg-card text-secondary-foreground shadow-card active:bg-secondary"
                   )}
                 >
                   <span aria-hidden className="text-sm leading-none">
@@ -336,7 +336,7 @@ export function MenuBrowser({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-card text-[14px] font-semibold text-foreground active:bg-secondary"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-card text-[14px] font-semibold text-foreground shadow-card active:bg-secondary"
             >
               <MessageCircle className="h-4 w-4 text-primary" strokeWidth={2.25} />
               Hablar por WhatsApp

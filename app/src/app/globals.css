@@ -61,26 +61,33 @@
   para las tarjetas, que así "flotan" sobre el papel.
 */
 :root {
-    --background: oklch(0.973 0.014 76);
-    --foreground: oklch(0.26 0.028 48);
-    --card: oklch(0.995 0.006 80);
-    --card-foreground: oklch(0.26 0.028 48);
-    --popover: oklch(0.995 0.006 80);
-    --popover-foreground: oklch(0.26 0.028 48);
-    --primary: oklch(0.52 0.105 190);
-    --primary-foreground: oklch(0.99 0.005 80);
-    --secondary: oklch(0.945 0.018 76);
-    --secondary-foreground: oklch(0.32 0.03 48);
-    --muted: oklch(0.945 0.018 76);
-    --muted-foreground: oklch(0.53 0.025 58);
-    --accent: oklch(0.925 0.038 190);
-    --accent-foreground: oklch(0.34 0.075 192);
+    /* Cerámica: el fondo es barro claro, no blanco. Las tarjetas son
+       un crema más pálido que el fondo — esa diferencia de tono es la
+       que las separa, para no necesitar borde NI sombra. Un borde fino
+       junto a una sombra difusa es la firma más reconocible de una
+       interfaz generada automáticamente; acá se usa una sola cosa. */
+    --background: oklch(0.951 0.019 74);
+    --foreground: oklch(0.245 0.03 46);
+    --card: oklch(0.988 0.008 82);
+    --card-foreground: oklch(0.245 0.03 46);
+    --popover: oklch(0.988 0.008 82);
+    --popover-foreground: oklch(0.245 0.03 46);
+    /* Verde pino apagado, no turquesa saturado: el turquesa brillante
+       sobre crema se lee a panel de software; este se lee a local. */
+    --primary: oklch(0.455 0.072 169);
+    --primary-foreground: oklch(0.985 0.008 85);
+    --secondary: oklch(0.925 0.022 74);
+    --secondary-foreground: oklch(0.31 0.032 46);
+    --muted: oklch(0.925 0.022 74);
+    --muted-foreground: oklch(0.505 0.028 56);
+    --accent: oklch(0.912 0.032 172);
+    --accent-foreground: oklch(0.33 0.06 170);
     --destructive: oklch(0.55 0.2 27);
-    --border: oklch(0.885 0.022 72);
-    --input: oklch(0.885 0.022 72);
-    --ring: oklch(0.52 0.105 190);
-    --wine: oklch(0.43 0.135 24);
-    --wine-foreground: oklch(0.99 0.005 80);
+    --border: oklch(0.878 0.024 72);
+    --input: oklch(0.878 0.024 72);
+    --ring: oklch(0.455 0.072 169);
+    --wine: oklch(0.428 0.132 26);
+    --wine-foreground: oklch(0.985 0.008 85);
     --chart-1: oklch(0.55 0.11 192);
     --chart-2: oklch(0.36 0.12 18);
     --chart-3: oklch(0.7 0.1 192);
@@ -142,7 +149,7 @@
     /* Grano finísimo sobre el fondo: le da textura de papel al color
        plano. Va en el body (no en un div) para que ninguna pantalla
        tenga que acordarse de incluirlo. */
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
     }
   html {
     @apply font-sans;
@@ -159,10 +166,12 @@
 @layer components {
   /* Sombra de tarjeta cálida: la sombra gris neutra sobre fondo crema
      se ve sucia — esta lleva el mismo tinte del papel. */
+  /* Sombra corta y pegada al borde, no una nube difusa. La sombra
+     amplia y suave es justo la que delata una interfaz generada; esta
+     apoya la pieza sobre el papel en vez de hacerla flotar. Va SIN
+     borde: la tarjeta ya se separa por tono. */
   .shadow-card {
-    box-shadow:
-      0 1px 2px oklch(0.4 0.03 50 / 0.05),
-      0 4px 12px -4px oklch(0.4 0.03 50 / 0.08);
+    box-shadow: 0 1px 2px oklch(0.35 0.04 48 / 0.07);
     }
   .shadow-card-lifted {
     box-shadow:

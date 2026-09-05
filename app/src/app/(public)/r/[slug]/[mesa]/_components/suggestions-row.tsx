@@ -39,7 +39,7 @@ export function SuggestionsRow({
               key={`combo-${s.dish.id}-${s.drink.id}`}
               type="button"
               onClick={() => onAddCombo(s.dish, s.drink)}
-              className="shadow-card group flex w-[190px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border/70 bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
+              className="shadow-card group flex w-[190px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
               <span className="flex flex-col gap-1">
                 <span className="font-display text-[15px] font-semibold leading-snug text-foreground">
@@ -70,7 +70,7 @@ export function SuggestionsRow({
               key={s.product.id ?? i}
               type="button"
               onClick={() => onSelectProduct(s.product)}
-              className="shadow-card group flex w-[150px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border/70 bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
+              className="shadow-card group flex w-[150px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
               <span className="font-display text-[15px] font-semibold leading-snug text-foreground">
                 {s.product.name}

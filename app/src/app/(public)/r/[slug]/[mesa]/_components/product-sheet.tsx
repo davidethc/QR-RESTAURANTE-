@@ -75,7 +75,7 @@ export function ProductSheet({
                   propósito. A sangre y sin imagen, el degradado ocupaba
                   todo el ancho y la ficha parecía rota. */}
               <div className="px-5 pt-5">
-                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-accent/50 via-secondary to-secondary">
+                <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-accent/50 via-secondary to-secondary">
                   {product.image_url ? (
                     <Image
                       src={product.image_url}

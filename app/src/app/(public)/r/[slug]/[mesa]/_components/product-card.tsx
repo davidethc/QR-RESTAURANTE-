@@ -42,7 +42,7 @@ export function ProductCardCompact({
             }
       }
       className={cn(
-        "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border/60 bg-card text-left",
+        "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-card text-left",
         soldOut ? "opacity-55" : "shadow-card cursor-pointer"
       )}
     >
@@ -153,7 +153,7 @@ export function ProductCard({
             }
       }
       className={cn(
-        "group relative flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-3.5 py-3 text-left transition-all duration-200",
+        "group relative flex items-center gap-3 rounded-2xl bg-card px-3.5 py-3 text-left transition-all duration-200",
         soldOut
           ? "opacity-55"
           : "shadow-card cursor-pointer active:scale-[0.99] active:shadow-none"

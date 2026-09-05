@@ -152,7 +152,7 @@ export function CartSheet({
                   key={product.id}
                   type="button"
                   onClick={() => onAddSuggestion(product)}
-                  className="flex min-h-16 w-[132px] shrink-0 flex-col justify-between gap-1.5 rounded-xl border border-border/70 bg-card px-3 py-2.5 text-left active:bg-muted"
+                  className="flex min-h-16 w-[132px] shrink-0 flex-col justify-between gap-1.5 rounded-xl bg-card px-3 py-2.5 text-left shadow-card active:bg-muted"
                 >
                   <span className="font-display line-clamp-2 text-[13px] font-semibold leading-snug text-foreground">
                     {product.name}
