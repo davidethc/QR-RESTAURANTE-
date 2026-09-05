@@ -1,3 +1,4 @@
+import { normalizeText } from "@/lib/utils";
 /**
  * Emoji por categoría de la carta.
  *
@@ -26,17 +27,20 @@ const KEYWORD_ICONS: [string[], string][] = [
 
 const FALLBACK_ICON = "🍽️";
 
-function normalize(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
+
+// Las palabras clave se normalizan una sola vez al cargar el módulo.
+// Antes se normalizaba cada una en cada llamada, y getCategoryIcon se
+// llama una vez por categoría en cada render de la carta.
+const NORMALIZED_ICONS: ReadonlyArray<readonly [readonly string[], string]> =
+  KEYWORD_ICONS.map(([keywords, icon]) => [
+    keywords.map(normalizeText),
+    icon,
+  ]);
 
 export function getCategoryIcon(categoryName: string): string {
-  const name = normalize(categoryName);
-  for (const [keywords, icon] of KEYWORD_ICONS) {
-    if (keywords.some((k) => name.includes(normalize(k)))) return icon;
+  const name = normalizeText(categoryName);
+  for (const [keywords, icon] of NORMALIZED_ICONS) {
+    if (keywords.some((k) => name.includes(k))) return icon;
   }
   return FALLBACK_ICON;
 }

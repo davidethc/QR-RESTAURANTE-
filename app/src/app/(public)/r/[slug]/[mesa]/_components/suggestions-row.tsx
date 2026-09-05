@@ -1,3 +1,6 @@
+"use client";
+
+import { useRef } from "react";
 import { Sparkles, Plus } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { MenuSuggestion } from "@/lib/suggestions";
@@ -23,6 +26,17 @@ export function SuggestionsRow({
   onSelectProduct: (product: PublicProduct) => void;
   onAddCombo: (dish: PublicProduct, drink: PublicProduct) => void;
 }) {
+  // Guardia contra el doble toque: en un celular es facilísimo que el
+  // dedo registre dos veces, y sin esto un combo entraba cuatro veces al
+  // carrito.
+  const lastTap = useRef(0);
+  function onceGuard(fn: () => void) {
+    const now = Date.now();
+    if (now - lastTap.current < 400) return;
+    lastTap.current = now;
+    fn();
+  }
+
   if (suggestions.length === 0) return null;
 
   return (
@@ -38,7 +52,7 @@ export function SuggestionsRow({
             <button
               key={`combo-${s.dish.id}-${s.drink.id}`}
               type="button"
-              onClick={() => onAddCombo(s.dish, s.drink)}
+              onClick={() => onceGuard(() => onAddCombo(s.dish, s.drink))}
               className="group flex w-[190px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
               <span className="flex flex-col gap-1">
@@ -69,7 +83,7 @@ export function SuggestionsRow({
             <button
               key={s.product.id ?? i}
               type="button"
-              onClick={() => onSelectProduct(s.product)}
+              onClick={() => onceGuard(() => onSelectProduct(s.product))}
               className="group flex w-[150px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
             >
               <span className="font-display text-[15px] font-bold leading-snug text-foreground">

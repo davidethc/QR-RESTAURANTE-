@@ -49,7 +49,15 @@ export function useCart(slug: string, tableNumber: number) {
   const persist = useCallback(
     (next: CartItem[]) => {
       setItems(next);
-      window.localStorage.setItem(key, JSON.stringify(next));
+      try {
+        window.localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        // Safari en Navegación Privada y un disco lleno lanzan
+        // QuotaExceededError aquí. Sin este catch el error sube desde el
+        // handler de "Agregar" y el cliente ve la pantalla rota justo al
+        // pedir. El carrito sigue vivo en memoria: solo se pierde al
+        // recargar, que es infinitamente mejor que romperse.
+      }
     },
     [key]
   );

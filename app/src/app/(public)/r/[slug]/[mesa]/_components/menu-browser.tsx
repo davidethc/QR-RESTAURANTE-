@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useRef, useState } from "react";
 import { Search, ShoppingBag, MessageCircle, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,15 +15,8 @@ import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { getCategoryIcon } from "@/lib/category-icons";
-import { formatPrice, cn } from "@/lib/utils";
+import { formatPrice, cn, normalizeText } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
-
-function normalize(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
 
 export function MenuBrowser({
   categories,
@@ -49,6 +42,18 @@ export function MenuBrowser({
     () => new Set()
   );
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  // Un callback de ref ESTABLE por categoría. Con una flecha creada en
+  // el JSX, React ve una función distinta en cada render y desmonta y
+  // vuelve a asignar todos los refs cada vez.
+  const refCallbacks = useRef<
+    Record<string, (el: HTMLElement | null) => void>
+  >({});
+  const getSectionRef = useCallback((id: string) => {
+    refCallbacks.current[id] ??= (el) => {
+      sectionRefs.current[id] = el;
+    };
+    return refCallbacks.current[id];
+  }, []);
 
   const [selectedProduct, setSelectedProduct] = useState<PublicProduct | null>(
     null
@@ -105,16 +110,34 @@ export function MenuBrowser({
     [suggestions]
   );
 
+  // Índice de búsqueda precalculado. Antes cada pulsación de tecla
+  // normalizaba en Unicode los 50 nombres de la carta otra vez, en el
+  // hilo principal de un celular de gama baja. Ahora se normaliza una
+  // vez por carta y cada tecla solo hace un includes().
+  const searchIndex = useMemo(
+    () =>
+      categories.flatMap((category) =>
+        category.products.map((product) => ({
+          product,
+          categoryName: category.name,
+          haystack: normalizeText(product.name),
+        }))
+      ),
+    [categories]
+  );
+
+  // La lista de resultados puede quedarse un fotograma atrás de lo que
+  // se está escribiendo: teclear siempre responde al instante.
+  const deferredQuery = useDeferredValue(query);
+
   const results = useMemo(() => {
-    const q = normalize(query.trim());
+    const q = normalizeText(deferredQuery.trim());
     if (!q) return null;
 
-    return categories.flatMap((category) =>
-      category.products
-        .filter((product) => normalize(product.name).includes(q))
-        .map((product) => ({ ...product, categoryName: category.name }))
-    );
-  }, [categories, query]);
+    return searchIndex
+      .filter((entry) => entry.haystack.includes(q))
+      .map((entry) => ({ ...entry.product, categoryName: entry.categoryName }));
+  }, [searchIndex, deferredQuery]);
 
   function toggleCategory(id: string) {
     setOpenCategories((prev) => {
@@ -126,9 +149,13 @@ export function MenuBrowser({
       }
       return next;
     });
-    // Cerrar la categoría marcada apaga la pill: si no hay nada abierto,
-    // no hay nada que señalar.
-    setActiveCategoryId((prev) => (prev === id ? null : id));
+    // Abrir marca; cerrar solo apaga si era la marcada. Sin distinguir
+    // los dos casos, cerrar una categoría cualquiera movía la marca a
+    // esa misma categoría recién cerrada.
+    const isOpening = !openCategories.has(id);
+    setActiveCategoryId((prev) =>
+      isOpening ? id : prev === id ? null : prev
+    );
   }
 
   function goToCategory(id: string) {
@@ -228,9 +255,7 @@ export function MenuBrowser({
               onToggle={() => toggleCategory(category.id)}
               onSelectProduct={setSelectedProduct}
               cartQuantities={cartQuantities}
-              sectionRef={(el) => {
-                sectionRefs.current[category.id] = el;
-              }}
+              sectionRef={getSectionRef(category.id)}
             />
           ))
         ) : results.length === 0 ? (

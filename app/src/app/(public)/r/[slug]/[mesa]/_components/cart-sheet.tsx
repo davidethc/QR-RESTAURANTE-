@@ -52,9 +52,15 @@ export function CartSheet({
   const router = useRouter();
   const inTable = tableNumber !== null;
 
-  const whatsappOrderUrl = buildWhatsappUrl(
-    whatsappPhone,
-    composeOrderMessage(restaurantName, items, total)
+  const whatsappOrderUrl = useMemo(
+    () =>
+      open
+        ? buildWhatsappUrl(
+            whatsappPhone,
+            composeOrderMessage(restaurantName, items, total)
+          )
+        : null,
+    [open, whatsappPhone, restaurantName, items, total]
   );
 
   const cartProductIds = useMemo(

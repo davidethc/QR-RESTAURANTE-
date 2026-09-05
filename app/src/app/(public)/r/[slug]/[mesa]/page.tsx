@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getTableSession } from "@/lib/session";
 import { getPublicMenu } from "@/lib/queries/menu";
@@ -21,8 +22,12 @@ export default async function MenuPage({
   params: Promise<{ slug: string; mesa: string }>;
 }) {
   const { slug } = await params;
+  // La carta y la sesión de mesa no dependen una de otra: se piden a la
+  // vez y se esperan juntas. En serie eran dos latencias encadenadas
+  // antes de que el cliente viera un solo plato.
+  const menuPromise = getPublicMenu(slug);
   const session = await getTableSession();
-  const menu = await getPublicMenu(slug);
+  const menu = await menuPromise;
 
   /**
    * Dos modos, decididos por si hay sesión de mesa viva:
@@ -48,7 +53,16 @@ export default async function MenuPage({
       />
       {inTable && (
         <>
-          <ActiveOrdersBanner slug={slug} tableNumber={session!.tableNumber} />
+          {/* Suspense: el banner de pedidos activos hace su propia
+              consulta a Postgres. Sin esta frontera bloqueaba el HTML de
+              toda la carta hasta resolverse — el cliente se quedaba
+              mirando una pantalla vacía por un aviso secundario. */}
+          <Suspense fallback={null}>
+            <ActiveOrdersBanner
+              slug={slug}
+              tableNumber={session!.tableNumber}
+            />
+          </Suspense>
           <ActiveCallBanner />
         </>
       )}

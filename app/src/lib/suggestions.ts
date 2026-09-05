@@ -1,3 +1,4 @@
+import { normalizeText } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
 export type MenuSuggestion =
@@ -9,12 +10,6 @@ export type MenuSuggestion =
       comboPrice: number;
     };
 
-function normalize(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
 
 function suggestionPrice(s: MenuSuggestion): number {
   return s.type === "combo" ? s.comboPrice : s.product.price;
@@ -69,7 +64,7 @@ export function getMenuSuggestions(
   }
 
   const drinksCategory = categories.find((c) =>
-    normalize(c.name).includes("bebida")
+    normalizeText(c.name).includes("bebida")
   );
   const drinks = drinksCategory?.products.filter((p) => p.available) ?? [];
 

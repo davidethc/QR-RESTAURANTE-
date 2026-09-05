@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Image from "next/image";
 import { Plus } from "lucide-react";
 import { getCategoryIcon } from "@/lib/category-icons";
@@ -19,7 +20,7 @@ import type { PublicProduct } from "@/types/menu";
  * tarjeta es puro texto y se sostiene sola; cuando el restaurante suba
  * la foto, aparece encima y la tarjeta crece.
  */
-export function ProductCardCompact({
+function ProductCardCompactBase({
   product,
   onSelect,
   quantityInCart = 0,
@@ -101,7 +102,7 @@ export function ProductCardCompact({
  * carta se ve terminada hoy (sin fotos) y solo mejora cuando el
  * restaurante suba las suyas.
  */
-export function ProductCard({
+function ProductCardBase({
   product,
   categoryName,
   onSelect,
@@ -199,3 +200,11 @@ export function ProductCard({
     </article>
   );
 }
+
+/**
+ * Memoizadas a propósito: `cartQuantities` en MenuBrowser cambia con
+ * cada plato que entra al carrito, así que sin esto agregar UN producto
+ * repintaba todas las tarjetas de todas las categorías abiertas.
+ */
+export const ProductCardCompact = memo(ProductCardCompactBase);
+export const ProductCard = memo(ProductCardBase);
