@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Search, ShoppingBag, MessageCircle, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -65,36 +65,18 @@ export function MenuBrowser({
     `Hola ${restaurantName}, vi su carta y quisiera hacer una consulta.`
   );
 
-  // Pill activa = categoría que el cliente está mirando. Un solo
-  // IntersectionObserver para todas las secciones (no un listener de
-  // scroll, que dispararía en cada píxel y costaría rendimiento).
-  // Arranca en la primera categoría para que la fila de pills nunca se
-  // vea "sin nada seleccionado" al entrar.
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(
-    categories[0]?.id ?? null
-  );
-
-  useEffect(() => {
-    const sections = Object.values(sectionRefs.current).filter(
-      (el): el is HTMLElement => el !== null
-    );
-    if (sections.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible) {
-          setActiveCategoryId(visible.target.id.replace("cat-", ""));
-        }
-      },
-      { rootMargin: "-140px 0px -55% 0px" }
-    );
-
-    sections.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [categories]);
+  // Pill activa = la categoría que el cliente ABRIÓ, no la que le queda
+  // debajo del dedo al hacer scroll.
+  //
+  // Antes esto lo decidía un IntersectionObserver, y estaba mal por dos
+  // razones: durante el scroll suave que dispara el propio clic, el
+  // observer se iba quedando con la sección que estuviera arriba en ese
+  // instante, así que acababa pintando una pill distinta de la que se
+  // tocó; y al entrar marcaba la primera categoría cuando en realidad
+  // no había ninguna abierta. Marcar por scroll además es una promesa
+  // que la pantalla no puede cumplir: con las categorías cerradas, casi
+  // todas caen dentro del viewport a la vez.
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   // El emoji de la ficha de producto sale de su categoría, y
   // PublicProduct no la lleva encima — se resuelve con este índice.
@@ -144,10 +126,14 @@ export function MenuBrowser({
       }
       return next;
     });
+    // Cerrar la categoría marcada apaga la pill: si no hay nada abierto,
+    // no hay nada que señalar.
+    setActiveCategoryId((prev) => (prev === id ? null : id));
   }
 
   function goToCategory(id: string) {
     setOpenCategories((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+    setActiveCategoryId(id);
     sectionRefs.current[id]?.scrollIntoView({
       behavior: "smooth",
       block: "start",
