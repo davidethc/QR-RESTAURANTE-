@@ -876,7 +876,15 @@ Probado en navegador real con `mesero@demo.monky.com`.
 - Un `MutationObserver` que mira `addedNodes` cuenta el contenedor Y el hijo:
   para contar toasts, contar elementos hoja visibles en un instante.
 
-### Datos de prueba creados
-Pedidos #6 a #12 en Omm Siri (sin ítems ni sesión, insertados por SQL para
-disparar eventos). **Pendientes de limpiar** — el borrado masivo está
-bloqueado por permisos.
+### Datos de prueba — limpiados (2026-09-06)
+Se borraron los 12 pedidos, sus ítems, las solicitudes y los registros de
+auditoría de Omm Siri; las sesiones de mesa pasaron a EXPIRED, las mesas a
+AVAILABLE y la secuencia de `order_number` se reinició en 1.
+
+Los #6 a #12 eran pedidos fantasma insertados por SQL para disparar eventos
+de Realtime: sin ítems y sin sesión, en el panel se veían como comandas
+reales sin nada que cocinar.
+
+**La carta quedó intacta**: 50 productos, 8 categorías, 5 mesas.
+Verificado después en el navegador: panel en 0/0, las 5 mesas disponibles,
+el indicador en "en vivo" y el escaneo del QR abriendo la carta.
