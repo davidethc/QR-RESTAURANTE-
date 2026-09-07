@@ -776,6 +776,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      health_check: { Args: never; Returns: string }
       mark_order_delivered: { Args: { p_order_id: string }; Returns: undefined }
       mark_order_ready: { Args: { p_order_id: string }; Returns: undefined }
       refresh_table_status: { Args: { p_table_id: string }; Returns: undefined }

@@ -888,3 +888,74 @@ reales sin nada que cocinar.
 **La carta quedó intacta**: 50 productos, 8 categorías, 5 mesas.
 Verificado después en el navegador: panel en 0/0, las 5 mesas disponibles,
 el indicador en "en vivo" y el escaneo del QR abriendo la carta.
+
+---
+
+## [2026-09-07] Latido: que Supabase no pause el proyecto
+
+### Por qué
+
+La organización está en plan **free**, y Supabase pausa los proyectos gratuitos tras **7 días de poca actividad de base de datos**
+([documentación oficial](https://supabase.com/docs/guides/platform/free-project-pausing)).
+Avisa por correo una semana antes y hay 90 días para restaurar sin perder datos.
+
+**Dos trampas que hay que tener claras:**
+
+1. **Hacer ping a la carta NO cuenta.** `getPublicMenu` está cacheada 5 min
+   (`src/lib/queries/menu.ts`): la respuesta sale del caché sin tocar Postgres.
+   Por eso existe una ruta dedicada con `force-dynamic`.
+2. **Un `pg_cron` dentro de la base tampoco cuenta.** La documentación habla de
+   "peticiones de usuario": quien despierta la base tiene que llamarla desde fuera.
+3. Los crons de GitHub Actions se apagan solos a los 60 días sin commits — por eso
+   no son el mecanismo principal.
+
+### Qué se implementó
+
+- Migración `053_health_check`: función `public.health_check()` que devuelve `now()`.
+  No lee ninguna tabla ni expone ningún dato. `execute` para `anon` y `authenticated`.
+- `src/app/api/health/route.ts`: `force-dynamic` + `revalidate = 0`.
+  Devuelve `200 {ok:true, db, ms}` o **`503`** si la base no responde.
+
+### Pruebas ejecutadas
+
+| Prueba | Resultado |
+|---|---|
+| `GET /api/health` | `200` con hora real ✓ |
+| Dos llamadas separadas 2 s | **horas distintas** → llega a Postgres, no está cacheada ✓ |
+| Cabecera de respuesta | `cache-control: no-store` ✓ |
+| Con la base rechazando (permiso revocado a propósito) | **`503`**, no 200 ✓ |
+| Permiso restaurado después | verificado, `200` de nuevo ✓ |
+| Carta y panel tras el cambio | 200 / 307 (redirección de login) ✓ |
+
+### Pendiente: configurar los dos vigilantes (pasos manuales)
+
+Hacen falta **dos** porque uno solo es un único punto de fallo.
+
+**1. UptimeRobot (principal)** — https://uptimerobot.com, cuenta gratuita
+- Tipo: HTTP(s)
+- URL: `https://<TU-APP>.vercel.app/api/health`  ← falta la URL de producción
+- Intervalo: 5 minutos
+- Alerta: al correo del dueño
+- Vigila la cadena completa: Vercel + Next + Supabase.
+
+**2. cron-job.org (respaldo)** — https://cron-job.org, cuenta gratuita
+- URL: `https://fvzxfbzujvkkvniyphps.supabase.co/rest/v1/rpc/health_check`
+- Método: `POST`
+- Cabeceras: `apikey` y `Authorization: Bearer <clave publishable>`
+  (la misma `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` del `.env`; es pública por diseño,
+  viaja en cada página del sitio)
+- Intervalo: 1 hora
+- Llama a Supabase **directamente**, así que sigue despertando la base aunque
+  la app en Vercel esté caída — que es justo cuando el vigilante principal deja de servir.
+
+288 peticiones al día contra el "unas pocas al día" que pide la documentación: margen de sobra.
+
+### Lo que hay que aceptar
+
+Ningún truco sobre un plan gratuito está garantizado para siempre; Supabase puede
+cambiar cómo mide la actividad. La red de seguridad es que **avisan por correo una
+semana antes** y hay **90 días para restaurar sin perder nada**.
+
+Nota de contexto: cuando un restaurante real esté usando el sistema, la base recibe
+tráfico todo el día y no se pausaría de todos modos. El riesgo real es **ahora**, en
+la etapa de demostraciones, cuando el proyecto pasa semanas quieto entre reuniones.
