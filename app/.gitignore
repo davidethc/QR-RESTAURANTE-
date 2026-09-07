@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# El ejemplo SÍ se sube: no tiene secretos y es la única forma de saber
+# qué variables hay que configurar al montar el proyecto en otra
+# máquina o en Vercel.
+!.env.example
 
 # vercel
 .vercel
