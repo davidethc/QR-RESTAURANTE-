@@ -959,3 +959,55 @@ semana antes** y hay **90 días para restaurar sin perder nada**.
 Nota de contexto: cuando un restaurante real esté usando el sistema, la base recibe
 tráfico todo el día y no se pausaría de todos modos. El riesgo real es **ahora**, en
 la etapa de demostraciones, cuando el proyecto pasa semanas quieto entre reuniones.
+
+---
+
+## [2026-09-07] Crear mesas y PDF de QR desde el panel
+
+### Lo que faltaba
+No había forma de crear mesas desde el panel: las 5 de la demo se insertaron por SQL.
+La base **ya lo permitía** (política `tables_insert_admin` para OWNER/ADMIN, y
+`qr_token` con `default gen_random_uuid()`, o sea que el QR se crea solo).
+Solo faltaba la interfaz — no hizo falta ningún RPC nuevo.
+
+### Tres problemas corregidos del QR anterior
+1. **`window.location.origin`**: el QR codificaba el dominio desde el que se abrió el
+   panel. Imprimir desde una vista previa dejaba adhesivos inservibles pegados en las
+   mesas. Ahora manda `NEXT_PUBLIC_SITE_URL` (`src/lib/qr.ts`) y hay aviso visible
+   antes de imprimir.
+2. **Inyección de HTML**: `handlePrint` metía el nombre del local en un
+   `document.write` sin escapar; `Café & Té` bastaba para romperlo. Se eliminó esa
+   impresión por mesa — el PDF hace ese trabajo mejor y para todas.
+3. **Un QR a la vez**: con 20 mesas eran 20 diálogos.
+
+### Credenciales usadas
+`owner@demo.monky.com` / `MonkyDemo2026!` (sesión guardada en el scratchpad como
+`owner-auth.json`; la de mesero en `staff-auth.json`).
+
+### Pruebas ejecutadas
+
+| Prueba | Resultado |
+|---|---|
+| Crear rango 6–10 | 5 mesas creadas, cada una con su `qr_token` ✓ |
+| Repetir el mismo rango | "Alguna mesa entre la 6 y la 10 ya existe. No se creó ninguna." ✓ |
+| Crear una sola con nombre ("Terraza 2") | creada ✓ |
+| Rango invertido (20→5) | "El número final no puede ser menor que el inicial." ✓ |
+| Rango de 101 mesas | "Máximo 50 mesas por vez." ✓ |
+| PDF con 13 mesas | **2 páginas**, 13 imágenes, 34 KB ✓ |
+| Peso del PDF | 5,2 MB → **15 KB** tras activar `compress` en jsPDF |
+| `jspdf` en el paquete del cliente | **no se descarga** en la carta ✓ |
+| `jspdf` antes de tocar el botón | ningún fragmento >200 KB ✓ |
+| Botones con cuenta de MESERO | no aparecen ✓ (se descubrió sin querer: el primer intento de prueba falló porque el botón no existía para ese rol) |
+| Aviso de URL no imprimible | aparece en el diálogo y al pulsar el PDF ✓ |
+
+### Notas
+- **`compress: true` en jsPDF no es opcional**: sin él, 5 QR pesaban 5,2 MB y con 20
+  mesas el archivo pasaría de 20 MB, imposible de mandar por WhatsApp a la imprenta.
+- La regla del aviso se corrigió dos veces: primero no avisaba si `SITE_URL` apuntaba
+  a localhost, y después avisaba siempre en `vercel.app` — que va a ser el dominio de
+  producción. Ahora avisa solo si la dirección nunca puede funcionar (localhost o IP)
+  o si no hay variable configurada y se está adivinando.
+- **Falta configurar `NEXT_PUBLIC_SITE_URL` en Vercel** con el dominio de producción.
+- **Prueba pendiente que solo se puede hacer a mano**: escanear con un celular un QR
+  del PDF impreso y confirmar que abre la carta de esa mesa.
+- Mesas de prueba (6–13) eliminadas; quedan las 5 originales.

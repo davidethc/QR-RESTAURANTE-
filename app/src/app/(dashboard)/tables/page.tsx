@@ -5,6 +5,8 @@ import { TableStatusBadge } from "@/components/shared/status-badge";
 import { TableQrDialog } from "./_components/table-qr-dialog";
 import { ReleaseTableButton } from "./_components/release-table-button";
 import { TablesLive } from "./_components/tables-live";
+import { CreateTablesDialog } from "./_components/create-tables-dialog";
+import { TablesPdfButton } from "./_components/tables-pdf-button";
 import { formatPrice } from "@/lib/utils";
 import { getMyRestaurant, getTablesStatus } from "@/lib/queries/staff";
 
@@ -24,7 +26,21 @@ export default async function TablesPage() {
       <PageHeader
         title="Mesas"
         description={`${tables.length} mesas`}
-        action={<TablesLive restaurantId={session.restaurant.id} />}
+        action={
+          <div className="flex items-center gap-2">
+            <TablesLive restaurantId={session.restaurant.id} />
+            {canManage && (
+              <>
+                <TablesPdfButton
+                  restaurantName={session.restaurant.name}
+                  slug={session.restaurant.slug}
+                  tables={tables}
+                />
+                <CreateTablesDialog restaurantId={session.restaurant.id} />
+              </>
+            )}
+          </div>
+        }
       />
       <div className="grid grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-3 lg:grid-cols-4">
         {tables.map((table) => (
@@ -68,7 +84,6 @@ export default async function TablesPage() {
             {canManage && (
               <div className="mt-3 border-t border-border/60 pt-3">
                 <TableQrDialog
-                  restaurantName={session.restaurant.name}
                   tableLabel={table.name ?? `Mesa ${table.number}`}
                   qrToken={table.qr_token}
                 />

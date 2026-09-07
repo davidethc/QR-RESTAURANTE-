@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { QrCode, Download, Printer } from "lucide-react";
+import { QrCode, Download, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,23 +12,24 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { buildScanUrl, getQrUrlWarning } from "@/lib/qr";
 
 export function TableQrDialog({
-  restaurantName,
   tableLabel,
   qrToken,
 }: {
-  restaurantName: string;
   tableLabel: string;
   qrToken: string;
 }) {
   const [open, setOpen] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    const scanUrl = `${window.location.origin}/scan/${qrToken}`;
+    const scanUrl = buildScanUrl(qrToken);
+    setWarning(getQrUrlWarning());
     QRCode.toDataURL(scanUrl, { width: 512, margin: 2 }).then((url) => {
       if (!cancelled) setDataUrl(url);
     });
@@ -43,36 +44,6 @@ export function TableQrDialog({
     a.href = dataUrl;
     a.download = `qr-${tableLabel.toLowerCase().replace(/\s+/g, "-")}.png`;
     a.click();
-  }
-
-  function handlePrint() {
-    if (!dataUrl) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <title>QR — ${tableLabel}</title>
-          <style>
-            body { font-family: system-ui, sans-serif; text-align: center; padding: 40px; }
-            img { width: 320px; height: 320px; }
-            h1 { font-size: 20px; margin-bottom: 4px; }
-            h2 { font-size: 16px; font-weight: normal; color: #555; margin-top: 0; }
-            p { margin-top: 16px; font-size: 14px; color: #555; }
-          </style>
-        </head>
-        <body>
-          <h1>${restaurantName}</h1>
-          <h2>${tableLabel}</h2>
-          <img src="${dataUrl}" alt="QR" />
-          <p>Escanea para ver la carta y pedir</p>
-        </body>
-      </html>
-    `);
-    win.document.close();
-    win.focus();
-    win.print();
   }
 
   return (
@@ -106,13 +77,18 @@ export function TableQrDialog({
             <p className="text-center text-sm text-muted-foreground">
               Apunta la cámara del celular aquí para probar el enlace.
             </p>
+            {/* Un QR impreso con el dominio equivocado es papel tirado:
+                el aviso tiene que salir ANTES de imprimir. */}
+            {warning && (
+              <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-[13px] text-honey-soft-foreground">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                {warning}
+              </p>
+            )}
           </div>
           <DialogFooter className="gap-2 sm:justify-center">
-            <Button variant="outline" onClick={handleDownload} disabled={!dataUrl}>
+            <Button onClick={handleDownload} disabled={!dataUrl}>
               <Download className="h-4 w-4" /> Descargar PNG
-            </Button>
-            <Button onClick={handlePrint} disabled={!dataUrl}>
-              <Printer className="h-4 w-4" /> Imprimir
             </Button>
           </DialogFooter>
         </DialogContent>
