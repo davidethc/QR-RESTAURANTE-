@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useSyncExternalStore } from "react";
 import { Bell, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -13,6 +14,43 @@ import type { SessionCall } from "@/types/orders";
 // insistir. Sin esto el cliente queda encerrado justo cuando más
 // necesita llamar: cuando nadie le hizo caso.
 const REOPEN_AFTER_MS = 5 * 60 * 1000;
+
+/**
+ * `true` cuando ya pasó el instante `deadline`.
+ *
+ * Antes esto era un `Date.now()` suelto en el cuerpo del componente, y
+ * tenía dos problemas de verdad, no solo de lint:
+ *
+ * 1. El valor se congelaba: se calculaba una vez por render, así que una
+ *    solicitud sin atender NUNCA llegaba sola a "Volver a llamar" — solo
+ *    cambiaba si algo ajeno provocaba otro render. Justo el caso en que
+ *    el cliente más necesita insistir.
+ * 2. Con el shell estático, el servidor evaluaba el reloj en un momento
+ *    y el navegador en otro, lo que da desajuste de hidratación.
+ *
+ * `useSyncExternalStore` es la API pensada exactamente para esto: el
+ * snapshot del servidor es siempre `false` (nada es viejo todavía) y en
+ * el cliente se programa UN temporizador para el instante exacto del
+ * cambio, en vez de sondear el reloj.
+ */
+function usePastDeadline(deadline: number | null): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (deadline === null) return () => {};
+      const ms = deadline - Date.now();
+      if (ms <= 0) return () => {};
+      const timer = setTimeout(onChange, ms);
+      return () => clearTimeout(timer);
+    },
+    [deadline]
+  );
+
+  return useSyncExternalStore(
+    subscribe,
+    () => deadline !== null && Date.now() >= deadline,
+    () => false
+  );
+}
 
 /**
  * Llamar al mesero y pedir la cuenta.
@@ -82,9 +120,11 @@ function ServiceButton({
   confirmLabel: string;
   onConfirm: () => ReturnType<typeof callWaiter>;
 }) {
-  const stale =
-    call?.status === "PENDING" &&
-    Date.now() - new Date(call.created_at).getTime() > REOPEN_AFTER_MS;
+  const stale = usePastDeadline(
+    call?.status === "PENDING"
+      ? new Date(call.created_at).getTime() + REOPEN_AFTER_MS
+      : null
+  );
 
   const waiting = call !== undefined && !stale;
   const label = !waiting

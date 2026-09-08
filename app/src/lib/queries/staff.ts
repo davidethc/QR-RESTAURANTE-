@@ -7,7 +7,6 @@ import type {
   DashboardSummary,
   TableStatusRow,
   AdminMenu,
-  StaffMember,
   RestaurantSettings,
 } from "@/types/staff";
 
@@ -86,25 +85,6 @@ export async function getAdminMenu(restaurantId: string): Promise<AdminMenu> {
 
   if (error) throw error;
   return data as unknown as AdminMenu;
-}
-
-export async function getStaffMembers(
-  restaurantId: string
-): Promise<StaffMember[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_staff_members", {
-    p_restaurant_id: restaurantId,
-  });
-
-  if (error) throw error;
-  return (data ?? []) as unknown as StaffMember[];
-}
-
-/** Pedidos que cocina debe ver: nunca los pendientes de aprobación. */
-export async function getKitchenOrders(
-  restaurantId: string
-): Promise<StaffOrder[]> {
-  return getStaffOrders(restaurantId, ["ACCEPTED", "PREPARING", "READY"]);
 }
 
 export async function getRestaurantSettings(

@@ -144,18 +144,3 @@ export async function markDelivered(orderId: string): Promise<ActionResult> {
   revalidatePath("/orders");
   return { ok: true, data: undefined };
 }
-
-export async function cancelOrder(
-  orderId: string,
-  reason?: string
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("cancel_order", {
-    p_order_id: orderId,
-    p_reason: reason,
-  });
-
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/orders");
-  return { ok: true, data: undefined };
-}

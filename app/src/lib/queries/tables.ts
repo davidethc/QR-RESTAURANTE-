@@ -1,3 +1,0 @@
-// getTables()
-// getTableByQRToken()
-// getTableById()

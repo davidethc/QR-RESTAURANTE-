@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useMemo, useRef, useState } from "react";
 import { Search, ShoppingBag, MessageCircle, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,15 +45,21 @@ export function MenuBrowser({
   // Un callback de ref ESTABLE por categoría. Con una flecha creada en
   // el JSX, React ve una función distinta en cada render y desmonta y
   // vuelve a asignar todos los refs cada vez.
-  const refCallbacks = useRef<
-    Record<string, (el: HTMLElement | null) => void>
-  >({});
-  const getSectionRef = useCallback((id: string) => {
-    refCallbacks.current[id] ??= (el) => {
-      sectionRefs.current[id] = el;
-    };
-    return refCallbacks.current[id];
-  }, []);
+  //
+  // Se arma con useMemo a partir de `categories` en vez de leer un ref
+  // durante el render (que era lo que hacía el `getSectionRef` anterior,
+  // y lo que React Compiler marca como error): escribir en
+  // `sectionRefs.current` dentro del propio callback sí es válido,
+  // porque React lo invoca al montar, no al renderizar.
+  const sectionRefCallbacks = useMemo(() => {
+    const map: Record<string, (el: HTMLElement | null) => void> = {};
+    for (const category of categories) {
+      map[category.id] = (el) => {
+        sectionRefs.current[category.id] = el;
+      };
+    }
+    return map;
+  }, [categories]);
 
   const [selectedProduct, setSelectedProduct] = useState<PublicProduct | null>(
     null
@@ -82,16 +88,6 @@ export function MenuBrowser({
   // que la pantalla no puede cumplir: con las categorías cerradas, casi
   // todas caen dentro del viewport a la vez.
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
-
-  // El emoji de la ficha de producto sale de su categoría, y
-  // PublicProduct no la lleva encima — se resuelve con este índice.
-  const categoryByProductId = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const category of categories) {
-      for (const product of category.products) map[product.id] = category.name;
-    }
-    return map;
-  }, [categories]);
 
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};
@@ -260,7 +256,7 @@ export function MenuBrowser({
               onToggle={() => toggleCategory(category.id)}
               onSelectProduct={setSelectedProduct}
               cartQuantities={cartQuantities}
-              sectionRef={getSectionRef(category.id)}
+              sectionRef={sectionRefCallbacks[category.id]}
             />
           ))
         ) : results.length === 0 ? (
@@ -284,9 +280,6 @@ export function MenuBrowser({
 
       <ProductSheet
         product={selectedProduct}
-        categoryName={
-          selectedProduct ? categoryByProductId[selectedProduct.id] : undefined
-        }
         onOpenChange={(open) => !open && setSelectedProduct(null)}
         onAdd={(product, quantity, notes) => {
           cart.addItem(product, quantity, notes);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Minus, Plus, PencilLine, ShoppingBag } from "lucide-react";
 import {
@@ -32,12 +32,10 @@ import type { PublicProduct } from "@/types/menu";
  */
 export function ProductSheet({
   product,
-  categoryName,
   onOpenChange,
   onAdd,
 }: {
   product: PublicProduct | null;
-  categoryName?: string;
   onOpenChange: (open: boolean) => void;
   onAdd: (product: PublicProduct, quantity: number, notes: string) => void;
 }) {
@@ -45,13 +43,21 @@ export function ProductSheet({
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
 
-  useEffect(() => {
-    if (product) {
-      setQuantity(1);
-      setNotes("");
-      setNotesOpen(false);
-    }
-  }, [product]);
+  // Reiniciar el formulario al abrir otro plato, comparando contra el
+  // anterior DURANTE el render. Antes era un useEffect, que obliga a
+  // pintar una vez con los datos del plato anterior y volver a pintar ya
+  // corregido: dos renders y un parpadeo posible en cada toque. Llamando
+  // a setState aquí, React descarta el render en curso y rehace este
+  // componente antes de tocar la pantalla — un solo pintado. Es el
+  // patrón que documenta React para "ajustar estado cuando cambia una
+  // prop" (https://react.dev/learn/you-might-not-need-an-effect).
+  const [lastProductId, setLastProductId] = useState(product?.id);
+  if (product && product.id !== lastProductId) {
+    setLastProductId(product.id);
+    setQuantity(1);
+    setNotes("");
+    setNotesOpen(false);
+  }
 
   function handleAdd() {
     if (!product) return;
@@ -81,7 +87,10 @@ export function ProductSheet({
                       alt={product.name}
                       fill
                       sizes="(max-width: 640px) 100vw, 600px"
-                      priority
+                      // Sin `priority`: este panel solo existe después
+                      // de que el cliente toca un plato. Marcarlo como
+                      // prioritario lo ponía a competir por ancho de
+                      // banda con la carta que sí se está viendo.
                       className="object-cover"
                     />
                   </div>

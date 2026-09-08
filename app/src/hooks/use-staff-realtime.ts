@@ -56,8 +56,14 @@ export function useStaffRealtime(
     tables = DEFAULT_TABLES,
   }: { channelName?: string; tables?: StaffTable[] } = {}
 ) {
+  // El callback más reciente, sin meterlo en las dependencias del efecto
+  // de suscripción (si no, cada render recrearía el canal WebSocket).
+  // La asignación va DENTRO de un efecto: escribir un ref durante el
+  // render rompe el render concurrente y React Compiler lo marca.
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
 
   // Dos señales, porque ninguna basta sola:
   //  - `channelOk`: lo que dice Supabase. Es la verdad sobre si llegan

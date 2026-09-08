@@ -1,3 +1,0 @@
-// getRestaurantBySlug()
-// getRestaurantById()
-// getRestaurantConfig()

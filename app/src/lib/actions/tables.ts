@@ -3,22 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/types/actions";
-import type { ResolvedTableQr } from "@/types/restaurant";
-
-export async function resolveQr(
-  qrToken: string
-): Promise<ActionResult<ResolvedTableQr>> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("resolve_table_qr", {
-    p_qr_token: qrToken,
-  });
-
-  if (error) return { ok: false, error: error.message };
-  if (!data?.length) return { ok: false, error: "QR inválido" };
-
-  return { ok: true, data: data[0] };
-}
 
 /** Tope por operación: un dedo resbalado no debe crear mil filas. */
 const MAX_TABLES_PER_BATCH = 50;
