@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { cn } from "@/lib/utils";
-import { GooeyToaster } from "@/components/ui/goey-toaster";
+import { Toaster } from "sonner";
 
 /**
  * Bricolage Grotesque para títulos, nombres de plato y precios.
@@ -41,12 +41,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <GooeyToaster
+        {/* Sonner, no goey-toast: este layout lo carga TODA la app,
+            incluido el celular del comensal, y goey-toast arrastra
+            framer-motion (~60 KB comprimidos) para pintar un "Plato
+            agregado". Los avisos del personal que sí justifican ese
+            peso montan su propio <GooeyToaster> en el layout del
+            panel. Ver src/lib/notifications-staff.ts. */}
+        <Toaster
           position="top-center"
-          bounce={0.4}
-          showProgress
           closeButton
           duration={2000}
+          richColors
         />
       </body>
     </html>
