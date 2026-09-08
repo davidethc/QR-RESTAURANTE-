@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getOrderStatus } from "@/lib/actions/orders";
 import { OrderTracker } from "./_components/order-tracker";
+import { getSessionChannelName } from "@/lib/session-channel";
 
 export const metadata: Metadata = { title: "Tu pedido" };
 
@@ -11,7 +12,10 @@ export default async function OrderPage({
   params: Promise<{ slug: string; mesa: string; id: string }>;
 }) {
   const { slug, mesa, id } = await params;
+  // En paralelo: el pedido no depende del canal ni al revés.
+  const channelPromise = getSessionChannelName();
   const result = await getOrderStatus(id);
+  const channelName = await channelPromise;
 
   if (!result.ok) {
     return (
@@ -27,7 +31,7 @@ export default async function OrderPage({
 
   return (
     <main className="min-h-full">
-      <OrderTracker initialOrder={result.data} />
+      <OrderTracker initialOrder={result.data} channelName={channelName} />
       <div className="px-4 pb-6">
         <Link
           href={`/r/${slug}/${mesa}`}

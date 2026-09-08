@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { CheckCircle2, Circle } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { notify } from "@/lib/notifications";
 import { getOrderStatus } from "@/lib/actions/orders";
+import { useSessionUpdates } from "@/hooks/use-session-updates";
 import type { OrderStatus } from "@/config/constants";
 import type { CustomerOrder } from "@/types/staff";
 
-const POLL_MS = 4000;
 const MAX_FAILURES = 3;
 
 const STEPS: { status: OrderStatus; label: string }[] = [
@@ -38,73 +38,52 @@ function notifyTransition(status: OrderStatus, orderNumber: number) {
 }
 
 /**
- * El cliente es anónimo: no puede suscribirse a Realtime de Postgres
- * (RLS solo permite SELECT a personal autenticado). El seguimiento en
- * vivo se logra con un sondeo corto sobre el RPC seguro — el mismo
- * resultado visible ("se actualiza solo"), sin abrir la tabla a nadie.
+ * Seguimiento en vivo del pedido.
+ *
+ * Antes era un sondeo cada 4 s con una Server Action. Como React
+ * serializa las Server Actions, ese ciclo competía con la propia
+ * navegación del cliente: tocar "Volver a la carta" podía quedarse
+ * esperando detrás de una consulta en vuelo.
+ *
+ * Ahora escucha la señal de Realtime de su mesa (un aviso vacío que
+ * emite un trigger de Postgres) y solo consulta cuando algo cambió. La
+ * tabla `orders` sigue sin estar abierta a `anon`: los datos siguen
+ * llegando por el RPC seguro que valida la cookie en el servidor.
  */
-export function OrderTracker({ initialOrder }: { initialOrder: CustomerOrder }) {
+export function OrderTracker({
+  initialOrder,
+  channelName,
+}: {
+  initialOrder: CustomerOrder;
+  /** null = sin sesión de mesa viva: no se suscribe ni consulta. */
+  channelName: string | null;
+}) {
   const [order, setOrder] = useState(initialOrder);
   const statusRef = useRef(initialOrder.status);
+  const failures = useRef(0);
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
+    // Estado final: no hay nada más que esperar.
     if (TERMINAL.includes(statusRef.current)) return;
 
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let failures = 0;
+    const result = await getOrderStatus(initialOrder.id);
 
-    // El bucle se rearma al TERMINAR cada consulta. Con setInterval, y
-    // como las Server Actions se serializan en React, una consulta más
-    // lenta que el intervalo dejaba una cola que no drenaba nunca.
-    function schedule() {
-      if (cancelled) return;
-      timer = setTimeout(() => void poll(), POLL_MS);
+    if (!result.ok) {
+      // Antes se ignoraba el fallo y se seguía sondeando en silencio
+      // para siempre, incluso con la sesión ya expirada.
+      if (++failures.current >= MAX_FAILURES) notify.error(result.error);
+      return;
     }
+    failures.current = 0;
 
-    async function poll() {
-      if (document.hidden) return schedule();
-
-      const result = await getOrderStatus(initialOrder.id);
-      if (cancelled) return;
-
-      if (!result.ok) {
-        // Antes se ignoraba el fallo y se seguía sondeando en silencio
-        // para siempre, incluso con la sesión ya expirada.
-        if (++failures >= MAX_FAILURES) {
-          notify.error(result.error);
-          return;
-        }
-        return schedule();
-      }
-      failures = 0;
-
-      if (result.data.status !== statusRef.current) {
-        notifyTransition(result.data.status, result.data.order_number);
-        statusRef.current = result.data.status;
-      }
-      setOrder(result.data);
-
-      // Estado final: no hay nada más que esperar.
-      if (TERMINAL.includes(result.data.status)) return;
-      schedule();
+    if (result.data.status !== statusRef.current) {
+      notifyTransition(result.data.status, result.data.order_number);
+      statusRef.current = result.data.status;
     }
-
-    void poll();
-    function onWake() {
-      if (!document.hidden) {
-        clearTimeout(timer);
-        void poll();
-      }
-    }
-    document.addEventListener("visibilitychange", onWake);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onWake);
-    };
+    setOrder(result.data);
   }, [initialOrder.id]);
+
+  useSessionUpdates({ channelName, onUpdate: refresh });
 
   const stepIndex = STEPS.findIndex((s) => s.status === order.status);
   const isRejectedOrCancelled =
