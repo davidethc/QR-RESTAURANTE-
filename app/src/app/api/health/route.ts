@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { createPublicClient } from "@/lib/supabase/public";
 
 /**
@@ -13,20 +14,25 @@ import { createPublicClient } from "@/lib/supabase/public";
  *    completa —Vercel, Next y Postgres—, así que si cualquiera de las
  *    tres falla, el monitor lo ve y avisa.
  *
- * Detalle crítico: `force-dynamic` y `revalidate = 0`. La carta pública
- * sí está cacheada 5 minutos (ver `lib/queries/menu.ts`), y por eso
- * hacerle ping NO sirve para mantener viva la base: devolvería la copia
- * del caché sin tocar Postgres nunca. Si esta ruta se cachea, deja de
- * cumplir su único propósito y encima da falsa confianza: monitor en
- * verde y base pausándose igual.
+ * Detalle crítico: esta ruta NO se puede cachear. La carta pública sí
+ * lo está (ver `lib/queries/menu.ts`), y por eso hacerle ping a ella NO
+ * sirve para mantener viva la base: devolvería la copia del caché sin
+ * tocar Postgres nunca. Si esta ruta se cachea, deja de cumplir su
+ * único propósito y encima da falsa confianza: monitor en verde y base
+ * pausándose igual.
+ *
+ * `await connection()` es lo que lo garantiza. Antes eran
+ * `dynamic = "force-dynamic"` y `revalidate = 0`, que con Cache
+ * Components activo ya no existen (todo es dinámico por defecto y esos
+ * exports rompen el build). `connection()` marca explícitamente que
+ * este handler solo puede correr con una petición real delante, lo que
+ * además impide que el `Date.now()` de abajo se evalúe al construir.
  *
  * No devuelve ningún dato del negocio ni ninguna clave: solo si la base
  * respondió y a qué hora, que es todo lo que un monitor necesita.
  */
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 export async function GET() {
+  await connection();
   const startedAt = Date.now();
 
   try {

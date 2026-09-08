@@ -3,6 +3,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getStaffOrders } from "@/lib/queries/staff";
 import { KitchenBoard } from "./_components/kitchen-board";
 
+// Fuera del alcance de esta optimización: solo la ruta del comensal
+// (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
+// marca este segmento como "puede bloquear" y silencia su validación,
+// sin cambiar cómo renderiza. Quitar esta línea al migrar el panel.
+export const instant = false;
+
 export const metadata: Metadata = { title: "Cocina" };
 
 export default async function KitchenPage() {

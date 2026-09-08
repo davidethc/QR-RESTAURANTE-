@@ -35,6 +35,10 @@ export function MenuHeader({
             alt={restaurant.name}
             fill
             sizes="36px"
+            // Es lo primero que se ve arriba del todo y entra en la
+            // medición de LCP: sin `priority` el navegador lo trata
+            // como imagen diferida y compite con el resto de la carta.
+            priority
             className="object-cover"
           />
         </div>

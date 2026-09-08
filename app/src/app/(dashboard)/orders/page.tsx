@@ -8,6 +8,12 @@ import {
 } from "@/lib/queries/staff";
 import { OrdersBoard } from "./_components/orders-board";
 
+// Fuera del alcance de esta optimización: solo la ruta del comensal
+// (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
+// marca este segmento como "puede bloquear" y silencia su validación,
+// sin cambiar cómo renderiza. Quitar esta línea al migrar el panel.
+export const instant = false;
+
 export const metadata: Metadata = { title: "Pedidos" };
 
 export default async function OrdersPage({
