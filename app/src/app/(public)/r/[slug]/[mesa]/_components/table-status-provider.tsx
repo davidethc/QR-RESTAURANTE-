@@ -22,6 +22,17 @@ const ACTIVE_CALL_STATUSES: SessionCall["status"][] = ["PENDING", "ACCEPTED"];
 interface TableStatusValue {
   orders: SessionOrderSummary[];
   calls: SessionCall[];
+  /**
+   * Si la mesa pidió algo alguna vez en esta sesión. Es la condición para
+   * poder pedir la cuenta.
+   *
+   * Se calcula sobre la lista SIN filtrar a propósito: `orders` de aquí
+   * arriba solo trae lo que está en curso, así que una mesa que ya recibió
+   * todo lo suyo lo tiene vacío. Si esto se leyera de ahí, el cliente que
+   * terminó de comer — el que más obviamente necesita la cuenta — sería
+   * justo al que se le bloquearía.
+   */
+  hasAnyOrder: boolean;
 }
 
 /**
@@ -33,16 +44,23 @@ interface TableStatusValue {
 const TableStatusContext = createContext<TableStatusValue>({
   orders: [],
   calls: [],
+  hasAnyOrder: false,
 });
 
 export function useTableStatus() {
   return use(TableStatusContext);
 }
 
-function activeOnly(status: TableStatus): TableStatusValue {
+/** Un pedido rechazado o cancelado no es una cuenta que cobrar. */
+function countsForBill(order: SessionOrderSummary): boolean {
+  return order.status !== "REJECTED" && order.status !== "CANCELLED";
+}
+
+function derive(status: TableStatus): TableStatusValue {
   return {
     orders: status.orders.filter((o) => ACTIVE_ORDER_STATUSES.has(o.status)),
     calls: status.calls.filter((c) => ACTIVE_CALL_STATUSES.includes(c.status)),
+    hasAnyOrder: status.orders.some(countsForBill),
   };
 }
 
@@ -51,6 +69,7 @@ function signature(v: TableStatusValue): string {
   return [
     ...v.orders.map((o) => `o${o.id}:${o.status}`),
     ...v.calls.map((c) => `c${c.id}:${c.status}`),
+    `b${v.hasAnyOrder}`,
   ].join("|");
 }
 
@@ -81,7 +100,7 @@ export function TableStatusProvider({
   children: React.ReactNode;
 }) {
   const [value, setValue] = useState<TableStatusValue>(() =>
-    activeOnly(initialStatus)
+    derive(initialStatus)
   );
 
   // Estados de la vuelta anterior, para detectar transiciones. Se siembra
@@ -120,7 +139,7 @@ export function TableStatusProvider({
 
     // Solo se cambia el valor del contexto si algo cambió de verdad: un
     // objeto nuevo aquí re-renderiza TODO el subárbol de la carta.
-    const next = activeOnly(result.data);
+    const next = derive(result.data);
     setValue((current) =>
       signature(current) === signature(next) ? current : next
     );

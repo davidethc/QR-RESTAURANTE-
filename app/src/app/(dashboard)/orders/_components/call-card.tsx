@@ -1,4 +1,5 @@
-import { Bell, Receipt } from "lucide-react";
+import Link from "next/link";
+import { Bell, Receipt, ClipboardList } from "lucide-react";
 import { CallStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
 import { ActionButton } from "@/components/shared/action-button";
@@ -164,6 +165,22 @@ export function CallCard({
         >
           Marcar atendida
         </ActionButton>
+      )}
+
+      {/* Quien llama al mesero suele querer pedir. Desde acá se va directo a
+          la carta de esa mesa, en vez de tener que buscarla en Mesas — y al
+          enviar el pedido esta solicitud queda atendida sola, sin volver.
+          No se ofrece para las de cuenta: ahí el cliente quiere pagar. */}
+      {!isBill && call.status !== "ATTENDED" && (
+        <Button
+          asChild
+          variant="outline"
+          className="mt-2 h-12 w-full rounded-full border-border/70 text-[15px] font-semibold"
+        >
+          <Link href={`/tables/${call.table_id}/order`}>
+            <ClipboardList className="h-4 w-4" /> Tomar pedido
+          </Link>
+        </Button>
       )}
     </div>
   );

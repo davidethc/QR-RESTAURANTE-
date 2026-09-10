@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Minus, Plus, PencilLine, ShoppingBag } from "lucide-react";
+import { PencilLine, ShoppingBag } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { QuantityStepper } from "@/components/shared/quantity-stepper";
 import { cn, formatPrice } from "@/lib/utils";
 import type { PublicProduct } from "@/types/menu";
 
@@ -126,35 +127,7 @@ export function ProductSheet({
                 <span className="text-[15px] font-semibold text-foreground">
                   Cantidad
                 </span>
-                <div className="neu-inset flex items-center gap-1 rounded-full bg-secondary p-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Quitar uno"
-                    className="size-11 rounded-full hover:bg-card"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
-                  >
-                    <Minus className="h-4 w-4" strokeWidth={2.5} />
-                  </Button>
-                  <span
-                    aria-live="polite"
-                    className="w-7 text-center text-[15px] font-semibold tabular-nums"
-                  >
-                    {quantity}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Agregar uno"
-                    className="size-11 rounded-full hover:bg-card"
-                    onClick={() => setQuantity((q) => q + 1)}
-                  >
-                    <Plus className="h-4 w-4" strokeWidth={2.5} />
-                  </Button>
-                </div>
+                <QuantityStepper value={quantity} onChange={setQuantity} />
               </div>
 
               {notesOpen ? (

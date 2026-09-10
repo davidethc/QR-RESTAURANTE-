@@ -62,7 +62,7 @@ function usePastDeadline(deadline: number | null): boolean {
  * control que provoca el estado es el que debe mostrarlo.
  */
 export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
-  const { calls } = useTableStatus();
+  const { calls, hasAnyOrder } = useTableStatus();
 
   return (
     <div className="flex gap-2">
@@ -89,6 +89,12 @@ export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
         confirmDescription={`El mesero llevará la cuenta a la Mesa ${tableNumber}.`}
         confirmLabel="Solicitar"
         onConfirm={() => callWaiter("BILL")}
+        // Sin pedidos no hay cuenta que pedir. La base lo rechaza igual,
+        // pero un botón que falla al tocarlo es peor que uno que avisa
+        // antes: al mesero le ahorraba un viaje en balde, y al cliente
+        // le explica qué le falta en vez de darle un error.
+        blocked={!hasAnyOrder}
+        blockedLabel="Pide algo primero"
       />
     </div>
   );
@@ -105,6 +111,8 @@ function ServiceButton({
   confirmDescription,
   confirmLabel,
   onConfirm,
+  blocked = false,
+  blockedLabel,
 }: {
   call: SessionCall | undefined;
   icon: React.ReactNode;
@@ -119,6 +127,10 @@ function ServiceButton({
   confirmDescription: string;
   confirmLabel: string;
   onConfirm: () => ReturnType<typeof callWaiter>;
+  /** La acción todavía no corresponde. Distinto de "en espera": ahí ya
+   *  la pediste; aquí aún no puedes. */
+  blocked?: boolean;
+  blockedLabel?: string;
 }) {
   const stale = usePastDeadline(
     call?.status === "PENDING"
@@ -127,13 +139,15 @@ function ServiceButton({
   );
 
   const waiting = call !== undefined && !stale;
-  const label = !waiting
-    ? stale
-      ? staleLabel
-      : idleLabel
-    : call!.status === "ACCEPTED"
-      ? acceptedLabel
-      : pendingLabel;
+  const label = blocked
+    ? (blockedLabel ?? idleLabel)
+    : !waiting
+      ? stale
+        ? staleLabel
+        : idleLabel
+      : call!.status === "ACCEPTED"
+        ? acceptedLabel
+        : pendingLabel;
 
   // En espera el botón se apaga por tono y el ícono pierde el verde:
   // deja de leerse como algo que se pueda tocar. Un solo tratamiento,
@@ -141,15 +155,21 @@ function ServiceButton({
   const trigger = (
     <Button
       variant="ghost"
-      disabled={waiting}
+      disabled={waiting || blocked}
       className={cn(
         "h-12 flex-1 rounded-2xl text-[15px] font-semibold",
-        waiting &&
+        // Bloqueado se apaga del todo: ni relleno de estado ni ícono con
+        // color. No pasó nada todavía, y nada hay que mirar aquí.
+        blocked && "text-muted-foreground disabled:opacity-100",
+        !blocked &&
+          waiting &&
           "bg-primary-soft text-primary-soft-foreground disabled:opacity-100 [&_svg]:text-primary/70",
-        !waiting &&
+        !blocked &&
+          !waiting &&
           !stale &&
           "border border-border bg-card hover:bg-muted [&_svg]:text-primary",
-        !waiting &&
+        !blocked &&
+          !waiting &&
           stale &&
           "border border-warning/45 bg-card hover:bg-muted [&_svg]:text-warning"
       )}
@@ -158,7 +178,7 @@ function ServiceButton({
     </Button>
   );
 
-  if (waiting) return trigger;
+  if (waiting || blocked) return trigger;
 
   return (
     <ConfirmDialog

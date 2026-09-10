@@ -29,6 +29,29 @@ export async function callWaiter(
   return { ok: true, data };
 }
 
+/**
+ * El mesero pide la cuenta por el cliente, cuando se la piden de viva voz
+ * en vez de por el teléfono.
+ *
+ * La regla de "solo con pedidos" la aplica la base, no esta función: da
+ * igual por dónde entre la solicitud, la condición es la misma.
+ */
+export async function requestBillAsStaff(
+  tableId: string
+): Promise<ActionResult<string>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("request_bill_as_staff", {
+    p_table_id: tableId,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/tables");
+  revalidatePath("/orders");
+  return { ok: true, data };
+}
+
 export async function handleCall(
   callId: string,
   status: Extract<CallStatus, "ACCEPTED" | "ATTENDED" | "REJECTED">
