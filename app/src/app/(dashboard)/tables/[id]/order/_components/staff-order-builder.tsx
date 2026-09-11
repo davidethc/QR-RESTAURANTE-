@@ -12,22 +12,11 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { createStaffOrder } from "@/lib/actions/orders";
 import { notify } from "@/lib/notifications";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
+import { getCategoryIcon } from "@/lib/category-icons";
 import { useStaffCart } from "@/hooks/use-staff-cart";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 import type { TopProduct } from "@/types/staff";
 
-/**
- * La pantalla en la que el mesero toma el pedido con el cliente delante.
- *
- * Deliberadamente NO reutiliza la carta del cliente. Esa está hecha para
- * vender: fotos grandes, filas que se deslizan, una ficha por plato. Acá el
- * cliente ya decidió y está dictando — lo que hace falta es una lista densa
- * donde tocar una fila suma una unidad, sin diálogos de por medio, y el total
- * siempre a la vista.
- *
- * La nota por plato ("sin cebolla") existe pero está plegada: la escribe uno
- * de cada diez pedidos y no debe estorbarle a los otros nueve.
- */
 export function StaffOrderBuilder({
   categories,
   topProducts,
@@ -43,6 +32,9 @@ export function StaffOrderBuilder({
   const cart = useStaffCart();
   const [query, setQuery] = useState("");
   const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [openCategories, setOpenCategories] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const results = useMemo(() => {
     const term = normalizeText(query.trim());
@@ -55,6 +47,18 @@ export function StaffOrderBuilder({
       );
   }, [categories, query]);
 
+  function toggleCategory(id: string) {
+    setOpenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
   async function handleSend() {
     const result = await createStaffOrder(tableId, cart.items);
     if (result.ok) {
@@ -66,7 +70,6 @@ export function StaffOrderBuilder({
   }
 
   return (
-    // pb generoso: la barra del pedido es fija y no debe tapar la última fila.
     <div className="pb-44">
       <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur">
         <div className="relative">
@@ -76,8 +79,6 @@ export function StaffOrderBuilder({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar plato…"
             className="h-11 rounded-full pl-9 pr-9 text-[15px]"
-            // Sin autoFocus: en una tablet el teclado saltaría solo y taparía
-            // media carta antes de que el mesero decida si va a escribir.
           />
           {query && (
             <button
@@ -92,8 +93,6 @@ export function StaffOrderBuilder({
         </div>
       </div>
 
-      {/* Los más pedidos: con 50 platos en la carta, el 80% de lo que se
-          pide vive en estos ocho. Se oculta al buscar. */}
       {!results && topProducts.length > 0 && (
         <section className="px-4 pt-4">
           <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -133,23 +132,64 @@ export function StaffOrderBuilder({
           )}
         </section>
       ) : (
-        categories.map((category) => {
-          const available = category.products.filter((p) => p.available);
-          if (available.length === 0) return null;
+        <div className="flex flex-col border-b border-border pt-2">
+          {categories.map((category) => {
+            const available = category.products.filter((p) => p.available);
+            if (available.length === 0) return null;
 
-          return (
-            <section key={category.id} className="px-4 pt-5">
-              <h2 className="font-display mb-2 text-[20px] font-bold tracking-[-0.015em]">
-                {category.name}
-              </h2>
-              <ProductList
-                products={available}
-                onAdd={(p) => cart.addItem(p)}
-                quantityOf={cart.quantityOf}
-              />
-            </section>
-          );
-        })
+            const isOpen = openCategories.has(category.id);
+            const previewNames = available.slice(0, 3).map((p) => p.name);
+            const remaining = available.length - previewNames.length;
+
+            return (
+              <section key={category.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category.id)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left active:bg-muted"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-[20px] leading-none transition-transform duration-200",
+                      isOpen && "scale-105",
+                    )}
+                  >
+                    {getCategoryIcon(category.name)}
+                  </span>
+
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="font-display truncate text-[17px] font-bold leading-tight text-foreground">
+                        {category.name}
+                      </span>
+                      <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
+                        {available.length} {available.length === 1 ? "plato" : "platos"}
+                      </span>
+                    </span>
+                    {!isOpen && (
+                      <span className="truncate text-[13px] leading-snug text-muted-foreground">
+                        {previewNames.join(" · ")}
+                        {remaining > 0 && (
+                          <span className="text-muted-foreground/60"> +{remaining}</span>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <ProductList
+                    products={available}
+                    onAdd={(p) => cart.addItem(p)}
+                    quantityOf={cart.quantityOf}
+                  />
+                )}
+              </section>
+            );
+          })}
+        </div>
       )}
 
       {cart.items.length > 0 && (
@@ -160,9 +200,6 @@ export function StaffOrderBuilder({
           }}
         >
           <div className="mx-auto max-w-3xl">
-            {/* El pedido en curso, editable sin abrir nada: el cliente
-                cambia de opinión mientras dicta, y ese es el momento en que
-                hay que poder corregir. */}
             <ul className="mb-3 max-h-52 space-y-1.5 overflow-y-auto">
               {cart.items.map((item) => (
                 <li key={item.id}>
@@ -263,14 +300,12 @@ function ProductList({
   quantityOf: (productId: string) => number;
 }) {
   return (
-    <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-card">
+    <ul className="divide-y divide-border/60 overflow-hidden bg-card mx-4 mb-3 rounded-2xl">
       {products.map((product) => {
         const inCart = quantityOf(product.id);
 
         return (
           <li key={product.id}>
-            {/* Toda la fila es el botón: con el cliente dictando rápido, el
-                blanco de un toque no puede ser un "+" de 20 píxeles. */}
             <button
               type="button"
               onClick={() => onAdd(product)}
