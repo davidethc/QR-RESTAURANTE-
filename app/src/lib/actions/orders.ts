@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTableSession } from "@/lib/session";
-import type { CartItem } from "@/types/menu";
+import type { CartItem, StaffCartItem } from "@/types/menu";
 import type { CustomerOrder, SessionOrderSummary } from "@/types/staff";
 import type { ActionResult } from "@/types/actions";
 
@@ -35,6 +35,43 @@ export async function createOrder(
   });
 
   if (error) return { ok: false, error: error.message };
+  return { ok: true, data };
+}
+
+/**
+ * El pedido que el mesero toma de viva voz, parado en la mesa.
+ *
+ * A diferencia de `createOrder`, no hay cookie de sesión que leer: el mesero
+ * está autenticado como personal, no como esa mesa. La sesión de mesa la
+ * resuelve la base a partir del `tableId` (y la crea si el cliente todavía no
+ * había escaneado nada).
+ *
+ * El pedido nace ya en preparación, con el mesero registrado como quien lo
+ * aceptó — es lo mismo que pasaría si el cliente lo mandara y él lo aceptara
+ * acto seguido, así que no tiene sentido hacerle dar ese segundo paso.
+ */
+export async function createStaffOrder(
+  tableId: string,
+  items: StaffCartItem[],
+  notes?: string
+): Promise<ActionResult<string>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("create_staff_order", {
+    p_table_id: tableId,
+    p_items: items.map((item) => ({
+      product_id: item.productId,
+      quantity: item.quantity,
+      notes: item.notes || null,
+    })),
+    p_notes: notes,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/tables");
+  revalidatePath("/orders");
+  revalidatePath("/kitchen");
   return { ok: true, data };
 }
 
@@ -138,21 +175,6 @@ export async function markDelivered(orderId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_order_delivered", {
     p_order_id: orderId,
-  });
-
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/orders");
-  return { ok: true, data: undefined };
-}
-
-export async function cancelOrder(
-  orderId: string,
-  reason?: string
-): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("cancel_order", {
-    p_order_id: orderId,
-    p_reason: reason,
   });
 
   if (error) return { ok: false, error: error.message };

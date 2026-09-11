@@ -1,4 +1,0 @@
-// getOrders()
-// getOrderById()
-// getOrdersByStatus()
-// getOrdersByTable()

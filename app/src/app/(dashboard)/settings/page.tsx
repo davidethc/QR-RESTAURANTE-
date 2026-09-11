@@ -3,6 +3,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
 import { SettingsForm } from "./_components/settings-form";
 
+// Fuera del alcance de esta optimización: solo la ruta del comensal
+// (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
+// marca este segmento como "puede bloquear" y silencia su validación,
+// sin cambiar cómo renderiza. Quitar esta línea al migrar el panel.
+export const instant = false;
+
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function SettingsPage() {

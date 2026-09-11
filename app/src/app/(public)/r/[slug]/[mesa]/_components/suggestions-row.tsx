@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { Sparkles, Plus } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { MenuSuggestion } from "@/lib/suggestions";
@@ -30,12 +30,16 @@ export function SuggestionsRow({
   // dedo registre dos veces, y sin esto un combo entraba cuatro veces al
   // carrito.
   const lastTap = useRef(0);
-  function onceGuard(fn: () => void) {
+  // useCallback y no una función suelta: declarada en el cuerpo del
+  // componente, React Compiler la analiza como código de render y marca
+  // el Date.now() como impuro. Dentro de useCallback el cuerpo es
+  // diferido — solo corre cuando el dedo toca.
+  const onceGuard = useCallback((fn: () => void) => {
     const now = Date.now();
     if (now - lastTap.current < 400) return;
     lastTap.current = now;
     fn();
-  }
+  }, []);
 
   if (suggestions.length === 0) return null;
 

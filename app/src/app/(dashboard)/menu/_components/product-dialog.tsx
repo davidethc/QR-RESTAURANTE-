@@ -224,7 +224,7 @@ export function ProductDialog({
 
             <Field orientation="horizontal">
               <FieldLabel htmlFor="prod-featured">
-                Destacado — aparece en "Sugerencias"
+                Destacado — aparece en &ldquo;Sugerencias&rdquo;
               </FieldLabel>
               <Controller
                 control={control}

@@ -54,6 +54,31 @@ export interface CartItem {
   subtotal: number;
 }
 
+/**
+ * Lo que el mesero va anotando al tomar el pedido en la mesa.
+ *
+ * Más plano que `CartItem` a propósito: no arrastra el `PublicProduct`
+ * entero porque la pantalla del mesero es una lista densa que solo muestra
+ * nombre y precio — no hay foto, ni descripción, ni bebida sugerida que
+ * pintar. El precio que viaja aquí es solo para mostrar el total mientras
+ * arma el pedido; el que se cobra lo recalcula la base.
+ */
+export interface StaffCartItem {
+  /**
+   * Identidad de la línea, estable durante toda su vida.
+   *
+   * No basta con `productId` + notas: al escribir una indicación esa clave
+   * cambiaría con cada tecla, React remontaría la fila y el cursor saltaría
+   * fuera del campo. Esto lo fija de una vez al crear la línea.
+   */
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  notes: string;
+}
+
 /* Carta pública — lo que devuelve el RPC get_public_menu.
    Deliberadamente más pequeño que Product: al cliente solo viaja
    lo que necesita para decidir. */

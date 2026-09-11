@@ -1011,3 +1011,239 @@ Solo faltaba la interfaz — no hizo falta ningún RPC nuevo.
 - **Prueba pendiente que solo se puede hacer a mano**: escanear con un celular un QR
   del PDF impreso y confirmar que abre la carta de esa mesa.
 - Mesas de prueba (6–13) eliminadas; quedan las 5 originales.
+
+---
+
+## Optimización de rendimiento del comensal — 2026-09-07
+
+Motivo: en el celular la carta tardaba en abrir y, al pulsar, la siguiente pantalla
+aparecía segundos después. Auditoría completa + Fases 1, 2, 4 y 5 del plan.
+**Fase 3 (Realtime para el comensal) NO ejecutada todavía** — requiere migración en
+Supabase y está pendiente de aprobación.
+
+### Causas encontradas (medidas, no estimadas)
+
+| Causa | Evidencia |
+|---|---|
+| No existía ni un `loading.tsx` en toda la ruta pública: al pulsar no se pintaba nada hasta que el servidor terminaba | `find src/app -name loading.tsx` → 0 |
+| El proxy hacía `getClaims()` (llamada de red a Supabase Auth) en **cada** carga y **cada** navegación del comensal, para luego ver que la ruta no era de personal | `src/proxy.ts:30` + matcher que cubría todo |
+| `cookies()` en el render hacía la ruta 100 % dinámica: sin shell estático | ausente de `prerender-manifest.json` |
+| Tercer `await` en serie (`getSessionOrders`) antes del primer HTML | `page.tsx:53` |
+| framer-motion viajaba al móvil sin usarse en el código: entraba como peer de `goey-toast`, montado en el layout **raíz** | chunk con huella `framerAppearId` en el First Load |
+
+### Resultados medidos
+
+| Ruta | First Load JS antes | después | cambio |
+|---|---|---|---|
+| `/r/[slug]/[mesa]` | 778 KB | **624 KB** | **−20 %** |
+| `/r/[slug]/[mesa]/order/[id]` | 676 KB | **522 KB** | **−23 %** |
+| `/` `/qr-invalido` `/_not-found` | 632 KB | 479 KB | −24 % |
+| `/login` | 1076 KB | 923 KB | −14 % |
+
+Comprimido real (gzip) de la carta: **187 KB**. Las rutas del panel quedan igual
+(+0 %) a propósito: quedaron fuera del alcance.
+
+Las dos rutas del comensal pasaron de `ƒ (Dynamic)` a **`◐ (Partial Prerender)`** y
+ahora **sí** aparecen en `prerender-manifest.json`: existe shell estático.
+
+### Cambios aplicados
+- `src/proxy.ts` — matcher restringido a las 5 rutas de personal.
+- `src/lib/notifications.ts` reescrito sobre **sonner**; los 4 avisos de personal que
+  justifican el efecto gooey se movieron a `src/lib/notifications-staff.ts`, único
+  archivo que ya importa `goey-toast`. `<GooeyToaster>` bajó del layout raíz al del
+  panel; el raíz monta `<Toaster>` de sonner.
+  ⚠️ **Los toasts del comensal cambiaron de aspecto** (decisión aprobada).
+- `next.config.ts` — `cacheComponents`, `partialPrefetching`,
+  `optimizePackageImports: ["radix-ui"]`, `turbopack.root`.
+- `src/lib/queries/menu.ts` — `unstable_cache` → `"use cache: remote"` +
+  `cacheLife("minutes")` + `cacheTag`. La invalidación por `updateTag` del panel
+  sigue funcionando igual.
+- `src/app/api/health/route.ts` — `dynamic`/`revalidate` (incompatibles con Cache
+  Components) → `await connection()`. Sigue sin cachearse, que es su único propósito.
+- Nuevos: `loading.tsx` y `error.tsx` de la carta, `loading.tsx` del pedido.
+- `page.tsx` — las 3 consultas ahora en paralelo en vez de en serie.
+- `instant = false` en las 9 rutas de panel/auth (fuera de alcance, sin cambio de
+  comportamiento). **No** en el layout raíz, que silenciaría también al comensal.
+- Borrado: 10 archivos huérfanos, 8 exports muertos (incl. 2 Server Actions, que eran
+  endpoints POST públicos sin uso), 17 `.gitkeep` obsoletos, 4 carpetas de andamiaje.
+- Lint: **13 errores → 6**.
+
+### QA ejecutado (build de producción, `npm start`)
+
+| Prueba | Resultado |
+|---|---|
+| Escaneo QR Mesa 1 | 307 → `/r/omm-siri/1` ✓ |
+| Carta **con** sesión de mesa | 200, chapa "Mesa" presente, sin aviso de carta ✓ |
+| Carta **sin** sesión | 200 en **18 ms** (shell estático), aviso de carta presente ✓ |
+| Las 8 categorías reales en el HTML inicial | ✓ (el shell trae contenido, no un esqueleto) |
+| QR inválido | 307 → `/qr-invalido` ✓ |
+| `/api/health` | 200 ✓ |
+| `/orders` sin sesión | 307 → `/login` ✓ (**el cambio del proxy no rompió la protección**) |
+| framer-motion en chunks del comensal | **NO** ✓ (sigue en `/menu`, que es donde debe) |
+| `npx tsc --noEmit` | limpio ✓ |
+| Validación de navegación instantánea (`next dev`) | **sin insights**: la ruta ya no bloquea ✓ |
+
+### Pendiente / no hecho
+- **Fase 3 — Realtime para el comensal.** Hoy sigue el sondeo de 4 s por Server
+  Action (`table-status-provider.tsx`, `order-tracker.tsx`). Diseño acordado:
+  Broadcast desde la base a un canal cuyo nombre es un **hash del token de sesión**,
+  con carga vacía; el cliente recibe la señal y pide los datos con la Server Action
+  que ya existe. **No** se abre SELECT a `anon`: eso obligaría a exponer el token al
+  JavaScript y la cookie `mk_session` es `httpOnly`. Verificado que `realtime.send()`
+  existe en el proyecto y que no hay políticas en `realtime.messages` todavía.
+- **Prueba real en un celular**: no ejecutada. Es la única que responde a la queja
+  original; el QA de arriba es por HTTP.
+- 6 errores de lint restantes: 3 son falsos positivos de react-hook-form y 3 son
+  patrones deliberados de seguridad de hidratación (`use-cart`, `elapsed-timer`,
+  `table-qr-dialog`) que el propio código documenta. No se silenciaron con
+  `eslint-disable`.
+- 🔴 **Seguridad, sin relación con el rendimiento**: este archivo contiene
+  contraseñas en claro y los tokens QR de las 5 mesas, y está versionado en git.
+  Conviene rotar esas credenciales y sacarlas del repositorio.
+
+---
+
+## Fase 3 — Realtime para el comensal — 2026-09-08
+
+Elimina los dos sondeos de 4 s por Server Action, que eran la causa directa de que
+pulsar tardara: React serializa las Server Actions, así que una navegación se
+quedaba en cola detrás de un sondeo en vuelo.
+
+### Diseño aplicado (y por qué NO se abrió la RLS)
+
+Abrir `SELECT` a `anon` sobre `orders` habría obligado a pasar el token de sesión al
+JavaScript del navegador para compararlo en la policy — y la cookie `mk_session` es
+`httpOnly` precisamente para que ni un XSS pueda robarla. En su lugar:
+
+1. Trigger `notify_table_session_change()` en `orders` y `waiter_calls` (AFTER INSERT
+   OR UPDATE OF status) que llama a `realtime.send()` con **carga vacía**.
+2. El tema del canal es `session:<sha256 del session_token>`. El hash lo calculan
+   igual Postgres (`encode(digest(...),'hex')`) y Node (`src/lib/session-channel.ts`)
+   — **verificado que coinciden byte a byte**.
+3. El cliente recibe la señal y pide los datos con la Server Action que ya existía
+   (`getTableStatus` / `getOrderStatus`), que valida la cookie en el servidor.
+
+**El trigger va envuelto en su propio BEGIN/EXCEPTION**: si Realtime falla, el pedido
+se guarda igual. Una notificación perdida se recupera con la red de seguridad; un
+pedido perdido, no.
+
+### Trampa encontrada (costó dos intentos)
+
+Broadcast-desde-la-base pasa por **Realtime Authorization**. Con `private => false` y
+un canal público, el mensaje **se escribe en `realtime.messages` pero no se entrega a
+nadie**: falla en silencio, sin error ni en el cliente ni en la base. Hace falta:
+
+- `realtime.send(..., true)` (privado),
+- en el cliente `channel(topic, { config: { private: true } })` **y**
+  `await supabase.realtime.setAuth()`,
+- y una policy de SELECT sobre `realtime.messages`.
+
+La policy es `topic ~ '^session:[0-9a-f]{64}$'` para `anon, authenticated`: acota a
+temas con la forma exacta del hash, así un comensal no puede escuchar canales del
+personal.
+
+### QA ejecutado
+
+| Prueba | Resultado |
+|---|---|
+| Trigger dispara al cambiar estado | fila en `realtime.messages`, tema correcto ✓ |
+| Cliente **anon** recibe la señal (script con `@supabase/supabase-js`) | `✓ SEÑAL RECIBIDA`, payload `{"id":"..."}` — solo un UUID de mensaje, cero datos del negocio ✓ |
+| anon intenta `staff-notify:*` | **Unauthorized** ✓ |
+| anon intenta `session:no-es-un-hash` | **Unauthorized** ✓ |
+| Canal correcto presente en el HTML de la carta | ✓ |
+| Token de sesión filtrado al HTML | **NO** ✓ (sigue solo en la cookie httpOnly) |
+| Supabase en el First Load del comensal | **NO** ✓ — se carga con `import()` dinámico tras la hidratación |
+| First Load carta / pedido | 625 KB / 523 KB (baseline 778 / 676) |
+| Flujo completo (escaneo, carta con y sin mesa, QR inválido, health, `/orders` sin auth) | 6/6 ✓ |
+| `npx tsc --noEmit` | limpio ✓ |
+
+### Cambios de código
+- Nuevos: `src/lib/session-channel.ts` (derivación del canal, `server-only`),
+  `src/hooks/use-session-updates.ts` (unifica los dos bucles duplicados).
+- `table-status-provider.tsx` y `order-tracker.tsx`: sondeo de 4 s → señal de Realtime
+  + red de seguridad de **30 s** (por si el WebSocket cae en la wifi del local).
+- `page.tsx` ahora usa `getTableStatus()` en vez de `getSessionOrders()`, así también
+  las solicitudes salen pintadas desde el servidor: el celular **no hace ninguna
+  petición al arrancar**.
+- El provider solo cambia el valor del contexto si la firma (id+estado) cambió, para
+  no re-renderizar toda la carta.
+
+### Aviso para quien toque esto después
+Si se cambia el algoritmo del hash en `session-channel.ts`, hay que cambiarlo también
+en la función `notify_table_session_change()` de Postgres, y al revés. No hay nada que
+lo verifique automáticamente: si se desincronizan, el comensal deja de recibir avisos
+**en silencio** (la red de seguridad de 30 s tapa el fallo y cuesta verlo).
+
+### Sigue pendiente
+- **Prueba real en un celular.** Todo el QA de arriba es por HTTP y con scripts de
+  Node; nadie ha tocado la pantalla todavía.
+- Probar que el panel del personal sigue recibiendo sus avisos (usa `postgres_changes`,
+  no broadcast, así que no debería verse afectado por la policy nueva — pero no se ha
+  comprobado a mano).
+
+---
+
+## El mesero toma pedidos + regla de la cuenta (2026-09-10)
+
+Dos funciones que resultaron ser la misma pieza: el mesero puede tomar el pedido
+en la mesa cuando el cliente se lo dicta, y pedir la cuenta deja de ser posible
+sin haber pedido nada.
+
+### Decisiones que salieron de leer la base, no de suponer
+
+| Hallazgo | Qué cambió |
+|---|---|
+| `orders` ya tenía `accepted_by` / `accepted_at` | Se descartó la columna `placed_by` que se había planeado. Una migración de esquema menos. |
+| `accept_and_prepare_order` deja los pedidos en **PREPARING**, no en ACCEPTED | La columna "Nuevos" de `/kitchen` está muerta en el flujo real. El pedido del mesero se insertó como PREPARING para no caer en una columna que la cocina ya ignora. |
+| `get_tables_status` ya devolvía `active_total` | La rejilla de mesas sabe sin consultas nuevas si una mesa tiene consumo: es la condición exacta para mostrar "Pidió la cuenta". |
+| `get_session_orders` devuelve **todos** los pedidos; el filtro a "activos" es del lado cliente | `hasAnyOrder` se calcula sobre la lista **sin filtrar**. Si se leyera de la filtrada, la mesa que ya recibió todo — la que más obviamente quiere pagar — sería justo a la que se le bloquearía la cuenta. |
+
+### Base de datos
+`find_or_create_active_table_session` (helper), `create_staff_order`,
+`request_bill_as_staff`, `get_top_products`; `create_waiter_call` y
+`get_waiter_calls` modificados de forma aditiva (regla de BILL, y `table_id`).
+
+**Agujero de permisos encontrado y cerrado durante el trabajo**: el proyecto tiene
+default privileges que dan EXECUTE a `anon` sobre toda función nueva del schema
+`public`, así que un `revoke ... from public` **no** se los quita.
+`find_or_create_active_table_session` quedó expuesta a `anon` devolviendo la fila
+completa de `table_sessions`, **incluido el `session_token`** — con un `table_id`
+cualquiera se podía obtener el token de una mesa y leer o crear pedidos ajenos.
+Se revocó explícitamente a `anon` y `authenticated`.
+
+### QA ejecutado en el navegador
+
+| Prueba | Resultado |
+|---|---|
+| Mesa sin pedidos → `create_waiter_call('BILL')` por SQL | rechazado: "Primero hay que hacer un pedido…" ✓ |
+| Mesa sin pedidos → `create_waiter_call('WAITER')` | permitido ✓ (llamar sin haber pedido es legítimo) |
+| Mesa con pedido → `BILL` | permitido ✓ |
+| Carta del cliente, mesa sin pedidos | botón inerte con **"Pide algo primero"**; "Llamar mesero" sigue activo ✓ |
+| Carta del cliente, mesa con pedido | "Pedir cuenta" habilitado ✓ |
+| **Mesa con todo en DELIVERED** | "Pedir cuenta" **habilitado** ✓ — el caso que se rompería si `hasAnyOrder` mirara la lista filtrada |
+| Mesero: `/tables` → "Tomar pedido" → 2 productos + nota → enviar | $1,25 + $12,00 = **$13,25**, total del servidor coincide ✓ |
+| ¿Dónde cae el pedido? | **/kitchen → "En preparación"**, con la nota "sin cebolla" ✓. `/orders` → "Nuevos (0)" ✓ |
+| Trazabilidad | `accepted_by` = Juan Pérez, `accepted_at` y `preparing_at` puestos, auditoría `ACCEPT_ORDER, START_PREPARING` ✓ |
+| Cliente escanea el QR de una mesa donde el mesero ya pidió | **1 sola sesión activa**, no 2 ✓ |
+| Solicitud "Mesa 1 llama" → "Tomar pedido" desde la tarjeta → enviar | la solicitud queda **ATTENDED sola**, atribuida al mesero ✓ |
+| "Pidió la cuenta" en la rejilla | solo aparece en mesas con `active_total > 0` ✓ |
+| Permisos por rol | el mesero no ve "Ver QR" ni crear mesas; KITCHEN no puede entrar a `/tables/[id]/order` |
+| `npx tsc --noEmit` y `npm run build` | limpios ✓ |
+
+### Bug de UI encontrado y corregido antes de probarlo
+Las líneas del carrito del mesero se identificaban por `productId + notas`. Al
+escribir una indicación, esa clave cambiaba con cada tecla, React remontaba la fila
+y el cursor saltaba fuera del campo. Se les puso un `id` propio, estable, y las
+operaciones del carrito pasaron a ir por ese id en vez de por índice (con índices,
+quitar una línea mientras se edita otra manda el cambio al plato equivocado).
+
+### Aviso: error preexistente, no introducido aquí
+`/tables` y `/r/[slug]/[mesa]` registran en desarrollo
+`E1432 blocking-prerender-current-time`. Se comprobó con `git stash -u`: **aparece
+igual sin ninguno de estos cambios**. No rompe el build ni la app, pero conviene
+resolverlo aparte.
+
+### Sigue pendiente
+- Probarlo en una tablet de verdad: toda esta ronda fue en navegador de escritorio
+  y en viewport móvil emulado.
+- `NEXT_PUBLIC_SITE_URL` en Vercel y el redespliegue (ver la sección de la Fase 6).

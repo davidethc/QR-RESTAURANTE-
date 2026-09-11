@@ -48,9 +48,15 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Solo el área de personal. El comensal no inicia sesión nunca, así que
+  // hacerle pasar por aquí le costaba una llamada de red a Supabase Auth
+  // (el getClaims de arriba) en cada carga Y en cada navegación, para
+  // acabar cayendo siempre en el `return response` de abajo.
   matcher: [
-    // Todo excepto estáticos e imágenes. La ruta pública del QR (/r/...)
-    // pasa por aquí sin exigir sesión: el cliente nunca inicia sesión.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/orders/:path*",
+    "/kitchen/:path*",
+    "/menu/:path*",
+    "/tables/:path*",
+    "/settings/:path*",
   ],
 };

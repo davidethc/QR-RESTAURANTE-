@@ -732,6 +732,10 @@ export type Database = {
         Args: { p_items: Json; p_notes?: string; p_session_token: string }
         Returns: string
       }
+      create_staff_order: {
+        Args: { p_items: Json; p_notes?: string; p_table_id: string }
+        Returns: string
+      }
       create_waiter_call: {
         Args: {
           p_session_token: string
@@ -762,6 +766,10 @@ export type Database = {
         Returns: Json
       }
       get_tables_status: { Args: { p_restaurant_id: string }; Returns: Json }
+      get_top_products: {
+        Args: { p_limit?: number; p_restaurant_id: string }
+        Returns: Json
+      }
       get_waiter_calls: {
         Args: {
           p_restaurant_id: string
@@ -784,6 +792,7 @@ export type Database = {
         Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
       }
+      request_bill_as_staff: { Args: { p_table_id: string }; Returns: string }
       resolve_table_qr: {
         Args: { p_qr_token: string }
         Returns: {

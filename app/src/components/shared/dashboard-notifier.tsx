@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
-import { notify } from "@/lib/notifications";
+import { notifyStaff } from "@/lib/notifications-staff";
 import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
 import type { OrderStatus, UserRole } from "@/config/constants";
 
@@ -96,14 +96,14 @@ export function DashboardNotifier({
             order.status === "PENDING" &&
             claim(`new:${order.id}`)
           ) {
-            notify.newOrder(order.order_number, order.table_number);
+            notifyStaff.newOrder(order.order_number, order.table_number);
           } else if (
             prevStatus &&
             prevStatus !== order.status &&
             order.status === "READY" &&
             claim(`ready:${order.id}`)
           ) {
-            notify.orderReadyForStaff(order.order_number, order.table_number);
+            notifyStaff.orderReadyForStaff(order.order_number, order.table_number);
           }
         }
       }
@@ -119,9 +119,9 @@ export function DashboardNotifier({
           ) {
             const goToCalls = () => router.push("/orders?view=calls");
             if (call.type === "BILL") {
-              notify.billRequested(call.table_number, goToCalls);
+              notifyStaff.billRequested(call.table_number, goToCalls);
             } else {
-              notify.waiterCalled(call.table_number, goToCalls);
+              notifyStaff.waiterCalled(call.table_number, goToCalls);
             }
           }
         }

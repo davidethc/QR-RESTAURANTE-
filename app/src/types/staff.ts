@@ -69,6 +69,8 @@ export interface StaffWaiterCall {
   status: CallStatus;
   created_at: string;
   handled_at: string | null;
+  /** Para saltar de la solicitud directo a tomarle el pedido a esa mesa. */
+  table_id: string;
   table_number: number;
   table_name: string | null;
   handled_by_name: string | null;
@@ -97,6 +99,22 @@ export interface TableStatusRow {
   active_orders: number;
   pending_calls: number;
   active_total: number;
+}
+
+/** La mesa a la que el mesero le va a tomar el pedido. */
+export interface TableForOrder {
+  id: string;
+  number: number;
+  name: string | null;
+  restaurant_id: string;
+  status: TableStatus;
+}
+
+/** Lo más vendido, para el acceso rápido de la pantalla de pedido. */
+export interface TopProduct {
+  id: string;
+  name: string;
+  price: number;
 }
 
 export interface AdminCategory {

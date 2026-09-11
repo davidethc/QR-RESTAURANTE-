@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTableSession } from "@/lib/session";
 import type { CallType, CallStatus } from "@/config/constants";
 import type { ActionResult } from "@/types/actions";
-import type { SessionCall } from "@/types/orders";
+import type {} from "@/types/orders";
 
 export async function callWaiter(
   type: CallType
@@ -29,23 +29,27 @@ export async function callWaiter(
   return { ok: true, data };
 }
 
-export async function getSessionCalls(): Promise<ActionResult<SessionCall[]>> {
-  const session = await getTableSession();
-  if (!session) {
-    return {
-      ok: false,
-      error: "No encontramos tu mesa. Escanea el código QR nuevamente.",
-    };
-  }
-
+/**
+ * El mesero pide la cuenta por el cliente, cuando se la piden de viva voz
+ * en vez de por el teléfono.
+ *
+ * La regla de "solo con pedidos" la aplica la base, no esta función: da
+ * igual por dónde entre la solicitud, la condición es la misma.
+ */
+export async function requestBillAsStaff(
+  tableId: string
+): Promise<ActionResult<string>> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("get_session_calls", {
-    p_session_token: session.sessionToken,
+  const { data, error } = await supabase.rpc("request_bill_as_staff", {
+    p_table_id: tableId,
   });
 
   if (error) return { ok: false, error: error.message };
-  return { ok: true, data: (data ?? []) as unknown as SessionCall[] };
+
+  revalidatePath("/tables");
+  revalidatePath("/orders");
+  return { ok: true, data };
 }
 
 export async function handleCall(

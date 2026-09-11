@@ -1,14 +1,14 @@
 "use client";
 
-import { createContext, use, useEffect, useRef, useState } from "react";
-import { getTableStatus } from "@/lib/actions/table-status";
+import { createContext, use, useCallback, useRef, useState } from "react";
+import { getTableStatus, type TableStatus } from "@/lib/actions/table-status";
+import { useSessionUpdates } from "@/hooks/use-session-updates";
 import { notify } from "@/lib/notifications";
 import type { SessionCall } from "@/types/orders";
 import type { OrderStatus } from "@/config/constants";
 import type { SessionOrderSummary } from "@/types/staff";
 
-const POLL_MS = 4000;
-/** Tras tantos fallos seguidos se corta: algo va mal de verdad. */
+/** Tras tantos fallos seguidos se avisa: algo va mal de verdad. */
 const MAX_FAILURES = 3;
 
 const ACTIVE_ORDER_STATUSES = new Set<OrderStatus>([
@@ -22,6 +22,17 @@ const ACTIVE_CALL_STATUSES: SessionCall["status"][] = ["PENDING", "ACCEPTED"];
 interface TableStatusValue {
   orders: SessionOrderSummary[];
   calls: SessionCall[];
+  /**
+   * Si la mesa pidió algo alguna vez en esta sesión. Es la condición para
+   * poder pedir la cuenta.
+   *
+   * Se calcula sobre la lista SIN filtrar a propósito: `orders` de aquí
+   * arriba solo trae lo que está en curso, así que una mesa que ya recibió
+   * todo lo suyo lo tiene vacío. Si esto se leyera de ahí, el cliente que
+   * terminó de comer — el que más obviamente necesita la cuenta — sería
+   * justo al que se le bloquearía.
+   */
+  hasAnyOrder: boolean;
 }
 
 /**
@@ -33,119 +44,108 @@ interface TableStatusValue {
 const TableStatusContext = createContext<TableStatusValue>({
   orders: [],
   calls: [],
+  hasAnyOrder: false,
 });
 
 export function useTableStatus() {
   return use(TableStatusContext);
 }
 
+/** Un pedido rechazado o cancelado no es una cuenta que cobrar. */
+function countsForBill(order: SessionOrderSummary): boolean {
+  return order.status !== "REJECTED" && order.status !== "CANCELLED";
+}
+
+function derive(status: TableStatus): TableStatusValue {
+  return {
+    orders: status.orders.filter((o) => ACTIVE_ORDER_STATUSES.has(o.status)),
+    calls: status.calls.filter((c) => ACTIVE_CALL_STATUSES.includes(c.status)),
+    hasAnyOrder: status.orders.some(countsForBill),
+  };
+}
+
+/** Firma barata de "qué hay en curso y en qué estado". */
+function signature(v: TableStatusValue): string {
+  return [
+    ...v.orders.map((o) => `o${o.id}:${o.status}`),
+    ...v.calls.map((c) => `c${c.id}:${c.status}`),
+    `b${v.hasAnyOrder}`,
+  ].join("|");
+}
+
 /**
  * Un único latido para todo lo que la mesa tiene en curso.
  *
- * El cliente es `anon` y no puede suscribirse a Realtime — la RLS de
- * `orders` solo da SELECT a `authenticated` —, así que el sondeo corto
- * es obligatorio. Lo que sí se puede evitar es sondear dos veces: antes
- * había un ciclo para las solicitudes y ninguno para los pedidos, que
- * por eso se quedaban congelados. Ahora hay uno solo que alimenta la
- * franja de arriba y los botones de abajo.
+ * Antes esto sondeaba cada 4 s con una Server Action. Como React
+ * serializa las Server Actions, si al tocar un enlace había un sondeo en
+ * vuelo la navegación se quedaba esperando detrás: era la causa
+ * principal de que pulsar tardara "segundos" en el celular.
  *
- * `initialOrders` llega ya resuelto desde el servidor para que el
- * primer pintado no dé un salto esperando al primer sondeo.
+ * Ahora escucha una señal de Realtime (ver `useSessionUpdates`) y solo
+ * pide datos cuando algo cambió de verdad. Mientras el cliente mira la
+ * carta sin novedades, no sale ni una petición.
+ *
+ * `initialStatus` llega ya resuelto desde el servidor, así que al abrir
+ * tampoco hay ninguna consulta: la franja de arriba y los botones de
+ * abajo salen pintados en el primer HTML.
  */
 export function TableStatusProvider({
-  initialOrders,
+  initialStatus,
+  channelName,
   children,
 }: {
-  initialOrders: SessionOrderSummary[];
+  initialStatus: TableStatus;
+  /** null = sin sesión de mesa viva: ni se suscribe ni consulta. */
+  channelName: string | null;
   children: React.ReactNode;
 }) {
-  const [value, setValue] = useState<TableStatusValue>({
-    orders: initialOrders.filter((o) => ACTIVE_ORDER_STATUSES.has(o.status)),
-    calls: [],
-  });
+  const [value, setValue] = useState<TableStatusValue>(() =>
+    derive(initialStatus)
+  );
 
-  // Estados de la vuelta anterior, para detectar transiciones. Arranca
-  // vacío a propósito: el primer ciclo solo siembra, así al entrar a la
-  // carta no salta un toast por algo que ya había pasado.
-  const prevCalls = useRef<Map<string, SessionCall["status"]>>(new Map());
+  // Estados de la vuelta anterior, para detectar transiciones. Se siembra
+  // con lo que ya vino del servidor a propósito: si arrancara vacío,
+  // entrar a la carta con una solicitud ya aceptada dispararía un toast
+  // por algo que el cliente vio hace rato.
+  const prevCalls = useRef<Map<string, SessionCall["status"]>>(
+    new Map(initialStatus.calls.map((c) => [c.id, c.status]))
+  );
+  const failures = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let failures = 0;
+  const refresh = useCallback(async () => {
+    const result = await getTableStatus();
 
-    // Bucle que se rearma AL TERMINAR cada consulta, no cada 4 s pase
-    // lo que pase. Con setInterval, y como las Server Actions se
-    // serializan en React, una consulta lenta —el 3G de un local a
-    // mediodía— acumulaba una cola que no drenaba nunca y el celular
-    // se quedaba pidiendo para siempre.
-    function schedule() {
-      if (cancelled) return;
-      timer = setTimeout(() => void poll(), POLL_MS);
+    if (!result.ok) {
+      // Antes esto era un `return` a secas: si la sesión expiraba, el
+      // celular seguía consultando en silencio eternamente, sin cortar
+      // ni decirle nada al cliente.
+      if (++failures.current >= MAX_FAILURES) notify.error(result.error);
+      return;
     }
+    failures.current = 0;
 
-    async function poll() {
-      // Celular en el bolsillo o pestaña de fondo: cero peticiones.
-      if (document.hidden) return schedule();
-
-      const result = await getTableStatus();
-      if (cancelled) return;
-
-      if (!result.ok) {
-        // Antes esto era un `return` a secas: si la sesión expiraba, el
-        // celular seguía sondeando en silencio eternamente, sin cortar
-        // ni decirle nada al cliente.
-        if (++failures >= MAX_FAILURES) {
-          notify.error(result.error);
-          return;
-        }
-        return schedule();
-      }
-      failures = 0;
-
-      for (const call of result.data.calls) {
-        const prev = prevCalls.current.get(call.id);
-        if (prev === "PENDING" && call.status === "ACCEPTED") {
-          notify.callInProgress(call.type);
-        } else if (
-          (prev === "PENDING" || prev === "ACCEPTED") &&
-          call.status === "ATTENDED"
-        ) {
-          notify.callDone(call.type);
-        }
-      }
-      prevCalls.current = new Map(
-        result.data.calls.map((c) => [c.id, c.status])
-      );
-
-      setValue({
-        orders: result.data.orders.filter((o) =>
-          ACTIVE_ORDER_STATUSES.has(o.status)
-        ),
-        calls: result.data.calls.filter((c) =>
-          ACTIVE_CALL_STATUSES.includes(c.status)
-        ),
-      });
-      schedule();
-    }
-
-    void poll();
-    // Al volver a la pestaña se refresca de inmediato en vez de esperar
-    // hasta 4 s con datos viejos en pantalla.
-    function onWake() {
-      if (!document.hidden) {
-        clearTimeout(timer);
-        void poll();
+    for (const call of result.data.calls) {
+      const prev = prevCalls.current.get(call.id);
+      if (prev === "PENDING" && call.status === "ACCEPTED") {
+        notify.callInProgress(call.type);
+      } else if (
+        (prev === "PENDING" || prev === "ACCEPTED") &&
+        call.status === "ATTENDED"
+      ) {
+        notify.callDone(call.type);
       }
     }
-    document.addEventListener("visibilitychange", onWake);
+    prevCalls.current = new Map(result.data.calls.map((c) => [c.id, c.status]));
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onWake);
-    };
+    // Solo se cambia el valor del contexto si algo cambió de verdad: un
+    // objeto nuevo aquí re-renderiza TODO el subárbol de la carta.
+    const next = derive(result.data);
+    setValue((current) =>
+      signature(current) === signature(next) ? current : next
+    );
   }, []);
+
+  useSessionUpdates({ channelName, onUpdate: refresh });
 
   return <TableStatusContext value={value}>{children}</TableStatusContext>;
 }
