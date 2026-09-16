@@ -18,9 +18,14 @@ import { useEffect, useRef } from "react";
  *     VACÍO al canal de esta mesa cuando cambia un pedido o una
  *     solicitud. Al recibirlo se piden los datos una vez. Cero
  *     peticiones mientras no pasa nada.
- *  2. **Una red de seguridad muy espaciada** (30 s por defecto, contra
- *     los 4 s de antes) por si el WebSocket se cae en la wifi del local
- *     sin avisar. Se pausa con la pestaña oculta, igual que antes.
+ *  2. **Una red de seguridad** (15 s por defecto, contra los 4 s de
+ *     antes) por si el WebSocket se cae en la wifi del local sin avisar,
+ *     o por la latencia real medida del broadcast-desde-la-base: no es
+ *     instantáneo como sugiere el comentario de arriba — en pruebas con
+ *     Playwright contra la base real llegó en ~5 s la mayoría de las
+ *     veces, pero alguna vuelta tardó más de 10 s. Con 30 s de red de
+ *     seguridad esa cola larga se sentía como "no se actualiza". Se
+ *     pausa con la pestaña oculta, igual que antes.
  *
  * El cliente de Supabase se carga con `import()` dinámico a propósito:
  * así el paquete no entra en la carga inicial de la carta, que es
@@ -30,7 +35,7 @@ import { useEffect, useRef } from "react";
 export function useSessionUpdates({
   channelName,
   onUpdate,
-  safetyNetMs = 30_000,
+  safetyNetMs = 15_000,
 }: {
   /** null = el cliente no está en una mesa: no se suscribe ni sondea. */
   channelName: string | null;
