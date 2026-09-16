@@ -1247,3 +1247,69 @@ resolverlo aparte.
 - Probarlo en una tablet de verdad: toda esta ronda fue en navegador de escritorio
   y en viewport móvil emulado.
 - `NEXT_PUBLIC_SITE_URL` en Vercel y el redespliegue (ver la sección de la Fase 6).
+
+---
+
+## [2026-09-16] Verificación real del realtime del comensal, en navegador (Playwright)
+
+La Fase 3 (2026-09-08) había probado el mecanismo de broadcast con scripts de
+Node contra la base, pero el "Sigue pendiente" de esa ronda decía explícitamente
+que nadie había tocado la pantalla todavía. Esta ronda sí: Playwright contra un
+`next dev` propio (puerto 3211, éste sí apuntando al proyecto `fvzxfbzujvkkvniyphps`
+— **cuidado**: `localhost:3000` en esta máquina puede estar sirviendo otro
+proyecto sin relación, "Exclusive Barber Shop"; confirmar el `<title>` antes de
+dar por bueno cualquier resultado contra ese puerto).
+
+### Qué se verificó
+| Prueba | Resultado |
+|---|---|
+| Escaneo de QR (Mesa 5) → sesión vieja `ACTIVE` de hace días se marca `EXPIRED` y se crea una nueva | ✓ — es a propósito, no bug: `find_or_create_active_table_session` expira sesiones inactivas |
+| `ServiceButtons`: "Pedir cuenta" bloqueado ("Pide algo primero") en mesa sin pedidos de la sesión nueva | ✓ |
+| Pedido creado por `create_customer_order` → franja de pedido activo aparece con el estado correcto, **sin navegar** | ✓ |
+| Cambiar `orders.status` por SQL (PENDING→PREPARING→READY→DELIVERED) mientras la pestaña sigue abierta, sin recargar | ✓ en las 4 transiciones — el badge de estado cambia solo |
+| Trigger `notify_table_session_change` inserta en `realtime.messages` con el tema `session:<hash>` correcto | ✓ (confirmado por SQL directo) |
+| El navegador recibe el frame `session_changed` por el WebSocket privado | ✓ — capturado el frame crudo con el listener de WebSocket de Playwright |
+| Separación de roles: "Llamar mesero" / "Pedir cuenta" existen solo en `(public)/r/[slug]/[mesa]`, ninguna otra ruta los duplica | ✓ (`grep` en todo `src/app`) |
+
+### Lo que NO es tan instantáneo como dice el comentario del hook
+Midiendo con timestamps (`time.time()` en Python vs el instante del `UPDATE`),
+la señal de broadcast llegó consistentemente en **~5 s**, pero en una vuelta
+tardó más de 10 s. No es un fallo — siempre llegó — pero el comentario de
+`use-session-updates.ts` decía "en menos de un segundo", que no es lo medido
+hoy contra la base real. Con la red de seguridad en 30 s, esa cola larga se
+sentía exactamente como "no se actualiza": alguien mirando la pantalla 10-15 s
+después de un cambio veía el estado viejo sin ninguna señal de que algo
+estuviera en camino.
+
+**Cambio aplicado**: `safetyNetMs` de `useSessionUpdates` bajó de 30 000 a
+**15 000 ms** (`src/hooks/use-session-updates.ts`). Acota el peor caso a la
+mitad sin acercarse al costo de los 4 s de antes. Reprobado después del cambio:
+transición reflejada dentro de una ventana de 20 s con la key de producción
+(`sb_publishable_...`), igual que con la key JWT legacy — el formato de key no
+cambió el resultado, así que no se tocó `session-channel.ts` ni la policy de
+`realtime.messages`.
+
+### Detalle técnico anotado, no corregido
+`supabase.realtime.setAuth()` sin argumento envía como `access_token` el
+`apikey` configurado del cliente — en este proyecto, la publishable key nueva
+(`sb_publishable_...`), que no es un JWT. Se confirmó por captura cruda del
+frame `phx_join`. La policy de `realtime.messages` solo mira el `topic`
+(`^session:[0-9a-f]{64}$`), no el rol del JWT, así que hoy no rompe nada — pero
+es un valor que técnicamente no es lo que ese parámetro espera. No se tocó:
+cambiarlo sin una falla real que lo justifique sería una corrección especulativa.
+
+### Datos de prueba — limpiados
+3 pedidos de prueba (Mesa 5, sesión nueva del escaneo) y sus ítems, borrados
+después de medir. La sesión volvió a `EXPIRED` y la mesa a `AVAILABLE`.
+
+### QA de cierre
+`npx tsc --noEmit` limpio · `npm run build` limpio · `npm run lint`: mismos
+10 problemas preexistentes de siempre, ninguno en archivos tocados hoy.
+
+### Sigue pendiente
+- Prueba en un teléfono real, no solo Playwright headless.
+- Si alguna vez se necesita latencia sub-segundo de verdad (no solo "dentro de
+  15 s"), la vía sería `postgres_changes` con RLS para `anon` en vez de
+  broadcast — pero eso es el cambio de arquitectura que la Fase 3 evitó a
+  propósito por el token en cookie `httpOnly` (ver esa sección arriba). No
+  tocar sin hablarlo antes.
