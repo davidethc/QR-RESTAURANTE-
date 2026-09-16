@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getStaffOrders } from "@/lib/queries/staff";
 import { KitchenBoard } from "./_components/kitchen-board";
@@ -12,6 +13,9 @@ export const instant = false;
 export const metadata: Metadata = { title: "Cocina" };
 
 export default async function KitchenPage() {
+  // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
+  // de auth-js al cargar la sesión rompe el prerender de esta página.
+  await connection();
   const session = await getMyRestaurant();
   const restaurantId = session.restaurant.id;
 

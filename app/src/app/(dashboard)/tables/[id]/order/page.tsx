@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -30,6 +31,9 @@ export default async function TakeOrderPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
+  // de auth-js al cargar la sesión rompe el prerender de esta página.
+  await connection();
   const { id } = await params;
   const session = await getMyRestaurant();
 

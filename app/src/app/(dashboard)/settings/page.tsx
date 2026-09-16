@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
 import { SettingsForm } from "./_components/settings-form";
@@ -12,6 +13,9 @@ export const instant = false;
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function SettingsPage() {
+  // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
+  // de auth-js al cargar la sesión rompe el prerender de esta página.
+  await connection();
   const session = await getMyRestaurant();
   const restaurant = await getRestaurantSettings(session.restaurant.id);
 

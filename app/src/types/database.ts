@@ -792,7 +792,6 @@ export type Database = {
         Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
       }
-      request_bill_as_staff: { Args: { p_table_id: string }; Returns: string }
       resolve_table_qr: {
         Args: { p_qr_token: string }
         Returns: {

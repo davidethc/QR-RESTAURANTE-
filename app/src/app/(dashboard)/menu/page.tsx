@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getAdminMenu } from "@/lib/queries/staff";
 import { MenuAdminBoard } from "./_components/menu-admin-board";
@@ -12,6 +13,9 @@ export const instant = false;
 export const metadata: Metadata = { title: "Carta" };
 
 export default async function MenuAdminPage() {
+  // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
+  // de auth-js al cargar la sesión rompe el prerender de esta página.
+  await connection();
   const session = await getMyRestaurant();
   const menu = await getAdminMenu(session.restaurant.id);
 

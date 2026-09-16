@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import Link from "next/link";
+import { ClipboardList, Bell } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { TableStatusBadge } from "@/components/shared/status-badge";
 import { TableQrDialog } from "./_components/table-qr-dialog";
 import { ReleaseTableButton } from "./_components/release-table-button";
 import { TakeOrderButton } from "./_components/take-order-button";
-import { RequestBillButton } from "./_components/request-bill-button";
 import { TablesLive } from "./_components/tables-live";
 import { CreateTablesDialog } from "./_components/create-tables-dialog";
 import { TablesPdfButton } from "./_components/tables-pdf-button";
@@ -21,6 +22,9 @@ export const instant = false;
 export const metadata: Metadata = { title: "Mesas" };
 
 export default async function TablesPage() {
+  // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
+  // de auth-js al cargar la sesión rompe el prerender de esta página.
+  await connection();
   const session = await getMyRestaurant();
   const tables = await getTablesStatus(session.restaurant.id);
   const canManage = session.role === "OWNER" || session.role === "ADMIN";
@@ -66,18 +70,18 @@ export default async function TablesPage() {
             </div>
 
             {(table.active_orders > 0 || table.pending_calls > 0) && (
-              <div className="mt-2.5 flex flex-col gap-0.5 text-[13px] leading-snug text-muted-foreground">
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-snug text-muted-foreground">
                 {table.active_orders > 0 && (
-                  <span>
-                    {table.active_orders} pedido
-                    {table.active_orders > 1 ? "s" : ""} activo
+                  <span className="flex items-center gap-1">
+                    <ClipboardList className="size-3.5" />
+                    {table.active_orders} activo
                     {table.active_orders > 1 ? "s" : ""}
                   </span>
                 )}
                 {table.pending_calls > 0 && (
-                  <span>
-                    {table.pending_calls} solicitud
-                    {table.pending_calls > 1 ? "es" : ""} pendiente
+                  <span className="flex items-center gap-1 font-medium text-primary">
+                    <Bell className="size-3.5" />
+                    {table.pending_calls} pendiente
                     {table.pending_calls > 1 ? "s" : ""}
                   </span>
                 )}
@@ -96,33 +100,24 @@ export default async function TablesPage() {
               </div>
             )}
 
-            {canManage && (
-              <div className="mt-1">
-                <TableQrDialog
-                  tableLabel={table.name ?? `Mesa ${table.number}`}
-                  qrToken={table.qr_token}
-                />
-              </div>
-            )}
-
-            {/* Solo con consumo: es la misma condición que exige la base
-                para aceptar la solicitud, así que el botón no puede
-                aparecer en un caso en el que fallaría. */}
-            {canServeTable && table.active_total > 0 && (
-              <div className="mt-1">
-                <RequestBillButton
-                  tableId={table.id}
-                  tableLabel={table.name ?? `Mesa ${table.number}`}
-                />
-              </div>
-            )}
-
-            {canServeTable && table.status !== "AVAILABLE" && (
-              <div className="mt-1">
-                <ReleaseTableButton
-                  tableId={table.id}
-                  tableLabel={table.name ?? `Mesa ${table.number}`}
-                />
+            {(canManage || (canServeTable && table.status !== "AVAILABLE")) && (
+              <div className="mt-2 flex gap-2">
+                {canManage && (
+                  <div className="flex-1">
+                    <TableQrDialog
+                      tableLabel={table.name ?? `Mesa ${table.number}`}
+                      qrToken={table.qr_token}
+                    />
+                  </div>
+                )}
+                {canServeTable && table.status !== "AVAILABLE" && (
+                  <div className="flex-1">
+                    <ReleaseTableButton
+                      tableId={table.id}
+                      tableLabel={table.name ?? `Mesa ${table.number}`}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </Link>

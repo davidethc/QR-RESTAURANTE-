@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   getMyRestaurant,
   getDashboardSummary,
   getStaffOrders,
   getWaiterCalls,
+  getTablesStatus,
 } from "@/lib/queries/staff";
 import { OrdersBoard } from "./_components/orders-board";
+import { QuickTakeOrder } from "./_components/quick-take-order";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -21,15 +24,24 @@ export default async function OrdersPage({
 }: {
   searchParams: Promise<{ table?: string; view?: string }>;
 }) {
+  // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
+  // de auth-js al cargar la sesión rompe el prerender de esta página.
+  await connection();
   const session = await getMyRestaurant();
   const restaurantId = session.restaurant.id;
   const { table, view } = await searchParams;
   const initialTableFilter = table ? Number(table) : null;
+  /** Igual que en Mesas: quien atiende mesas puede tomar un pedido. */
+  const canServeTable =
+    session.role === "OWNER" ||
+    session.role === "ADMIN" ||
+    session.role === "WAITER";
 
-  const [summary, orders, calls] = await Promise.all([
+  const [summary, orders, calls, tables] = await Promise.all([
     getDashboardSummary(restaurantId),
     getStaffOrders(restaurantId, ["PENDING", "ACCEPTED", "PREPARING", "READY"]),
     getWaiterCalls(restaurantId, ["PENDING", "ACCEPTED"]),
+    canServeTable ? getTablesStatus(restaurantId) : Promise.resolve([]),
   ]);
 
   return (
@@ -49,6 +61,7 @@ export default async function OrdersPage({
         }
         initialView={view === "calls" ? "calls" : null}
       />
+      {canServeTable && <QuickTakeOrder tables={tables} />}
     </main>
   );
 }

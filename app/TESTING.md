@@ -1246,4 +1246,90 @@ resolverlo aparte.
 ### Sigue pendiente
 - Probarlo en una tablet de verdad: toda esta ronda fue en navegador de escritorio
   y en viewport móvil emulado.
+
+## Bug real: el panel no se actualizaba solo, y "Pidió la cuenta" del mesero eliminado (2026-09-16)
+
+El aviso de la ronda anterior ("error preexistente, no introducido aquí... no
+rompe el build ni la app") estaba equivocado en la segunda mitad: sí rompía la
+app. Era la causa real de que un mesero que toma un pedido y navega a
+"Pedidos" no viera su propio pedido en "Preparando" sin recargar la página a
+mano.
+
+### Causa raíz (confirmada, no supuesta)
+
+`(dashboard)/layout.tsx` y cada `page.tsx` del panel llaman a `getMyRestaurant()`
+→ `createClient()` (`lib/supabase/server.ts`), que crea un `SupabaseAuthClient`
+nuevo cada vez. Ese cliente carga la sesión en un tick posterior (un timer
+interno de `@supabase/auth-js`, fuera de la cadena síncrona que arrancó con
+`await cookies()`) y ahí adentro llama a `Date.now()`. Con Cache Components
+activo, ese `Date.now()` diferido dispara
+`E1432 blocking-prerender-current-time` en **todas** las rutas del panel, no
+solo en desarrollo: en `next start` (producción) el request igual devuelve
+`200`, pero Next.js no completa el prerender de esa rama con datos frescos —
+así una navegación de cliente (`<Link>`, sin recargar) puede quedarse con
+contenido viejo aunque la base ya haya cambiado.
+
+**Se comprobó con Playwright contra un build de producción (`next build` +
+`next start`)**, no solo en dev: antes del fix, cada carga de `/tables`,
+`/orders`, `/kitchen`, `/menu`, `/settings` y `/tables/[id]/order` registraba
+el error en el log del servidor. Después del fix, cero apariciones.
+
+**Arreglo**: `await connection()` (de `next/server`) antes de la primera
+llamada a `getMyRestaurant()` en el layout y en los 6 `page.tsx` del panel.
+Fuerza el punto dinámico ANTES de que `auth-js` toque el reloj, así ese
+`Date.now()` ya no compite con el prerender. No se tocó
+`lib/supabase/server.ts` en sí (lo usan también las Server Actions del
+cliente/comensal) para no arriesgar el flujo cacheado de `/r/[slug]/[mesa]`.
+
+### QA ejecutado (Playwright, contra `next build` + `next start`)
+
+| Prueba | Resultado |
+|---|---|
+| Login mesero → Mesas → "Tomar pedido" → enviar → navegar a "Pedidos" (sin recargar) | el pedido nuevo aparece en "Preparando" **de inmediato** ✓ |
+| Mismo flujo + reload duro después | contenido idéntico (solo cambia el timer "Hace 0:0X") ✓ |
+| Log del servidor de producción durante todo el flujo | 0 apariciones de `Date.now()`/`blocking-prerender` (antes: una por cada carga de página del panel) ✓ |
+| `npx tsc --noEmit` | limpio ✓ |
+| `npm run build` | limpio, las 6 rutas del panel quedan `ƒ` (dinámicas), sin warnings de prerender ✓ |
+| `npx eslint` sobre los archivos tocados | limpio ✓ |
+
+### "Pidió la cuenta" (mesero) eliminado — decisión del usuario
+
+El botón `RequestBillButton` en `/tables` dejaba que el mesero marcara "esta
+mesa pidió la cuenta" por ella, cuando se la pedían de viva voz. El usuario
+pidió quitarlo del todo: pedir la cuenta es una acción exclusiva del cliente
+desde su teléfono (`callWaiter` tipo `BILL`).
+
+- Borrados: `tables/_components/request-bill-button.tsx`,
+  `requestBillAsStaff` (`lib/actions/waiter-calls.ts`).
+- Base de datos: `drop function public.request_bill_as_staff(uuid)` —
+  no bastaba con quitar el botón, la función quedaba con `EXECUTE` abierto a
+  `authenticated` y cualquier mesero podía invocarla por RPC directo sin pasar
+  por la UI. Confirmado con `has_function_privilege` antes de borrar.
+- `CallCard` (la solicitud que el **cliente** origina y el mesero atiende) no
+  se tocó — ese es el lado correcto de la relación y ya funcionaba bien.
+
+### "Tomar pedido" agregado a Comandas
+
+Antes solo vivía en la tarjeta de una mesa (`/tables`) o dentro del aviso de
+una llamada puntual (`CallCard`). Ahora `/orders` tiene un botón flotante
+("Tomar pedido") que abre un selector de mesas y lleva al mismo
+`/tables/[id]/order` — verificado con Playwright, abre el diálogo con las 5
+mesas del restaurante demo y navega correctamente.
+
+### Rediseño de la rejilla de Mesas
+
+Con "Pidió la cuenta" fuera, "Tomar pedido" pasa a ser el botón primario
+(`clay clay-primary`, antes era `outline`) de cada tarjeta; "Ver QR" y
+"Liberar mesa" se agruparon en una sola fila secundaria. Verificado
+visualmente con capturas de Playwright.
+
+### Pendiente / no verificado en esta ronda
+- El WebSocket de Realtime se cerró antes de establecerse en varias corridas
+  de Playwright headless (`WebSocket is closed before the connection is
+  established`) — no se investigó a fondo porque el fix de arriba no depende
+  de Realtime (usa un refetch server-side normal en cada navegación) y la
+  Fase 3 ya había verificado Realtime cruzado entre dos pestañas reales. Si
+  el mismo aviso aparece en un navegador real (no headless), sí merece
+  revisión aparte.
+- No se probó en tablet física.
 - `NEXT_PUBLIC_SITE_URL` en Vercel y el redespliegue (ver la sección de la Fase 6).
