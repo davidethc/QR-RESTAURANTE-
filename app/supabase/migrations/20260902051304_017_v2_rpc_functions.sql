@@ -1,78 +1,5 @@
--- Function: set_updated_at() - automatically update updated_at timestamp
-create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
 
--- Function: handle_new_user() - create profile when auth user is created
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (
-    id,
-    full_name,
-    avatar_url
-  )
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
-    new.raw_user_meta_data ->> 'avatar_url'
-  );
-
-  return new;
-end;
-$$;
-
--- Function: user_belongs_to_restaurant() - check if user belongs to restaurant
-create or replace function public.user_belongs_to_restaurant(
-  target_restaurant_id uuid
-)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.restaurant_members rm
-    where rm.restaurant_id = target_restaurant_id
-      and rm.user_id = auth.uid()
-      and rm.status = 'ACTIVE'
-  );
-$$;
-
--- Function: user_has_restaurant_role() - check if user has specific role in restaurant
-create or replace function public.user_has_restaurant_role(
-  target_restaurant_id uuid,
-  target_role public.member_role
-)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.restaurant_members rm
-    where rm.restaurant_id = target_restaurant_id
-      and rm.user_id = auth.uid()
-      and rm.role = target_role
-      and rm.status = 'ACTIVE'
-  );
-$$;
-
--- Function: resolve_table_qr() - resolve QR token to session
+-- RPC: Resolver QR → sesión de mesa
 create or replace function public.resolve_table_qr(
   p_qr_token uuid
 )
@@ -93,7 +20,6 @@ declare
   v_restaurant public.restaurants%rowtype;
   v_session public.table_sessions%rowtype;
 begin
-
   select *
   into v_table
   from public.tables
@@ -136,7 +62,7 @@ begin
 end;
 $$;
 
--- Function: create_customer_order() - create order from customer cart
+-- RPC: Crear pedido del cliente (server-side validation + price calculation)
 create or replace function public.create_customer_order(
   p_session_token uuid,
   p_items jsonb,
@@ -157,7 +83,6 @@ declare
   v_notes text;
   v_item_subtotal numeric(10,2);
 begin
-
   select *
   into v_session
   from public.table_sessions
@@ -172,12 +97,9 @@ begin
     raise exception 'El pedido debe contener productos';
   end if;
 
-  -- Validate all products and calculate subtotal
   for v_item in
-    select *
-    from jsonb_array_elements(p_items)
+    select * from jsonb_array_elements(p_items)
   loop
-
     v_quantity := (v_item ->> 'quantity')::integer;
 
     if v_quantity <= 0 then
@@ -198,7 +120,6 @@ begin
 
     v_item_subtotal := v_product.price * v_quantity;
     v_subtotal := v_subtotal + v_item_subtotal;
-
   end loop;
 
   insert into public.orders (
@@ -222,12 +143,9 @@ begin
   returning id
   into v_order_id;
 
-  -- Create order items with historical snapshot
   for v_item in
-    select *
-    from jsonb_array_elements(p_items)
+    select * from jsonb_array_elements(p_items)
   loop
-
     select *
     into v_product
     from public.products
@@ -257,7 +175,6 @@ begin
       v_product.price * v_quantity,
       v_notes
     );
-
   end loop;
 
   update public.table_sessions
@@ -268,7 +185,7 @@ begin
 end;
 $$;
 
--- Function: get_customer_order() - get order status for customer
+-- RPC: Consultar pedido del cliente (sin autenticación, via session_token)
 create or replace function public.get_customer_order(
   p_session_token uuid,
   p_order_id uuid
@@ -299,7 +216,7 @@ as $$
     and o.id = p_order_id;
 $$;
 
--- Function: create_waiter_call() - create waiter/bill request
+-- RPC: Llamar mesero (cliente anónimo via session_token)
 create or replace function public.create_waiter_call(
   p_session_token uuid,
   p_type public.waiter_call_type
@@ -311,9 +228,9 @@ set search_path = public
 as $$
 declare
   v_session public.table_sessions%rowtype;
+  v_existing_call uuid;
   v_call_id uuid;
 begin
-
   select *
   into v_session
   from public.table_sessions
@@ -324,14 +241,15 @@ begin
     raise exception 'Sesión de mesa inválida o expirada';
   end if;
 
-  -- Check for existing pending call of same type
-  if exists (
-    select 1
-    from public.waiter_calls
-    where table_id = v_session.table_id
-      and type = p_type
-      and status = 'PENDING'
-  ) then
+  select id
+  into v_existing_call
+  from public.waiter_calls
+  where table_id = v_session.table_id
+    and restaurant_id = v_session.restaurant_id
+    and type = p_type
+    and status = 'PENDING';
+
+  if found then
     raise exception 'Ya existe una solicitud pendiente de este tipo';
   end if;
 
@@ -359,60 +277,3 @@ begin
   return v_call_id;
 end;
 $$;
-
--- Triggers for updated_at
-create trigger profiles_set_updated_at
-before update on public.profiles
-for each row
-execute function public.set_updated_at();
-
-create trigger restaurants_set_updated_at
-before update on public.restaurants
-for each row
-execute function public.set_updated_at();
-
-create trigger restaurant_members_set_updated_at
-before update on public.restaurant_members
-for each row
-execute function public.set_updated_at();
-
-create trigger tables_set_updated_at
-before update on public.tables
-for each row
-execute function public.set_updated_at();
-
-create trigger categories_set_updated_at
-before update on public.categories
-for each row
-execute function public.set_updated_at();
-
-create trigger products_set_updated_at
-before update on public.products
-for each row
-execute function public.set_updated_at();
-
-create trigger product_options_set_updated_at
-before update on public.product_options
-for each row
-execute function public.set_updated_at();
-
-create trigger product_option_values_set_updated_at
-before update on public.product_option_values
-for each row
-execute function public.set_updated_at();
-
-create trigger orders_set_updated_at
-before update on public.orders
-for each row
-execute function public.set_updated_at();
-
-create trigger waiter_calls_set_updated_at
-before update on public.waiter_calls
-for each row
-execute function public.set_updated_at();
-
--- Trigger for creating profile on new auth user
-create trigger on_auth_user_created
-after insert on auth.users
-for each row
-execute function public.handle_new_user();

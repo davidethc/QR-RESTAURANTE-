@@ -1,14 +1,14 @@
--- Enable pgcrypto for UUID generation
+
+-- V2: Extensiones
 create extension if not exists pgcrypto;
 
--- Restaurant status
+-- V2: Enums
 create type public.restaurant_status as enum (
   'ACTIVE',
   'INACTIVE',
   'SUSPENDED'
 );
 
--- Member roles
 create type public.member_role as enum (
   'OWNER',
   'ADMIN',
@@ -16,13 +16,11 @@ create type public.member_role as enum (
   'KITCHEN'
 );
 
--- Member status
 create type public.member_status as enum (
   'ACTIVE',
   'INACTIVE'
 );
 
--- Table status
 create type public.table_status as enum (
   'AVAILABLE',
   'OCCUPIED',
@@ -31,14 +29,12 @@ create type public.table_status as enum (
   'INACTIVE'
 );
 
--- Table session status
 create type public.table_session_status as enum (
   'ACTIVE',
   'CLOSED',
   'EXPIRED'
 );
 
--- Order status
 create type public.order_status as enum (
   'PENDING',
   'ACCEPTED',
@@ -49,13 +45,11 @@ create type public.order_status as enum (
   'CANCELLED'
 );
 
--- Waiter call type
 create type public.waiter_call_type as enum (
   'WAITER',
   'BILL'
 );
 
--- Waiter call status
 create type public.waiter_call_status as enum (
   'PENDING',
   'ACCEPTED',
@@ -64,7 +58,6 @@ create type public.waiter_call_status as enum (
   'CANCELLED'
 );
 
--- Audit action
 create type public.audit_action as enum (
   'CREATE',
   'UPDATE',
