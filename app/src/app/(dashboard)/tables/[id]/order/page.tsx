@@ -73,6 +73,7 @@ export default async function TakeOrderPage({
         categories={menu.categories}
         topProducts={topProducts}
         tableId={table.id}
+        tableNumber={table.number}
         tableLabel={tableLabel}
       />
     </main>

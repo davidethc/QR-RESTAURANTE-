@@ -33,7 +33,7 @@ export function OrdersBoard({
   initialOrders: StaffOrder[];
   initialCalls: StaffWaiterCall[];
   initialTableFilter: number | null;
-  initialView?: "calls" | null;
+  initialView?: "calls" | "progress" | null;
 }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
@@ -45,9 +45,12 @@ export function OrdersBoard({
   // pedidos activos, arrancar en "Nuevos" la deja vacía y parece un
   // error. Sin filtro de mesa, se mantiene "Nuevos" por defecto —
   // salvo que se llegue con `?view=calls` (el "Ver" de un aviso
-  // disparado desde otra pantalla del panel).
+  // disparado desde otra pantalla del panel) o `?view=progress`
+  // (el mesero acaba de tomar un pedido de viva voz: nace directo en
+  // preparación, así que no tiene sentido aterrizar en "Nuevos").
   const [activeTab, setActiveTab] = useState(() => {
     if (initialView === "calls") return "calls";
+    if (initialView === "progress") return "progress";
     if (initialTableFilter === null) return "pending";
     const ordersForTable = initialOrders.filter(
       (o) => o.table_number === initialTableFilter

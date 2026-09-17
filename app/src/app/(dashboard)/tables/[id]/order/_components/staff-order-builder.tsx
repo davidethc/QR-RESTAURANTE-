@@ -21,11 +21,13 @@ export function StaffOrderBuilder({
   categories,
   topProducts,
   tableId,
+  tableNumber,
   tableLabel,
 }: {
   categories: PublicCategory[];
   topProducts: TopProduct[];
   tableId: string;
+  tableNumber: number;
   tableLabel: string;
 }) {
   const router = useRouter();
@@ -63,7 +65,11 @@ export function StaffOrderBuilder({
     const result = await createStaffOrder(tableId, cart.items);
     if (result.ok) {
       cart.clear();
-      router.push("/tables");
+      // Nace directo en preparación (ver createStaffOrder): llevar al
+      // mesero de vuelta a Mesas lo dejaría sin ver dónde quedó su
+      // pedido. Esto lo deja parado justo en "Preparando", filtrado a
+      // la mesa que acaba de atender.
+      router.push(`/orders?table=${tableNumber}&view=progress`);
       router.refresh();
     }
     return result;

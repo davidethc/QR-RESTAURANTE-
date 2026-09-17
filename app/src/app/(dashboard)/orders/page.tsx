@@ -59,7 +59,9 @@ export default async function OrdersPage({
             ? initialTableFilter
             : null
         }
-        initialView={view === "calls" ? "calls" : null}
+        initialView={
+          view === "calls" ? "calls" : view === "progress" ? "progress" : null
+        }
       />
       {canServeTable && <QuickTakeOrder tables={tables} />}
     </main>
