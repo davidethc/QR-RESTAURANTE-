@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Minus, Plus, Trash2, MessageCircle } from "lucide-react";
 import {
   Sheet,
@@ -113,8 +114,11 @@ export function CartSheet({
           <div className="flex-1 overflow-y-auto px-6">
             <div className="flex flex-col gap-4 pb-6">
               {items.map((item, index) => (
-                <div
+                <motion.div
                   key={`${item.product.id}-${index}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15 }}
                   className="flex items-start justify-between gap-3 border-b pb-3 last:border-0"
                 >
                   <div className="min-w-0 flex-1">
@@ -168,7 +172,7 @@ export function CartSheet({
                       <Trash2 className="text-destructive" />
                     </Button>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>

@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import Image from "next/image";
 import { Plus } from "lucide-react";
+import { motion } from "framer-motion";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatPrice, cn } from "@/lib/utils";
 import type { PublicProduct } from "@/types/menu";
@@ -111,16 +112,22 @@ function ProductCardBase({
   quantityInCart?: number;
 }) {
   const soldOut = !product.available;
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <button
+    <motion.button
       type="button"
       disabled={soldOut}
       onClick={() => onSelect?.(product)}
+      onHoverStart={() => !soldOut && setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
       className={cn(
         "group relative flex items-center gap-3 rounded-2xl bg-card px-3.5 py-3 text-left transition-colors duration-200",
-        soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
+        soldOut ? "opacity-55" : "cursor-pointer active:bg-muted",
+        isHovered && !soldOut ? "shadow-md" : "shadow-sm"
       )}
+      animate={{ boxShadow: isHovered && !soldOut ? "0 2px 4px oklch(0.4 0.03 50 / 0.06), 0 12px 28px -8px oklch(0.4 0.03 50 / 0.14)" : "0 1px 2px oklch(0.25 0.03 142 / 0.06)" }}
+      transition={{ duration: 0.15 }}
     >
       {product.image_url && (
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted">
@@ -185,7 +192,7 @@ function ProductCardBase({
           <Plus className="h-[18px] w-[18px]" strokeWidth={2.5} />
         </div>
       )}
-    </button>
+    </motion.button>
   );
 }
 
