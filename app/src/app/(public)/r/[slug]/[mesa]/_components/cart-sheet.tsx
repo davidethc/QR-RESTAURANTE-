@@ -138,10 +138,11 @@ export function CartSheet({
                       size="icon"
                       className="size-11 rounded-full"
                       onClick={() => onUpdateQuantity(index, item.quantity - 1)}
+                      aria-label={`Disminuir cantidad de ${item.product.name}`}
                     >
                       <Minus />
                     </Button>
-                    <span className="w-6 text-center text-[15px] font-semibold tabular-nums">
+                    <span className="w-6 text-center text-[15px] font-semibold tabular-nums" aria-live="polite">
                       {item.quantity}
                     </span>
                     <Button
@@ -150,6 +151,7 @@ export function CartSheet({
                       size="icon"
                       className="size-11 rounded-full"
                       onClick={() => onUpdateQuantity(index, item.quantity + 1)}
+                      aria-label={`Aumentar cantidad de ${item.product.name}`}
                     >
                       <Plus />
                     </Button>
@@ -238,7 +240,7 @@ export function CartSheet({
                 href={whatsappOrderUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground"
+                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold text-primary-foreground"
               >
                 <MessageCircle className="h-4 w-4" strokeWidth={2.25} />
                 Pedir por WhatsApp

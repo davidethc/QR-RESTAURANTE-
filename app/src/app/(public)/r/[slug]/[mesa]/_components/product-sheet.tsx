@@ -153,6 +153,7 @@ export function ProductSheet({
                   type="button"
                   onClick={() => setNotesOpen(true)}
                   className="flex min-h-11 w-full items-center gap-2 rounded-2xl border border-dashed border-border px-3.5 text-left text-[13px] font-medium text-muted-foreground active:bg-secondary"
+                  aria-label="Agregar indicaciones especiales para la cocina"
                 >
                   <PencilLine className="h-4 w-4 shrink-0" strokeWidth={2} />
                   {notes.trim() ? notes : "Agregar una indicación (opcional)"}
@@ -175,6 +176,7 @@ export function ProductSheet({
                 className={cn(
                   "clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-[15px]"
                 )}
+                aria-label={`Agregar ${quantity} ${product.name} al pedido - Total: ${formatPrice(product.price * quantity)}`}
               >
                 <span className="flex items-center gap-2">
                   <ShoppingBag className="h-4 w-4" strokeWidth={2.25} />

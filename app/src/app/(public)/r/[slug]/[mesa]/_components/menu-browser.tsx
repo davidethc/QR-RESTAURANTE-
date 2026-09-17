@@ -322,6 +322,7 @@ export function MenuBrowser({
             size="lg"
             className="clay clay-primary h-12 w-full justify-between rounded-2xl text-[15px]"
             onClick={() => setCartOpen(true)}
+            aria-label={`Ver carrito con ${cart.itemCount} artículos, total ${formatPrice(cart.total)}`}
           >
             <span className="flex items-center gap-2">
               <ShoppingBag className="h-4 w-4" />
