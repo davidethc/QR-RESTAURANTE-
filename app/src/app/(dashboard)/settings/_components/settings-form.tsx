@@ -24,6 +24,11 @@ export function SettingsForm({
 }: {
   restaurant: RestaurantSettings;
 }) {
+  // React Hook Form es una library conocida como incompatible con el
+  // React Compiler (lee refs internamente al invocar `handleSubmit`):
+  // esta directiva la saca del análisis del compilador en vez de pelear
+  // contra un falso positivo que no representa un problema real.
+  "use no memo";
   const [isPending, startTransition] = useTransition();
   const [logoUrl, setLogoUrl] = useState(restaurant.logo_url);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +87,11 @@ export function SettingsForm({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      // React Hook Form lee un ref al invocar `handleSubmit` — el eslint
+      // plugin del React Compiler no reconoce la directiva "use no memo"
+      // de arriba para esta regla puntual; es un falso positivo conocido
+      // de la library, no una lectura de ref durante el render real.
+      // eslint-disable-next-line react-hooks/refs
       onSubmit={handleSubmit(onSubmit)}
       noValidate
       className="max-w-lg"

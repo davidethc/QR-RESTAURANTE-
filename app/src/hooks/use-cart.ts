@@ -34,6 +34,15 @@ export function useCart(slug: string, tableNumber: number) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
+    // El efecto ES la sincronización con localStorage (sistema externo
+    // que no existe en el servidor) — exactamente el caso que React
+    // documenta como uso legítimo de un Effect, aunque el linter no
+    // distinga eso de "estado derivado que debería calcularse en el
+    // render". No hay snapshot estable que ofrecerle a
+    // `useSyncExternalStore` acá porque este mismo hook también
+    // escribe el carrito (`persist`), así que forzarlo agregaría una
+    // capa de sincronización sin beneficio real.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setItems(readCart(key));
   }, [key]);
 

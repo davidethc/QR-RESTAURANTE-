@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 
 function formatElapsed(since: string): string {
@@ -12,6 +12,15 @@ function formatElapsed(since: string): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+function subscribeToTick(callback: () => void) {
+  const id = setInterval(callback, 1000);
+  return () => clearInterval(id);
+}
+
+function noElapsedYet() {
+  return null;
+}
+
 /**
  * "Hace 05:32", actualizándose sola cada segundo. Se usa en tarjetas
  * de pedido y de solicitud para que el personal detecte demoras
@@ -20,12 +29,12 @@ function formatElapsed(since: string): string {
  * `warnAfterMinutes` resalta el texto cuando el pedido lleva
  * demasiado tiempo esperando (regla de "pedido urgente" del wireframe).
  *
- * El primer render (servidor y cliente) muestra siempre "—": calcular
- * el tiempo transcurrido en el `useState` inicial hace que el servidor
- * y el cliente calculen valores distintos (pasan milisegundos reales
- * entre uno y otro), lo que React marca como error de hidratación.
- * El valor real se calcula recién en `useEffect`, que solo corre en
- * el cliente después de hidratar.
+ * El primer render (servidor y cliente) muestra siempre "—":
+ * `useSyncExternalStore` sirve el snapshot del servidor (`null`) hasta
+ * hidratar, y recién después pasa a leer el valor real y suscribirse
+ * al tick — sin el doble setState manual de antes, que además disparaba
+ * el aviso de React de "no llames a setState de forma síncrona dentro
+ * de un efecto".
  */
 export function ElapsedTimer({
   since,
@@ -36,13 +45,11 @@ export function ElapsedTimer({
   warnAfterMinutes?: number;
   className?: string;
 }) {
-  const [elapsed, setElapsed] = useState<string | null>(null);
-
-  useEffect(() => {
-    setElapsed(formatElapsed(since));
-    const id = setInterval(() => setElapsed(formatElapsed(since)), 1000);
-    return () => clearInterval(id);
-  }, [since]);
+  const elapsed = useSyncExternalStore(
+    subscribeToTick,
+    () => formatElapsed(since),
+    noElapsedYet
+  );
 
   const minutes = elapsed ? Number(elapsed.split(":")[0]) : 0;
   const isLate =

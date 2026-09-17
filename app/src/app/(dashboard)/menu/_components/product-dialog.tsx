@@ -52,6 +52,9 @@ export function ProductDialog({
   product?: AdminProduct;
   defaultCategoryId?: string;
 }) {
+  // Ver la nota en SettingsForm: React Hook Form lee refs al invocar
+  // `handleSubmit`, incompatible con el React Compiler.
+  "use no memo";
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -139,6 +142,9 @@ export function ProductDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar producto" : "Nuevo producto"}</DialogTitle>
         </DialogHeader>
+        {/* Ver la nota en SettingsForm: falso positivo conocido de
+            React Hook Form con este eslint rule puntual. */}
+        {/* eslint-disable-next-line react-hooks/refs */}
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <FieldGroup>
             <Field>

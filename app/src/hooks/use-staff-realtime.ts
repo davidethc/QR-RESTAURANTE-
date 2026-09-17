@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createClient } from "@/lib/supabase/client";
 
 /** Cada cuánto corre la red de seguridad, con o sin socket vivo. */
@@ -9,6 +15,24 @@ const SAFETY_NET_MS = 20_000;
 export type StaffTable = "orders" | "waiter_calls" | "tables";
 
 const DEFAULT_TABLES: StaffTable[] = ["orders", "waiter_calls", "tables"];
+
+/** El ejemplo canónico de `useSyncExternalStore`: leer `navigator.onLine`
+ * sin el doble setState (inicial + listener) que dispara el aviso de
+ * React de "no llames a setState de forma síncrona dentro de un efecto". */
+function subscribeToOnline(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+function getOnlineSnapshot() {
+  return navigator.onLine;
+}
+function getOnlineServerSnapshot() {
+  return true;
+}
 
 /**
  * Actualización en vivo del panel del personal.
@@ -73,7 +97,11 @@ export function useStaffRealtime(
   //    el wifi, pero no sabe nada de si el canal funciona.
   // Conectado = las dos a la vez.
   const [channelOk, setChannelOk] = useState(false);
-  const [online, setOnline] = useState(true);
+  const online = useSyncExternalStore(
+    subscribeToOnline,
+    getOnlineSnapshot,
+    getOnlineServerSnapshot
+  );
   const connected = channelOk && online;
 
   // Evita que dos eventos seguidos lancen dos recargas a la vez: la
@@ -159,27 +187,19 @@ export function useStaffRealtime(
 
     // La tablet que se durmió o el celular que recuperó señal se ponen
     // al día al instante, sin esperar al siguiente ciclo.
+    // `online` ya lo sigue `useSyncExternalStore` arriba — este listener
+    // solo dispara el refetch al recuperar señal, no duplica el estado.
     function onWake() {
       if (!document.hidden) void refresh();
     }
-    function onOnline() {
-      setOnline(true);
-      onWake();
-    }
-    function onOffline() {
-      setOnline(false);
-    }
-    setOnline(navigator.onLine);
     document.addEventListener("visibilitychange", onWake);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onWake);
 
     return () => {
       cancelled = true;
       clearInterval(safetyNet);
       document.removeEventListener("visibilitychange", onWake);
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onWake);
       authListener.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };

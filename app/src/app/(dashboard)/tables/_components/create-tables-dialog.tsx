@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,17 +55,24 @@ export function CreateTablesDialog({
   const {
     register,
     handleSubmit,
+    control,
     reset,
     setError,
-    watch,
     formState: { errors },
   } = useForm<CreateTablesInput, unknown, CreateTablesValues>({
     resolver: zodResolver(createTablesSchema),
     defaultValues: { fromNumber: 1, toNumber: 1, name: "" },
   });
 
-  const from = Number(watch("fromNumber"));
-  const to = Number(watch("toNumber"));
+  // `useWatch` en vez de `watch()`: aísla el re-render a este componente
+  // cada vez que cambian estos dos campos, en vez de que `watch()`
+  // suscriba (y re-renderice) el formulario entero por cada tecla.
+  const [fromNumber, toNumber] = useWatch({
+    control,
+    name: ["fromNumber", "toNumber"],
+  });
+  const from = Number(fromNumber);
+  const to = Number(toNumber);
   const isSingle = Number.isFinite(from) && Number.isFinite(to) && from === to;
 
   function onSubmit(values: CreateTablesValues) {

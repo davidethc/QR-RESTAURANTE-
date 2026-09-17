@@ -23,13 +23,15 @@ export function TableQrDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
+  // No necesita ser estado: es una lectura sincrónica y barata (sin
+  // async de por medio), así que se deriva en cada render en vez de
+  // guardarla — evita el setState síncrono dentro del efecto.
+  const warning = open ? getQrUrlWarning() : null;
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     const scanUrl = buildScanUrl(qrToken);
-    setWarning(getQrUrlWarning());
     QRCode.toDataURL(scanUrl, { width: 512, margin: 2 }).then((url) => {
       if (!cancelled) setDataUrl(url);
     });
