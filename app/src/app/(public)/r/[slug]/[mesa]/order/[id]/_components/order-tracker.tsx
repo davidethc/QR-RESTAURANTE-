@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { CheckCircle2, Circle } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { notify } from "@/lib/notifications";
@@ -90,7 +91,12 @@ export function OrderTracker({
     order.status === "REJECTED" || order.status === "CANCELLED";
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex flex-col gap-6 px-4 py-6"
+    >
       <div>
         <h1 className="font-display text-2xl font-semibold text-foreground">
           Pedido #{order.order_number}
@@ -104,7 +110,10 @@ export function OrderTracker({
       </div>
 
       {isRejectedOrCancelled ? (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/30 bg-destructive/10 p-4"
+        >
           <p className="font-medium text-destructive">
             {order.status === "REJECTED"
               ? "No pudimos aceptar tu pedido"
@@ -117,22 +126,33 @@ export function OrderTracker({
           )}
         </div>
       ) : (
-        <ol className="flex flex-col gap-4 rounded-2xl bg-card p-4">
+        <ol
+          aria-live="polite"
+          aria-label="Progreso del pedido"
+          className="flex flex-col gap-4 rounded-2xl bg-card p-4"
+        >
           {STEPS.map((step, index) => {
             const done =
               index < stepIndex ||
               (index === stepIndex && order.status === "DELIVERED");
             const current = index === stepIndex && order.status !== "DELIVERED";
             return (
-              <li key={step.status} className="flex items-center gap-3">
+              <li
+                key={step.status}
+                aria-current={current ? "step" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg",
+                  current && "bg-blue-50 px-2 py-1.5 dark:bg-blue-950/20"
+                )}
+              >
                 {done ? (
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 ) : (
                   <Circle
                     className={cn(
                       "h-5 w-5 shrink-0",
                       current
-                        ? "animate-pulse fill-primary/20 text-primary"
+                        ? "animate-pulse fill-blue-100 text-blue-600 dark:fill-blue-900/40 dark:text-blue-400"
                         : "text-muted-foreground/40"
                     )}
                   />
@@ -146,6 +166,9 @@ export function OrderTracker({
                   )}
                 >
                   {step.label}
+                  {current && (
+                    <span className="sr-only"> (paso actual)</span>
+                  )}
                 </span>
               </li>
             );
@@ -177,6 +200,6 @@ export function OrderTracker({
           <span>{formatPrice(order.total)}</span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

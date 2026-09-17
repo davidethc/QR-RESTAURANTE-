@@ -11,6 +11,12 @@
       "sourceType": "autoskills-registry",
       "computedHash": "c124390cc3441844903ada94cb5820b23d922f2d0ad34e01e029e410197c8a32"
     },
+    "dineway-building-restaurant": {
+      "source": "dineway/dineway-skills",
+      "sourceType": "github",
+      "skillPath": "skills/dineway-building-restaurant/SKILL.md",
+      "computedHash": "e4613ca05e1ca71adab23ccc1b5186c04ebae98d6855b2dc721b083849851261"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "autoskills-registry",
@@ -56,6 +62,12 @@
       "source": "pproenca/dot-skills",
       "sourceType": "autoskills-registry",
       "computedHash": "5cac0a77035b36714c95df1f0ccc9955713fbfc87734f189a16f5aac903eccda"
+    },
+    "restaurant-local-seo": {
+      "source": "zubair-trabzada/ai-restaurant-claude",
+      "sourceType": "github",
+      "skillPath": "skills/restaurant-local-seo/SKILL.md",
+      "computedHash": "cd505dea594eb9823a40894c38d3c8cff1fc5e181636b8ff52294343d0ae259d"
     },
     "seo": {
       "source": "addyosmani/web-quality-skills",

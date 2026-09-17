@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Bell, Receipt, ClipboardList } from "lucide-react";
 import { CallStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
@@ -34,7 +37,12 @@ export function CallCard({
   const pending = call.status === "PENDING";
 
   return (
-    <div
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.2 }}
       className={cn(
         "shadow-card rounded-2xl border bg-card p-4",
         pending
@@ -47,6 +55,7 @@ export function CallCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span
+            aria-hidden
             className={cn(
               "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
               isBill
@@ -178,10 +187,10 @@ export function CallCard({
           className="mt-2 h-12 w-full rounded-full border-border/70 text-[15px] font-semibold"
         >
           <Link href={`/tables/${call.table_id}/order`}>
-            <ClipboardList className="h-4 w-4" /> Tomar pedido
+            <ClipboardList aria-hidden className="h-4 w-4" /> Tomar pedido
           </Link>
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 }

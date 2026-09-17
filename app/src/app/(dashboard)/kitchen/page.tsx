@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getStaffOrders } from "@/lib/queries/staff";
-import { KitchenBoard } from "./_components/kitchen-board";
+import { KitchenBoardV2 } from "./_components/kitchen-board-v2";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -27,8 +26,7 @@ export default async function KitchenPage() {
 
   return (
     <main className="flex min-h-full flex-col">
-      <PageHeader title="Cocina" description={`${orders.length} pedidos activos`} />
-      <KitchenBoard restaurantId={restaurantId} initialOrders={orders} />
+      <KitchenBoardV2 restaurantId={restaurantId} initialOrders={orders} />
     </main>
   );
 }

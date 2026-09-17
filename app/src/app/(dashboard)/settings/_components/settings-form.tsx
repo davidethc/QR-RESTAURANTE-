@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Store } from "lucide-react";
@@ -77,30 +78,42 @@ export function SettingsForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="max-w-lg">
+    <motion.form
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="max-w-lg"
+    >
       <FieldGroup>
         <Field>
-          <FieldLabel>Logo</FieldLabel>
+          <FieldLabel htmlFor="rest-logo">Logo</FieldLabel>
           <div className="flex items-center gap-3">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-muted">
               {logoUrl ? (
                 <Image
                   src={logoUrl}
-                  alt="Logo"
+                  alt="Logo del restaurante"
                   width={64}
                   height={64}
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <Store className="h-6 w-6 text-muted-foreground" />
+                <Store className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
               )}
             </div>
             <Input
+              id="rest-logo"
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              aria-describedby="rest-logo-hint"
             />
           </div>
+          <p id="rest-logo-hint" className="text-xs text-muted-foreground">
+            JPEG, PNG o WebP.
+          </p>
         </Field>
 
         <Field>
@@ -134,6 +147,6 @@ export function SettingsForm({
           Guardar cambios
         </Button>
       </FieldGroup>
-    </form>
+    </motion.form>
   );
 }

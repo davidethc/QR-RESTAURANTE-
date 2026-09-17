@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
 import { Inbox, ChefHat, Bell as BellIcon, PackageCheck, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ export function OrdersBoard({
   // acá — vive una sola vez en `DashboardNotifier` (layout del
   // dashboard) para que avisen en cualquier pantalla, no solo en
   // /orders. Este refetch solo mantiene actualizada la lista visible.
-  async function refetch() {
+  const refetch = useCallback(async () => {
     try {
       const [newOrders, newCalls] = await Promise.all([
         fetchStaffOrders(restaurantId, ACTIVE_ORDER_STATUSES),
@@ -85,14 +86,14 @@ export function OrdersBoard({
     } catch {
       // Silencioso: Realtime reintentará con el próximo cambio.
     }
-  }
+  }, [restaurantId]);
 
   const { connected, refresh } = useStaffRealtime(restaurantId, refetch);
 
-  function clearTableFilter() {
+  const clearTableFilter = useCallback(() => {
     setTableFilter(null);
     router.replace("/orders");
-  }
+  }, [router]);
 
   const visibleOrders = useMemo(
     () =>
@@ -137,7 +138,7 @@ export function OrdersBoard({
             onClick={clearTableFilter}
             className="h-9 rounded-full px-3 text-[13px] font-semibold text-primary hover:bg-primary/10"
           >
-            <X className="h-4 w-4" /> Ver todas
+            <X aria-hidden className="h-4 w-4" /> Ver todas
           </Button>
         </div>
       )}
@@ -183,9 +184,11 @@ export function OrdersBoard({
           {pending.length === 0 ? (
             <EmptyState icon={Inbox} title="No hay pedidos nuevos" description="Cuando llegue un pedido aparecerá aquí." />
           ) : (
-            pending.map((order) => (
-              <OrderCard key={order.id} order={order} onDone={refresh} />
-            ))
+            <AnimatePresence mode="popLayout">
+              {pending.map((order) => (
+                <OrderCard key={order.id} order={order} onDone={refresh} />
+              ))}
+            </AnimatePresence>
           )}
         </TabsContent>
 
@@ -193,9 +196,11 @@ export function OrdersBoard({
           {inProgress.length === 0 ? (
             <EmptyState icon={ChefHat} title="No hay pedidos en preparación" description="Todo está al día ✓" />
           ) : (
-            inProgress.map((order) => (
-              <OrderCard key={order.id} order={order} onDone={refresh} />
-            ))
+            <AnimatePresence mode="popLayout">
+              {inProgress.map((order) => (
+                <OrderCard key={order.id} order={order} onDone={refresh} />
+              ))}
+            </AnimatePresence>
           )}
         </TabsContent>
 
@@ -203,9 +208,11 @@ export function OrdersBoard({
           {ready.length === 0 ? (
             <EmptyState icon={PackageCheck} title="No hay pedidos listos" description="Cocina avisará cuando termine uno." />
           ) : (
-            ready.map((order) => (
-              <OrderCard key={order.id} order={order} onDone={refresh} />
-            ))
+            <AnimatePresence mode="popLayout">
+              {ready.map((order) => (
+                <OrderCard key={order.id} order={order} onDone={refresh} />
+              ))}
+            </AnimatePresence>
           )}
         </TabsContent>
 
@@ -213,9 +220,11 @@ export function OrdersBoard({
           {visibleCalls.length === 0 ? (
             <EmptyState icon={BellIcon} title="No hay solicitudes" description="Todo tranquilo." />
           ) : (
-            visibleCalls.map((call) => (
-              <CallCard key={call.id} call={call} onDone={refresh} />
-            ))
+            <AnimatePresence mode="popLayout">
+              {visibleCalls.map((call) => (
+                <CallCard key={call.id} call={call} onDone={refresh} />
+              ))}
+            </AnimatePresence>
           )}
         </TabsContent>
       </Tabs>

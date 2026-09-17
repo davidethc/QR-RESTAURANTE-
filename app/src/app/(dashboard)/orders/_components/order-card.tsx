@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
@@ -30,7 +33,14 @@ export function OrderCard({
   onDone?: () => void;
 }) {
   return (
-    <div className="shadow-card rounded-2xl border border-border/70 bg-card p-4">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.2 }}
+      className="shadow-card rounded-2xl border border-border/70 bg-card p-4"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-display truncate text-[17px] font-semibold leading-tight text-foreground">
@@ -120,6 +130,6 @@ export function OrderCard({
           Marcar entregado
         </ActionButton>
       )}
-    </div>
+    </motion.div>
   );
 }

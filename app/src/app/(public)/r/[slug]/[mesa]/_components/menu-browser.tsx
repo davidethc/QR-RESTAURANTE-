@@ -8,7 +8,7 @@ import { ProductCard } from "./product-card";
 import { CategorySection } from "./category-section";
 import { SuggestionsRow } from "./suggestions-row";
 import { ProductSheet } from "./product-sheet";
-import { CartSheet } from "./cart-sheet";
+import { CartSheetV2 as CartSheet } from "./cart-sheet-v2";
 import { ServiceButtons } from "./service-buttons";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";

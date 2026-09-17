@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import Link from "next/link";
-import { ClipboardList, Bell } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
-import { TableStatusBadge } from "@/components/shared/status-badge";
-import { TableQrDialog } from "./_components/table-qr-dialog";
-import { ReleaseTableButton } from "./_components/release-table-button";
-import { TakeOrderButton } from "./_components/take-order-button";
 import { TablesLive } from "./_components/tables-live";
 import { CreateTablesDialog } from "./_components/create-tables-dialog";
 import { TablesPdfButton } from "./_components/tables-pdf-button";
-import { formatPrice } from "@/lib/utils";
+import { TablesBoardV2 } from "./_components/tables-board-v2";
 import { getMyRestaurant, getTablesStatus } from "@/lib/queries/staff";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
@@ -55,74 +49,11 @@ export default async function TablesPage() {
           </div>
         }
       />
-      <div className="grid grid-cols-2 gap-3 px-4 pb-6 sm:grid-cols-3 lg:grid-cols-4">
-        {tables.map((table) => (
-          <Link
-            key={table.id}
-            href={`/orders?table=${table.number}`}
-            className="block rounded-2xl bg-card p-4 shadow-card transition-transform duration-200 active:scale-[0.98]"
-          >
-            <div className="flex flex-col gap-2">
-              <p className="font-display truncate text-[17px] font-semibold leading-tight text-foreground">
-                {table.name ?? `Mesa ${table.number}`}
-              </p>
-              <TableStatusBadge status={table.status} className="self-start" />
-            </div>
-
-            {(table.active_orders > 0 || table.pending_calls > 0) && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-snug text-muted-foreground">
-                {table.active_orders > 0 && (
-                  <span className="flex items-center gap-1">
-                    <ClipboardList className="size-3.5" />
-                    {table.active_orders} activo
-                    {table.active_orders > 1 ? "s" : ""}
-                  </span>
-                )}
-                {table.pending_calls > 0 && (
-                  <span className="flex items-center gap-1 font-medium text-primary">
-                    <Bell className="size-3.5" />
-                    {table.pending_calls} pendiente
-                    {table.pending_calls > 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {table.active_total > 0 && (
-              <p className="font-display mt-2 text-lg font-semibold tabular-nums text-wine">
-                {formatPrice(table.active_total)}
-              </p>
-            )}
-
-            {canServeTable && (
-              <div className="mt-3 border-t border-border/60 pt-3">
-                <TakeOrderButton tableId={table.id} />
-              </div>
-            )}
-
-            {(canManage || (canServeTable && table.status !== "AVAILABLE")) && (
-              <div className="mt-2 flex gap-2">
-                {canManage && (
-                  <div className="flex-1">
-                    <TableQrDialog
-                      tableLabel={table.name ?? `Mesa ${table.number}`}
-                      qrToken={table.qr_token}
-                    />
-                  </div>
-                )}
-                {canServeTable && table.status !== "AVAILABLE" && (
-                  <div className="flex-1">
-                    <ReleaseTableButton
-                      tableId={table.id}
-                      tableLabel={table.name ?? `Mesa ${table.number}`}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </Link>
-        ))}
-      </div>
+      <TablesBoardV2
+        tables={tables}
+        canManage={canManage}
+        canServeTable={canServeTable}
+      />
     </main>
   );
 }

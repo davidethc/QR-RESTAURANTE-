@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Search, X, PencilLine, Check, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +80,7 @@ export function StaffOrderBuilder({
     <div className="pb-44">
       <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -102,7 +103,7 @@ export function StaffOrderBuilder({
       {!results && topProducts.length > 0 && (
         <section className="px-4 pt-4">
           <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            <Flame className="size-3.5" /> Los más pedidos
+            <Flame aria-hidden className="size-3.5" /> Los más pedidos
           </p>
           <div className="flex flex-wrap gap-2">
             {topProducts.map((product) => (
@@ -198,8 +199,13 @@ export function StaffOrderBuilder({
         </div>
       )}
 
+      <AnimatePresence>
       {cart.items.length > 0 && (
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
+          transition={{ duration: 0.2 }}
           className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card px-4 pt-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0_/_0.15)]"
           style={{
             paddingBottom: "calc(0.875rem + env(safe-area-inset-bottom, 0px))",
@@ -290,8 +296,9 @@ export function StaffOrderBuilder({
               onSuccess={() => notify.success("Pedido enviado a cocina")}
             />
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

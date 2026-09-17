@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dineway Build Restaurant"
+  short_description: "Generate premium Dineway restaurant sites"
+  default_prompt: "Use $dineway-building-restaurant to build a high-quality Dineway restaurant website from a restaurant name, city, and optional placeId, using official facts, browser-supplemented Google Maps evidence, and local Agent JTBD enrichment for Menu, Reviews with Advantages, Gallery, and Visit."

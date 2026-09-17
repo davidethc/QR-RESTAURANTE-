@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,13 @@ export function QuickTakeOrder({ tables }: { tables: TableStatusRow[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const servable = tables
-    .filter((t) => t.status !== "INACTIVE")
-    .sort((a, b) => a.number - b.number);
+  const servable = useMemo(
+    () =>
+      tables
+        .filter((t) => t.status !== "INACTIVE")
+        .sort((a, b) => a.number - b.number),
+    [tables]
+  );
 
   function goToTable(tableId: string) {
     setOpen(false);
@@ -45,7 +49,7 @@ export function QuickTakeOrder({ tables }: { tables: TableStatusRow[] }) {
           marginBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
-        <ClipboardList className="size-5" /> Tomar pedido
+        <ClipboardList aria-hidden className="size-5" /> Tomar pedido
       </Button>
       <DialogContent>
         <DialogHeader>
