@@ -11,3 +11,6 @@
 
 # Estado de ejecución local (no es contenido del proyecto)
 .claude/scheduled_tasks.lock
+
+# Worktrees temporales de subagentes (checkouts locales, no contenido del repo)
+.claude/worktrees/
