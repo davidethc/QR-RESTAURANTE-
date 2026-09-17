@@ -1552,3 +1552,83 @@ esquema ni RPCs nuevos).
   worktree, hay que volver a crearlo con `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` y `NEXT_PUBLIC_SITE_URL` (ver
   `.env.example`).
+
+---
+
+## [2026-09-17] QA visual: imágenes rotas + espaciados (Playwright + Herdr)
+
+Herramienta: `playwright-cli --browser=chromium` en sesión aislada `qa-rest`
+(la sesión `default` estaba siendo usada/robada por otro proceso que abrió una
+app en `:3001` — por eso el CLI decía "browser not open" entre comandos; al
+moverme a `-s=qa-rest` dejó de morir). Dev server en pane de Herdr `w1:pJ`.
+
+### Imágenes rotas → NINGUNA
+- Carta cliente (Mesas 1 y 2, todas las categorías expandidas): 28 imágenes
+  de producto, todas `naturalWidth > 0` y fetch status 200 (verificado
+  scrolleando y re-fetcheando cada `src`).
+- Panel `/menu` (staff): 28 miniaturas, 200/200.
+- Diálogo QR (owner): data URL 512×512 OK.
+- `/tables`, `/kitchen`, `/orders`, `/settings`, tracker de pedido: sin `<img>`
+  (no hay rotas). Sin 404s de imágenes en el request log.
+
+### Espaciados (análisis geométrico del DOM, 390/768/1440px)
+- Sin desbordes horizontales en ninguna página (`scrollWidth === viewport`).
+- Header sticky y barra inferior fixed del cliente solapan el scroll a
+  propósito (comportamiento correcto).
+- 🔴 `/tables` mobile 390px: títulos de mesa truncados. "Mesa 2" muestra 33px
+  de ~59px, "Terraza" 33/61. La fila `justify-between` (nombre + badge
+  `shrink-0`) aprieta el nombre → ellipsis. No pasa en desktop/tablet.
+  `tables-board-v2.tsx:71-76`.
+- 🔴 `/menu` mobile 390px: nombres de producto cortados a ~88px (hasta 234px de
+  contenido). Fila muy densa (reorder + thumbnail 56px + price + switch +
+  diálogos). `product-row.tsx:123-125`.
+- /login, /orders, /kitchen, sheet de producto, carrito, tracker: limpios.
+
+### Otros
+- Consola dev: cada carga de `/r/[slug]/[mesa]` emite "Next.js encountered the
+  unstable value Date.now() while prerendering" (solo en dev). El panel ya lo
+  resolvió con `await connection()` en `(dashboard)/layout.tsx:30`; la ruta
+  pública no lo tiene. No bloquea en prod; registrar por si migramos el panel a
+  `instant`.
+- Infra: había otra app corriendo en `:3001` y compitió por la sesión
+  `default` de Playwright. Usar siempre `-s=<nombre>` para QA propio.
+
+---
+
+## [2026-09-17] QA: mesero toma pedido de viva voz → aterriza en "Preparando"
+
+Pedido del usuario: confirmar que cuando el mesero toma un pedido de viva
+voz desde su teléfono y lo envía, el panel lo lleva automáticamente a la
+pestaña "Preparando" de Pedidos. Verificado con Playwright (sesión `qa-rest`,
+emulación iPhone 15) contra `next dev` en `:3211` (localhost:3000 estaba
+ocupado por otro proyecto, "barberia-reservas" — mismo aviso de rondas
+anteriores). `app/.env.local` presente, servidor levantado con
+`npx next dev -p 3211`.
+
+### Flujo ejecutado (Mesa 3, limpia al terminar)
+
+| Paso | Resultado |
+|---|---|
+| Login `mesero@demo.monky.com` → `/orders` | ✓ |
+| `/tables` → "Tomar pedido" en Mesa 3 | abre `/tables/<uuid>/order` ✓ |
+| Buscar "lasaña" → agregar "Lasaña de pollo" → Enviar → confirmar | ✓ |
+| Después de confirmar | URL = `/orders?table=3&view=progress` ✓ |
+| Pestaña activa | **"Preparando 1" `[selected]`** ✓ |
+| Tarjeta del pedido en la pestaña | Mesa 3 · #32 · 1× Lasaña de pollo · $5,50 · badge "Preparando" · botón "Marcar listo" ✓ |
+| Banner "Viendo solo Mesa 3" | ✓ (Nuevos 0 · Preparando 1 · Listos 0 · Solicitudes 0) |
+| Base de datos (SQL directo) | `status=PREPARING`, `accepted_by=mesero@demo.monky.com`, `accepted_at = preparing_at` (RPC atómico) ✓ |
+| Un solo toast/error de consola, 0 5xx | ✓ |
+
+La ruta de `staff-order-builder.tsx` (`router.push('/orders?table=N&view=progress')`)
+sigue cumpliendo lo que documentó el commit `37a8dad`: el mesero cae parado
+en "Preparando", filtrado a la mesa que acaba de atender.
+
+**Nota**: la pestaña del flujo distinto (cliente pide por QR → mesero toca
+"Aceptar" en "Nuevos") NO navega automáticamente a "Preparando" — ese ya
+era el comportamiento intencional y no se tocó en esta ronda.
+
+### Datos de prueba — limpiados
+Pedido #32 (Mesa 3) + `order_items` + `audit_logs` borrados tras verificar;
+`table_sessions` de esa mesa pasada a `EXPIRED`, mesa a `AVAILABLE`
+(confirmado con SQL directo: todo en 0/vacío/EXPIRED/AVAILABLE). Servidor y
+navegador de QA cerrados al terminar.
