@@ -61,6 +61,19 @@
     --color-honey-foreground: var(--honey-foreground);
     --color-wine: var(--wine);
     --color-wine-foreground: var(--wine-foreground);
+    --color-primary-focus: var(--primary-focus);
+    --color-glass-bg: var(--glass-bg);
+    --color-glass-border: var(--glass-border);
+    --shadow-sm: var(--shadow-sm);
+    --shadow-md: var(--shadow-md);
+    --shadow-lg: var(--shadow-lg);
+    /* Escala de tipografía (base, xs, sm, md, lg, xl, 2xl) */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
 }
 
 /*
@@ -92,6 +105,7 @@
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.232 0.022 139);
     --primary: oklch(0.471 0.120 141);
+    --primary-focus: oklch(0.471 0.155 141);
     --primary-foreground: oklch(1 0 0);
     /* Cabecera. Antes iba escrito a mano dentro del componente. */
     --primary-dark: oklch(0.379 0.097 140);
@@ -142,6 +156,13 @@
     --chart-4: oklch(0.379 0.097 140);
     --chart-5: oklch(0.530 0.022 72);
     --radius: 0.5rem;
+    /* Glassmorphism tokens */
+    --glass-bg: oklch(from var(--background) l c h / 0.72);
+    --glass-border: oklch(1 0 0 / 0.15);
+    /* Shadow scale */
+    --shadow-sm: 0 1px 2px oklch(0.25 0.03 142 / 0.06);
+    --shadow-md: 0 2px 4px oklch(0.4 0.03 50 / 0.06), 0 12px 28px -8px oklch(0.4 0.03 50 / 0.14);
+    --shadow-lg: 0 6px 16px -4px oklch(0.3 0.03 142 / 0.24);
     --sidebar: oklch(1 0 0);
     --sidebar-foreground: oklch(0.232 0.022 139);
     --sidebar-primary: oklch(0.471 0.120 141);
@@ -160,6 +181,7 @@
     --popover: oklch(0.21 0.014 200);
     --popover-foreground: oklch(0.96 0 0);
     --primary: oklch(0.68 0.12 192);
+    --primary-focus: oklch(0.68 0.16 192);
     --primary-foreground: oklch(0.14 0.02 200);
     --secondary: oklch(0.26 0.012 80);
     --secondary-foreground: oklch(0.92 0 0);
@@ -178,6 +200,13 @@
     --chart-3: oklch(0.5 0.1 192);
     --chart-4: oklch(0.65 0.1 18);
     --chart-5: oklch(0.66 0.012 80);
+    /* Glassmorphism tokens (dark mode) */
+    --glass-bg: oklch(from var(--background) l c h / 0.72);
+    --glass-border: oklch(1 0 0 / 0.08);
+    /* Shadow scale (dark mode) */
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3);
+    --shadow-md: 0 2px 4px oklch(0 0 0 / 0.2), 0 12px 28px -8px oklch(0 0 0 / 0.4);
+    --shadow-lg: 0 6px 16px -4px oklch(0 0 0 / 0.5);
     --sidebar: oklch(0.21 0.014 200);
     --sidebar-foreground: oklch(0.96 0 0);
     --sidebar-primary: oklch(0.68 0.12 192);

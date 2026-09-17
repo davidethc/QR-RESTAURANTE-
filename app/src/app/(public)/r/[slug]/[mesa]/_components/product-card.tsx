@@ -53,7 +53,7 @@ function ProductCardCompactBase({
         </div>
       )}
 
-      <div className="relative flex flex-1 flex-col gap-1 p-3">
+      <div className="relative flex flex-1 flex-col gap-1 p-5 shadow-sm">
         {quantityInCart > 0 && (
           <span className="absolute right-2.5 top-2.5 rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-tight text-primary-foreground">
             {quantityInCart}
