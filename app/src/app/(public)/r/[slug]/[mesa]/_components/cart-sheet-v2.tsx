@@ -277,7 +277,7 @@ export function CartSheetV2({
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold text-primary-foreground"
+                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground"
               >
                 <MessageCircle className="h-5 w-5" strokeWidth={2} />
                 Pedir por WhatsApp

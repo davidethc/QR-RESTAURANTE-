@@ -244,7 +244,7 @@ export function CartSheet({
                 href={whatsappOrderUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold text-primary-foreground"
+                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground"
               >
                 <MessageCircle className="h-4 w-4" strokeWidth={2.25} />
                 Pedir por WhatsApp
