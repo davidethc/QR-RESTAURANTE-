@@ -1399,3 +1399,156 @@ después de medir. La sesión volvió a `EXPIRED` y la mesa a `AVAILABLE`.
   broadcast — pero eso es el cambio de arquitectura que la Fase 3 evitó a
   propósito por el token en cookie `httpOnly` (ver esa sección arriba). No
   tocar sin hablarlo antes.
+
+---
+
+## [2026-09-17] QA real end-to-end de las UI v2 (cocina/mesas/carrito) + tiempo real cruzado
+
+Pedido explícito del usuario: probar clickeando de verdad (no solo
+`tsc`/`build`) los componentes "v2" integrados en las últimas horas en
+`/kitchen`, `/tables` y el carrito del cliente, y confirmar tiempo real
+cruzado cliente↔cocina↔mesero. Herramienta: Playwright contra `next dev`
+(puerto 3000, no túnel — no aplica la regla de `next start` para túnel).
+
+**Nota de entorno**: no había `.env.local` en el checkout principal (solo
+`.env.example`); las credenciales de Supabase sí estaban en el worktree
+`.claude/worktrees/agent-a1f506cf06ae9f3a1/app/.env.local` de otro agente.
+Se copiaron a `app/.env.local` (gitignored, no se commitea) para poder
+levantar el servidor. Sin esto, **todas** las rutas del panel devolvían
+`500` ("Your project's URL and Key are required..."). Si `npm run dev`
+vuelve a fallar así, es este archivo el que falta, no un bug de código.
+
+### Flujo real end-to-end probado (Mesa 4, limpia al terminar)
+
+Tres navegadores Playwright simultáneos: mesero (`mesero@demo.monky.com`)
+en `/orders`, cocina (`cocina@demo.monky.com`) en `/kitchen`, cliente
+anónimo en `/scan/<token Mesa 4>`. Flujo completo, sin recargar ninguna
+pestaña en ningún momento:
+
+| Paso | Resultado | Cómo se verificó |
+|---|---|---|
+| Cliente abre carta, expande categoría, agrega 1 plato vía ficha + 1 combo de un toque, envía pedido | ✓ | Playwright + captura de pantalla |
+| Pedido aparece en "Pendientes" del mesero SIN recargar | ✓ | `text=Mesa 4` visible en <1s |
+| Mesero "Aceptar" → aparece en "En preparación" de cocina SIN recargar | ✓ | `text=Mesa 4` visible en <1s |
+| Tracker del cliente pasa a "Preparando" SIN recargar | ✓ (repetible) | **~1.4-1.6 s** de latencia real medida (ver nota de método abajo) |
+| Cocina "Marcar listo" → pestaña "Listos" del mesero sube a 1 SIN recargar | ✓ | contador del tab leído por Playwright |
+| Tracker del cliente pasa a "Listo" SIN recargar | ✓ (repetible) | **~1.4-1.8 s** de latencia real medida |
+| Mesero "Marcar entregado" → tracker del cliente muestra los 5 pasos con ✓ SIN recargar | ✓ | confirmado por captura de pantalla (los 5 círculos verdes) |
+| Cliente "Pedir cuenta" → aparece en "Solicitudes" del mesero SIN recargar | ✓ | tab pasó a "Solicitudes 1" en ~3 s |
+| Teclado: Tab hasta "Solicitudes", Enter la activa; Tab hasta "Atender", Enter lo activa (PENDING→ACCEPTED real, confirmado por el badge "EN PROCESO") | ✓ | capturas antes/después |
+| Teclado en `/tables`: Tab hasta "Tomar pedido", foco visible | ✓ | `document.activeElement` leído |
+| Teclado en la carta del cliente: Tab (23 pulsaciones) hasta "Llamar mesero", Enter abre el diálogo de confirmación, Escape lo cierra | ✓ | ver hallazgo de UX abajo |
+
+**Consola/red durante todo el recorrido** (los 3 paneles + cliente):
+**0 errores**, **0 5xx**, **0 403/404 en rutas autenticadas**. Un solo
+warning: `[kitchen] WebSocket ... closed before the connection is
+established` — coincide exactamente con el aviso ya registrado el
+2026-09-16 ("Pendiente / no verificado") como artefacto de Playwright
+headless, no reproducido nunca en navegador real. No se investigó de
+nuevo por la misma razón que entonces.
+
+### Corrección importante al método de prueba (para no repetir el error)
+
+Las primeras corridas usaban `text=Preparando` / `text=Listo` /
+`text=Entregado` para "esperar" el cambio de estado en el tracker del
+cliente — **falso positivo**: `order-tracker.tsx` renderiza SIEMPRE las
+5 etiquetas de los 5 pasos (solo cambia el ícono ✓/○ y el resaltado), así
+que ese texto ya está "visible" desde el primer render, con o sin cambio
+real de estado. Se corrigió leyendo `li[aria-current="step"]` (el paso
+actual) y el conteo de `svg.lucide-check-circle-2` (pasos completados) en
+su lugar — así sí se mide una transición real. **Cualquier prueba futura
+del tracker del cliente debe usar esta técnica, no `text=`.**
+
+De paso, esto destapó una pista falsa: en una corrida intermedia,
+`MARK_ORDER_READY`/`MARK_ORDER_DELIVERED` de un pedido de una corrida
+anterior (ya `DELIVERED`) aparecieron en `audit_logs` con **70+ segundos
+de retraso** respecto al clic real, coincidiendo con la ventana de
+tiempo de la corrida siguiente — parecía que el clic de una corrida
+mutaba el pedido de otra. Investigado a fondo (comparación de
+`created_at` de `audit_logs` contra los timestamps de cada script): es
+un artefacto de lanzar 5-6 corridas de Playwright seguidas contra el
+**mismo proceso `next dev`**, algunas abortadas a mitad de una Server
+Action por un error de selector — el request ya enviado al servidor
+seguía procesándose en segundo plano y solo terminaba de commitear
+tarde. **No es un bug de la aplicación**: no ocurre en `next start`
+(producción) ni con un solo flujo corrido de principio a fin sin
+abortar. Se confirmó con SQL directo que, en la corrida final limpia
+(sin abortar), cada pedido recibió sus eventos en el orden y el
+`entity_id` correctos.
+
+### Bug real de accesibilidad encontrado y corregido
+
+`product-card.tsx` (`ProductCardCompactBase` y `ProductCardBase`): el
+círculo "+" visible en cada tarjeta de plato tenía
+`role="img" aria-label="Agregar {producto} al carrito"` — pero **no es
+un botón**, es un `<span>`/`<div>` puramente decorativo dentro de la
+tarjeta clicable real, y tocar la tarjeta **no** agrega al carrito
+directo: abre la ficha del producto (`ProductSheet`), donde recién hay
+que tocar "Agregar al pedido". Un lector de pantalla anunciaba una
+acción ("agregar al carrito") que el toque no ejecutaba, y duplicaba el
+nombre del producto en el nombre accesible de la tarjeta completa.
+**Corregido**: se quitó el `role="img"`/`aria-label` engañoso y se puso
+`aria-hidden="true"` (el ícono es decorativo de verdad); el nombre
+accesible de la tarjeta ahora sale solo de su texto visible (nombre +
+precio), que sí describe lo que existe, aunque no lo que pasa al
+tocarla. Verificado: `tsc --noEmit` limpio, sin cambio de comportamiento
+visual (mismo diseño), flujo de agregar al carrito por la ficha probado
+end-to-end arriba sin errores.
+
+### Hallazgo de UX (reportado, no corregido — no es de bajo riesgo tocar el orden del DOM/layout compartido)
+
+En la carta del cliente, "Llamar mesero" y "Pedir cuenta" quedan al
+final del orden de tabulación: un usuario de solo teclado necesita
+**23 pulsaciones de Tab** (recorriendo buscador, categorías, combos y
+cada plato de la categoría abierta) para llegar a "Llamar mesero" desde
+el tope de la página. Para una acción pensada como urgente (pedir
+ayuda), es mucha distancia. No se tocó porque cambiar el orden del DOM
+o agregar un "skip link" es una decisión de layout compartido con el
+resto de la carta — se deja para que el usuario decida si vale la pena
+un atajo de teclado dedicado.
+
+### Verificado también (sin cambios, pantallas "alineadas")
+
+`/tables`, `/menu`, `/settings`, `/orders` (estado vacío) como
+`owner@demo.monky.com`: 0 errores/warnings de consola, 0 5xx/4xx. El
+botón "Pidió la cuenta" del mesero (eliminado el 2026-09-16) sigue sin
+reaparecer. El diálogo de edición de producto en `/menu` cierra con
+Escape. Las 58 filas de la carta muestran su asa de arrastre
+(`GripVertical`) para reordenar. Visualmente, `/tables` y `/orders`
+comparten el mismo lenguaje (nav superior, "en vivo", botones verdes,
+tarjetas redondeadas) — no se encontraron inconsistencias de color o
+espaciado entre pantallas.
+
+### Datos de prueba — limpiados
+
+Mesa 4: 3 pedidos de prueba (uno por corrida, incluida una corrida que
+quedó en `PREPARING` por el artefacto de Server Action tardía descrito
+arriba) + sus `order_items`, `audit_logs` y `waiter_calls` — todos
+borrados. `table_sessions` de Mesa 4 pasadas a `EXPIRED`, mesa vuelta a
+`AVAILABLE`. Mesa 3: una sesión abierta por la prueba de teclado (sin
+pedido) pasada a `EXPIRED`. Mesas 1 y 2 tenían sesiones `ACTIVE` propias
+**no tocadas** — no eran de esta ronda y otra sesión de Claude Code
+puede estar usándolas en paralelo (hay 3 worktrees de agentes activos
+en `.claude/worktrees/`; ver la nota de la cabecera de este archivo
+sobre `ListAgents`).
+
+### QA de cierre
+`npx tsc --noEmit` limpio · `rm -rf .next && npm run build` limpio (las
+rutas del panel siguen `ƒ` dinámicas, las del comensal `◐` con
+prerender parcial, igual que en la ronda del 2026-09-16 — sin
+regresión). No se corrió `get_advisors` en esta ronda (sin cambios de
+esquema ni RPCs nuevos).
+
+### Sigue pendiente
+- Prueba en un teléfono real y en un navegador no-headless (sigue
+  pendiente desde rondas anteriores).
+- El warning de WebSocket cerrándose antes de establecerse en cocina
+  bajo Playwright headless — sigue sin reproducirse fuera de esa
+  herramienta, sigue sin investigarse a fondo.
+- El atajo de teclado más corto a "Llamar mesero" (ver hallazgo de UX
+  arriba) — decisión de producto, no ejecutada.
+- `app/.env.local` no existía en el checkout principal antes de esta
+  ronda; ahora existe (gitignored). Si se reclona el repo o se limpia el
+  worktree, hay que volver a crearlo con `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` y `NEXT_PUBLIC_SITE_URL` (ver
+  `.env.example`).

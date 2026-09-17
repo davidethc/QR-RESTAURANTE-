@@ -74,8 +74,7 @@ function ProductCardCompactBase({
           ) : (
             <span
               className="clay clay-primary flex h-7 w-7 items-center justify-center rounded-full text-primary-foreground"
-              role="img"
-              aria-label={`Agregar ${product.name} al carrito`}
+              aria-hidden="true"
             >
               <Plus className="h-4 w-4" strokeWidth={2.75} />
             </span>
@@ -186,8 +185,7 @@ function ProductCardBase({
       {!soldOut && (
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center clay clay-primary rounded-full text-primary-foreground"
-          role="img"
-          aria-label={`Agregar ${product.name} al carrito`}
+          aria-hidden="true"
         >
           <Plus className="h-[18px] w-[18px]" strokeWidth={2.5} />
         </div>
