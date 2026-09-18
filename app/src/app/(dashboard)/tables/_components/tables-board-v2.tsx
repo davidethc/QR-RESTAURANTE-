@@ -68,12 +68,13 @@ function TableCard({
       className={`flex flex-col gap-3 rounded-2xl border-2 ${border} ${bg} p-4`}
     >
       <Link href={`/orders?table=${table.number}`} className="flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-3">
-          <p className="font-display truncate text-lg font-bold text-foreground">
+        <div className="flex min-h-7 items-center">
+          <p className="font-display text-lg font-bold leading-tight text-balance text-foreground">
             {table.name ?? `Mesa ${table.number}`}
           </p>
-          <TableStatusBadge status={table.status} className="shrink-0" />
         </div>
+
+        <TableStatusBadge status={table.status} className="self-start" />
 
         {(table.active_orders > 0 || table.pending_calls > 0) && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-snug text-muted-foreground">
@@ -106,9 +107,9 @@ function TableCard({
       )}
 
       {(canManage || (canServeTable && table.status !== "AVAILABLE")) && (
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row">
           {canManage && (
-            <div className="flex-1">
+            <div className="w-full sm:flex-1">
               <TableQrDialog
                 tableLabel={table.name ?? `Mesa ${table.number}`}
                 qrToken={table.qr_token}
@@ -116,7 +117,7 @@ function TableCard({
             </div>
           )}
           {canServeTable && table.status !== "AVAILABLE" && (
-            <div className="flex-1">
+            <div className="w-full sm:flex-1">
               <ReleaseTableButton
                 tableId={table.id}
                 tableLabel={table.name ?? `Mesa ${table.number}`}
@@ -138,22 +139,28 @@ export function TablesBoardV2({ tables, canManage, canServeTable }: TablesBoardV
   return (
     <div className="flex min-h-full flex-col">
       <div className="px-4 pb-3 lg:px-6">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 px-3 py-2">
-            <p className="text-xs text-muted-foreground">Ocupadas</p>
-            <p className="font-display text-xl font-bold text-foreground">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-blue-50 px-2.5 py-2 dark:bg-blue-950/20 sm:px-3 sm:py-2.5">
+            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Ocupadas
+            </p>
+            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-[20px]">
               {occupiedCount}/{totalTables}
             </p>
           </div>
-          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 px-3 py-2">
-            <p className="text-xs text-muted-foreground">Esperando pago</p>
-            <p className="font-display text-xl font-bold text-foreground">
+          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-amber-50 px-2.5 py-2 dark:bg-amber-950/20 sm:px-3 sm:py-2.5">
+            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Por cobrar
+            </p>
+            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-[20px]">
               {billRequested}
             </p>
           </div>
-          <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2">
-            <p className="text-xs text-muted-foreground">Libres</p>
-            <p className="font-display text-xl font-bold text-foreground">
+          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-emerald-50 px-2.5 py-2 dark:bg-emerald-950/20 sm:px-3 sm:py-2.5">
+            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Libres
+            </p>
+            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-[20px]">
               {availableCount}
             </p>
           </div>

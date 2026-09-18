@@ -1632,3 +1632,55 @@ Pedido #32 (Mesa 3) + `order_items` + `audit_logs` borrados tras verificar;
 `table_sessions` de esa mesa pasada a `EXPIRED`, mesa a `AVAILABLE`
 (confirmado con SQL directo: todo en 0/vacío/EXPIRED/AVAILABLE). Servidor y
 navegador de QA cerrados al terminar.
+
+---
+
+## [2026-09-17] QA: /tables mobile (393px y 360px) + Solicitudes sin Ctrl+R
+
+Sitio: vista Mesas del panel mesero en móvil, y el reporte de que el mesero
+debía hacer Ctrl+R para ver la solicitud de cuenta. Misma sesión Playwright
+(`qa-tables`, emulación iPhone 15) contra `next dev` en `:3211`.
+
+### /tables mobile — refinamiento de tamaños
+
+Estado previo a esta ronda: tarjetas en 175px con nombres comidos por el badge
+(`justify-between`) y el chip central "ESPERANDO PAGO" partido en 2 líneas en
+móvil (etiqueta 33px vs 17px en los otros chips). Cambios en
+`tables-board-v2.tsx`:
+
+- Nombres de mesa ya no se truncan: bloque nombre con `min-h-7` y `text-balance`,
+  badge debajo (`self-start`). Verificado `scrollWidth === clientWidth` en las
+  5 tarjetas a 393px y 360px ("Mesa 1-4", "Terraza").
+- Chips de resumen: etiqueta 11px en móvil, valor `text-lg` (20px desde `sm`),
+  padding reducido y `truncate` — a 393px y 360px las 3 etiquetas quedan en una
+  sola línea y la altura de los 3 chips es idéntica (55px en ambos viewports).
+  Etiqueta central acortada de "Esperando pago" a "Por cobrar" (la semántica es
+  la misma: mesas con cuenta por cobrar).
+- Fila de acciones secundarias (QR / Liberar mesa) apila en móvil
+  (`flex-col gap-2 sm:flex-row`), cada botón a ancho completo.
+
+`npx tsc --noEmit` y eslint del archivo: sin errores. `impeccable`: sin hallazgos.
+
+### Solicitudes — la solicitud SÍ aparece sin Ctrl+R
+
+Flujo: parado en `/orders?view=calls` con "Solicitudes 0" seleccionada, se
+insertó un `waiter_calls` (`BILL`/`PENDING`) por SQL directo contra
+`fvzxfbzujvkkvniyphps`. Resultado:
+
+| Verificación | Resultado |
+|---|---|
+| Contador de pestaña | "Solicitudes 0" → **"Solicitudes 1" solo, en ~400ms** ✓ |
+| Tarjeta pendiente | "Mesa 2 pidió la cuenta" presente sin recargar ✓ |
+| Al borrar el call (SQL) | contador vuelve a 0 (comprobado en `/orders?view=calls`) ✓ |
+
+El reporte original del usuario quedaba para el caso "mesero ya montado en
+Solicitudes": ese camino funciona con realtime (`useStaffRealtime`). El flujo
+entrante por toast ("Ver") reusa el mismo push; no se pudo reproducir el clic
+del toast vía CLI por auto-dismiss de 15s + latencia entre herramientas, así
+que esa pierna del camino quedó sin repro — se confirma con el montón de
+pruebas realtime de arriba (misma fuente: refetch sobre `waiter_calls`).
+
+### Datos de prueba — limpiados
+Los 2 calls `BILL`/`PENDING` insertados se borraron por SQL; `waiter_calls`
+queda sin filas `PENDING` (query directo). Mesa 2 conserva su sesión activa
+de pruebas pasadas. Navegador de QA sigue abierto para continuar.
