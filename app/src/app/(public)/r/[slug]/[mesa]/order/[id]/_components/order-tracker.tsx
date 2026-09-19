@@ -103,7 +103,7 @@ export function OrderTracker({
         </h1>
         <p className="text-sm text-muted-foreground">
           Mesa {order.table_number} ·{" "}
-          <span className="font-medium tabular-nums text-foreground">
+          <span className="font-medium tabular-nums text-wine">
             {formatPrice(order.total)}
           </span>
         </p>
@@ -142,17 +142,17 @@ export function OrderTracker({
                 aria-current={current ? "step" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-lg",
-                  current && "bg-blue-50 px-2 py-1.5 dark:bg-blue-950/20"
+                  current && "bg-primary-soft px-2 py-1.5"
                 )}
               >
                 {done ? (
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
                 ) : (
                   <Circle
                     className={cn(
                       "h-5 w-5 shrink-0",
                       current
-                        ? "animate-pulse fill-blue-100 text-blue-600 dark:fill-blue-900/40 dark:text-blue-400"
+                        ? "animate-pulse fill-primary-soft text-primary"
                         : "text-muted-foreground/40"
                     )}
                   />
@@ -189,7 +189,7 @@ export function OrderTracker({
                   <span className="italic"> — {item.notes}</span>
                 )}
               </span>
-              <span className="text-foreground">
+              <span className="text-wine">
                 {formatPrice(item.subtotal)}
               </span>
             </div>
@@ -197,7 +197,7 @@ export function OrderTracker({
         </div>
         <div className="mt-3 flex justify-between border-t pt-2 text-sm font-semibold tabular-nums">
           <span>Total</span>
-          <span>{formatPrice(order.total)}</span>
+          <span className="text-wine">{formatPrice(order.total)}</span>
         </div>
       </div>
     </motion.div>

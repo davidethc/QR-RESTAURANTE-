@@ -143,7 +143,7 @@ export function CartSheetV2({
                           {item.notes}
                         </p>
                       )}
-                      <p className="font-display mt-2 text-[16px] font-bold text-primary">
+                      <p className="font-display mt-2 text-[16px] font-bold text-wine">
                         {formatPrice(item.subtotal)}
                       </p>
                     </div>
@@ -187,7 +187,7 @@ export function CartSheetV2({
                         size="icon"
                         className="h-10 w-10 rounded-lg"
                         onClick={() => onRemove(index)}
-                        aria-label="Quitar"
+                        aria-label={`Quitar ${item.product.name}`}
                       >
                         <Trash2 className="h-5 w-5 text-destructive" />
                       </Button>
@@ -218,7 +218,7 @@ export function CartSheetV2({
                       {product.name}
                     </span>
                     <div className="flex items-center justify-between gap-1">
-                      <span className="font-display text-[14px] font-bold text-primary">
+                      <span className="font-display text-[14px] font-bold text-wine">
                         {formatPrice(product.price)}
                       </span>
                       <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground group-hover:scale-110 transition-transform">
@@ -239,7 +239,7 @@ export function CartSheetV2({
               <span className="font-display text-[16px] font-semibold text-muted-foreground">
                 Total
               </span>
-              <span className="font-display text-[24px] font-bold text-foreground">
+              <span className="font-display text-[24px] font-bold text-wine">
                 {formatPrice(total)}
               </span>
             </div>

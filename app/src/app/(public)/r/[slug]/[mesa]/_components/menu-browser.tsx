@@ -265,6 +265,11 @@ export function MenuBrowser({
           </p>
         ) : (
           <div className="flex flex-col gap-2 px-4">
+            {/* Los resultados de búsqueda no tienen su propia categoría
+                visible (category-section.tsx abre cada una con un h2) —
+                sin este encabezado oculto, el h1 del restaurante salta
+                directo a los h3 de cada producto. */}
+            <h2 className="sr-only">Resultados de búsqueda</h2>
             {results.map((product) => (
               <ProductCard
                 key={product.id}

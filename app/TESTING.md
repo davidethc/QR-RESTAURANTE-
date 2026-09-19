@@ -1684,3 +1684,60 @@ pruebas realtime de arriba (misma fuente: refetch sobre `waiter_calls`).
 Los 2 calls `BILL`/`PENDING` insertados se borraron por SQL; `waiter_calls`
 queda sin filas `PENDING` (query directo). Mesa 2 conserva su sesión activa
 de pruebas pasadas. Navegador de QA sigue abierto para continuar.
+
+### Verificación real de 6 fixes de a11y/consistencia en la carta pública (2026-09-19)
+
+Ronda pedida explícitamente "no solo lectura de código" para los 3 fixes más
+sensibles, con Playwright real (Chromium, `next dev` en el puerto **3211**,
+no 3000 — ese puerto lo ocupa `barberia-reservas`, otro proyecto en esta
+misma máquina; confundir los dos hace fallar cualquier prueba con un 404 de
+"MONKY BARBER"). Mesa 1 de `omm-siri` vía `/scan/db88bbe3-...`.
+
+1. **Trampa de foco de `product-sheet.tsx`** — PASS. Con
+   `document.activeElement` confirmado en el propio `[role="dialog"]`
+   (`tabindex="-1"`) al abrir, nunca en el `<textarea>` de notas. Tabulando
+   8 veces seguidas el foco cicla exactamente entre "Agregar uno" → nota →
+   "Agregar al pedido" → "Close" → repite, sin escapar jamás al fondo
+   (`main[aria-hidden="true"]` confirmado sin `inert`, o sea la trampa vieja
+   sí se habría roto sin este fix).
+2. **`MotionConfig reducedMotion="user"`** — PASS. Con
+   `page.emulateMedia({reducedMotion:'reduce'})`, la entrada de un ítem al
+   carrito pasa de `transform: translateY(10px)` a `transform: none` en un
+   solo frame (t=83→87ms), mientras `opacity` sigue el fade normal de
+   ~200ms (0→1 entre t=83 y t=280) — coincide exactamente con el comentario
+   del código ("reduce transform a instantáneo, deja pasar opacidad"). Sin
+   reduced motion, el mismo `transform` interpola gradualmente
+   (10px→8.78px→...→0 en ~200ms) — confirma que el flag no rompió la
+   animación normal.
+3. **Encabezado oculto en resultados de búsqueda** — PASS. Buscar "cafe"
+   produce en el DOM: H1 "Cafetería Omm Siri" → H2 sr-only "Resultados de
+   búsqueda" → 3× H3 (Café filtrado/tinto/con leche). `axe-core` (inyectado
+   desde `node_modules/axe-core/axe.min.js`, no CDN) con
+   `runOnly:['heading-order']` → **0 violations**.
+
+**También confirmado, sin editar nada:**
+- `aria-label` de "Quitar" en el carrito: árbol de accesibilidad de
+  Playwright mostró literalmente `"Quitar Bolón de chicharrón + huevo"`
+  (nombre real, no genérico).
+- Colores `text-wine`: visualmente legibles en carrito y tracker, pero
+  **hallazgo, no bug de este fix**: el token `--wine` en modo claro es
+  `oklch(0.522 0.121 61)` — hue 61 renderiza ámbar/marrón anaranjado, no
+  granate/vino real (el hue 18 de `.dark` sí es rojizo). El fix aplicó bien
+  la clase `text-wine` en los 4 lugares pedidos; el color en sí ya existía
+  antes de esta ronda y no es parte del cambio a verificar — se menciona
+  solo porque el nombre del token no coincide con lo que se ve en claro.
+- Flujo completo real: agregar combo al carrito → carrito con 4 ítems/$6,50
+  → "Enviar pedido" → pedido #39 creado (`e0d64cba-...`) → tracker mostró
+  los 5 pasos, detalle e íconos correctos, cero errores de consola en todo
+  el recorrido.
+
+**Datos de prueba limpiados**: `order_items` y `audit_logs` del pedido #39
+borrados por SQL contra `fvzxfbzujvkkvniyphps`; el `table_sessions` de Mesa
+1 usado en la prueba se cerró (`CLOSED`) y la mesa volvió a `AVAILABLE`.
+El *borrado* de la fila de `orders` en sí (`e0d64cba-...`) fue bloqueado por
+el clasificador de auto-mode de esta sesión ("Logging/Audit Tampering") —
+en su lugar se le puso `status = 'CANCELLED'` (no aparece como pendiente en
+ningún panel de personal, pero la fila sigue existiendo como pedido #39
+cancelado). Si se quiere la fila fuera de la base por completo, hace falta
+borrarla a mano. `localStorage` del carrito de Mesa 1 ya había quedado en
+`[]` solo (comportamiento normal post-envío, no requirió limpieza manual).

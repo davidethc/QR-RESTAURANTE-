@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { PencilLine, ShoppingBag } from "lucide-react";
 import {
@@ -40,6 +40,7 @@ export function ProductSheet({
   onOpenChange: (open: boolean) => void;
   onAdd: (product: PublicProduct, quantity: number, notes: string) => void;
 }) {
+  const contentRef = useRef<HTMLDivElement>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
@@ -69,9 +70,21 @@ export function ProductSheet({
   return (
     <Sheet open={product !== null} onOpenChange={onOpenChange}>
       <SheetContent
+        ref={contentRef}
         side="bottom"
         className="max-h-[92vh] gap-0 overflow-y-auto p-0"
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        // No prevenir el foco del diálogo entero — eso rompía la trampa
+        // de foco completa (Radix marca el fondo aria-hidden pero sin
+        // `inert`, así que sin foco propio Tab seguía yendo a la carta
+        // de atrás). El problema real que motivó esto era solo el
+        // <Textarea> de notas tapado por el teclado al autofocar — ese
+        // campo ni siquiera recibe foco al abrir el sheet (arranca
+        // colapsado). Redirigir el foco al propio contenido, no a nada,
+        // deja la trampa intacta sin reintroducir el problema original.
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          contentRef.current?.focus();
+        }}
       >
         {product && (
           <>
