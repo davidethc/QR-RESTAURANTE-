@@ -2,7 +2,7 @@
 title: "Wiki Index"
 type: "index"
 created: "2026-09-01"
-updated: "2026-09-01"
+updated: "2026-09-26"
 ---
 
 # Índice del Wiki Monky.com
@@ -30,6 +30,7 @@ Catálogo de todas las páginas en el wiki. Se actualiza con cada ingesta.
 
 - [[Proyecto QR - Visión General]] — Síntesis completa del proyecto: visión, problema, solución, propuesta de valor, fases
 - [[Fase UX — Wireframes (Síntesis)]] — Resumen de wireframes para Cliente, Mesero y Cocina
+- [[Estado del Sistema — Auditoría 2026-09-26]] — Qué existe, qué está a medias, qué falta (cobro, reportes, SRI, inventario), bugs y riesgos de producción, latencias reales de tiempo real
 
 ## Comparisons
 *Análisis comparativos entre fuentes o conceptos*

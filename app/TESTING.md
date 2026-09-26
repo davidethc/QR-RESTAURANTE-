@@ -26,20 +26,11 @@ ronda de QA nueva (no solo al final de una fase).
 
 ## Credenciales y accesos de prueba (restaurante demo: Cafetería Omm Siri, slug `omm-siri`)
 
-Personal (`/login`), contraseña única `MonkyDemo2026!`:
-- `owner@demo.monky.com` (OWNER)
-- `mesero@demo.monky.com` (WAITER)
-- `cocina@demo.monky.com` (KITCHEN — sin panel propio todavía, ver Fase 4)
-
-QR de mesas (`/scan/<token>` → set cookie → redirige a `/r/omm-siri/<mesa>`):
-
-| Mesa | Token |
-|---|---|
-| 1 | `db88bbe3-dba1-4a5a-b3a2-11520d87a808` |
-| 2 | `7fa6825d-1234-44ee-8244-34f8db0d1c41` |
-| 3 | `9b33ed2a-bd56-4bd0-a2c6-58c61f677da5` |
-| 4 | `ab97088d-a91b-4c6a-ae33-8f7fd936a088` |
-| 5 (nombre real: "Terraza") | `98cb1388-59e9-48ee-8edc-356362d4ac0b` |
+Las credenciales del personal y los tokens QR de las mesas **ya no viven en este
+archivo** (el repo es público). Están en `app/.env.qa.local` (gitignored):
+`QA_OWNER_EMAIL`, `QA_WAITER_EMAIL`, `QA_KITCHEN_EMAIL`, `QA_STAFF_PASSWORD` y
+`QA_TABLE_<N>_TOKEN`. Si el archivo no existe en tu checkout, pídelo al dueño del
+proyecto o consulta la base.
 
 Si estos tokens dejan de funcionar, re-consultar:
 ```sql
@@ -981,7 +972,7 @@ Solo faltaba la interfaz — no hizo falta ningún RPC nuevo.
 3. **Un QR a la vez**: con 20 mesas eran 20 diálogos.
 
 ### Credenciales usadas
-`owner@demo.monky.com` / `MonkyDemo2026!` (sesión guardada en el scratchpad como
+`QA_OWNER_EMAIL` / `QA_STAFF_PASSWORD` de `app/.env.qa.local` (sesión guardada en el scratchpad como
 `owner-auth.json`; la de mesero en `staff-auth.json`).
 
 ### Pruebas ejecutadas
@@ -1741,3 +1732,72 @@ ningún panel de personal, pero la fila sigue existiendo como pedido #39
 cancelado). Si se quiere la fila fuera de la base por completo, hace falta
 borrarla a mano. `localStorage` del carrito de Mesa 1 ya había quedado en
 `[]` solo (comportamiento normal post-envío, no requirió limpieza manual).
+
+---
+
+## 2026-09-24 — Sesión de mesa de 1 h 30 min + link de carta solo-WhatsApp
+
+Cambios: `lib/session.ts` (cookie `mk_session` con `Max-Age=5400` + campo
+`issuedAt`, validado en el servidor), `SessionExpiryWatcher` en la carta de
+mesa, ruta nueva `/r/[slug]` (siempre modo carta), diálogo "Link de carta" en
+`/tables` y link copiable en el diálogo de QR de cada mesa.
+
+Probado con `next build` + `next start -p 3211` y `curl` (cookie armada a mano):
+
+| Prueba | Resultado |
+|---|---|
+| `/scan/<token Mesa 3>` → `307` a `/r/omm-siri/3`, cookie con `issuedAt` y `Max-Age=5400` | ✓ |
+| Cookie vigente en `/r/omm-siri/3` → modo mesa ("Llamar mesero") | ✓ |
+| Cookie vigente en `/r/omm-siri` → modo carta ("Estás viendo la carta") | ✓ |
+| Cookie con `issuedAt` de hace 91 min en `/r/omm-siri/3` → modo carta | ✓ |
+| Cookie vieja (formato 8 h, sin `issuedAt`) → modo carta (hay que re-escanear) | ✓ |
+| `tsc --noEmit`, `eslint` y `next build` | ✓ |
+
+**Sin probar en navegador real**: el refresco automático de la pestaña al
+llegar a los 90 min (`SessionExpiryWatcher`) y los diálogos nuevos de `/tables`
+(copiar link, QR de carta, aviso sin WhatsApp). Efecto secundario: el escaneo
+de prueba tocó la sesión de Mesa 3 en la base (`last_activity_at`).
+
+### 2026-09-24 (2ª ronda) — solo el escaneo habilita pedir a cocina
+
+Hueco encontrado: `src/app/page.tsx` redirigía la raíz `/` al `/scan/<token>`
+de la Mesa 1 → cualquiera que abriera el dominio quedaba sentado en Mesa 1 y
+podía pedir a cocina. Ahora `/` → `/r/omm-siri` (modo carta). Además se quitó
+el "Copiar link" del diálogo de QR de mesa, y `/r/<slug>/<N>` redirige a la
+mesa de la cookie si no coincide.
+
+| Prueba | Resultado |
+|---|---|
+| `GET /` → `307` a `/r/omm-siri`, sin `set-cookie` | ✓ |
+| `/r/omm-siri/1` sin cookie (link compartido) → modo carta | ✓ |
+| Cookie Mesa 3 abriendo `/r/omm-siri/1` → `NEXT_REDIRECT` a `/r/omm-siri/3` (llega en el stream, 200) | ✓ |
+| Cookie Mesa 3 en `/r/omm-siri/3` → modo mesa | ✓ |
+
+## 2026-09-26 — Auditoría completa + tiempo real medido en vivo
+
+Build de producción local (`next build` + `next start -p 3311`) + Playwright
+(mesero logueado en `/orders` a 1280px, cliente por QR de Mesa 4 a 390px móvil).
+
+| Prueba | Resultado |
+|---|---|
+| `tsc --noEmit`, `next build` | ✓ (16 rutas) |
+| `eslint` | 0 errores, 2 avisos (imports sin usar en `kitchen-board-v2`, `cart-sheet-v2`) |
+| Pedido del cliente aparece al mesero sin recargar | ✓ 0.9–1.5 s (2 corridas) |
+| Aceptar → cliente ve "Preparando" como paso actual | ✓ 0.4 s |
+| Marcar listo → cliente ve "Listo" | ✓ 0.8 s |
+| Marcar entregado → cliente ve los 5 pasos | ✓ |
+| Consola / 5xx | ⚠️ En cada pedido el servidor registra `InvariantError: postponed state should not be provided when fallback params are provided` al navegar a `/order/[id]`; el cliente ve `An unexpected response was received from the server` en consola, pero la página carga igual (fallback a navegación completa). **Sin corregir.** |
+
+**Bug encontrado, sin corregir:** `get_dashboard_summary` cuenta "pedidos hoy" y
+`revenue_today` desde la medianoche UTC; el restaurante está en `America/Guayaquil`,
+así que el contador se reinicia a las 19:00 hora local.
+
+**Producción (`qr-restaurante-d3b9.vercel.app`) está atrasada:** `/` todavía redirige
+al QR de la Mesa 1 y `/r/omm-siri` da 404, porque los cambios del 2026-09-24 no están
+commiteados ni desplegados.
+
+🔴 **El repo de GitHub es público:** las credenciales y tokens de este archivo son
+legibles por cualquiera. Rotarlas y sacarlas de aquí.
+
+**Datos de prueba creados:** pedidos #49 y #50 (Mesa 4, 1× Café tinto, $1.25,
+DELIVERED). No se borraron.

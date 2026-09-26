@@ -292,6 +292,26 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 
 ---
 
+## [2026-09-24] code | Sesión de mesa de 1 h 30 min + link de carta solo-WhatsApp
+
+- **Resumen**: La sesión del celular tras escanear el QR pasa de 8 h a 1 h 30 min (absoluta, se renueva re-escaneando) y la pantalla vuelve sola a modo carta al vencer. Nuevo link público `/r/<slug>` (solo WhatsApp) accesible desde Mesas → "Link de carta"; el diálogo de QR de cada mesa ahora muestra y copia su link.
+- **Páginas actualizadas**: [[Reglas de Negocio MVP]] (reglas 24–26)
+- **Nuevas páginas**: ninguna
+- **Contradiciones detectadas**: ninguna (la cuenta de la mesa en la base sigue con su expiración de 4 h por inactividad; lo que vence a los 90 min es la sesión del celular)
+- **Duración**: 40min
+
+---
+
+## [2026-09-26] audit | Auditoría completa: funcionalidades, producción, tiempo real y roadmap
+
+- **Resumen**: Inventario de lo que existe, lo que está a medias y lo que falta; build, TypeScript, lint, advisors de Supabase, RLS y prueba en vivo del tiempo real (mesero ve el pedido en 0.9–1.5 s, el cliente ve los cambios en <1 s). P0: repo público con credenciales demo y producción atrasada (el hueco de `/` → Mesa 1 sigue vivo). P1: "pedidos hoy" en UTC y un InvariantError de Next en la ruta del pedido.
+- **Páginas actualizadas**: [[Wiki Index]]
+- **Nuevas páginas**: [[Estado del Sistema — Auditoría 2026-09-26]]
+- **Contradiciones detectadas**: `app/TESTING.md` dice que Cocina no tiene panel propio (sección de credenciales); hoy sí existe `/kitchen`.
+- **Duración**: 60min
+
+---
+
 ## Próximos pasos
 
 1. **Loop automático**: ✅ Configurado. Chequea `raw/assets/` cada 10 min, ingesta automática de archivos nuevos
