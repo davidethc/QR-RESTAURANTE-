@@ -511,11 +511,14 @@ export type Database = {
       restaurants: {
         Row: {
           address: string | null
+          billing_enabled: boolean
+          business_day_cutoff: string
           cover_image_url: string | null
           created_at: string
           description: string | null
           id: string
           logo_url: string | null
+          max_waiter_discount_pct: number
           name: string
           opening_hours: Json | null
           phone: string | null
@@ -526,11 +529,14 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          billing_enabled?: boolean
+          business_day_cutoff?: string
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           logo_url?: string | null
+          max_waiter_discount_pct?: number
           name: string
           opening_hours?: Json | null
           phone?: string | null
@@ -541,11 +547,14 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          billing_enabled?: boolean
+          business_day_cutoff?: string
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           logo_url?: string | null
+          max_waiter_discount_pct?: number
           name?: string
           opening_hours?: Json | null
           phone?: string | null
@@ -723,6 +732,18 @@ export type Database = {
         Returns: undefined
       }
       accept_order: { Args: { p_order_id: string }; Returns: undefined }
+      business_date: {
+        Args: { p_restaurant_id: string; p_ts?: string }
+        Returns: string
+      }
+      business_day_bounds: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          end_at: string
+          start_at: string
+        }[]
+      }
+      business_today: { Args: { p_restaurant_id: string }; Returns: string }
       cancel_order: {
         Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
@@ -742,6 +763,25 @@ export type Database = {
           p_type: Database["public"]["Enums"]["waiter_call_type"]
         }
         Returns: string
+      }
+      find_or_create_active_table_session: {
+        Args: { p_restaurant_id: string; p_table_id: string }
+        Returns: {
+          closed_at: string | null
+          id: string
+          last_activity_at: string
+          restaurant_id: string
+          session_token: string
+          started_at: string
+          status: Database["public"]["Enums"]["table_session_status"]
+          table_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       get_admin_menu: { Args: { p_restaurant_id: string }; Returns: Json }
       get_customer_order: {
@@ -803,9 +843,18 @@ export type Database = {
           table_number: number
         }[]
       }
+      restaurant_tz: { Args: { p_restaurant_id: string }; Returns: string }
       start_order_preparing: {
         Args: { p_order_id: string }
         Returns: undefined
+      }
+      table_effective_status: {
+        Args: { p_table_id: string }
+        Returns: Database["public"]["Enums"]["table_status"]
+      }
+      table_session_last_activity: {
+        Args: { p_session_id: string }
+        Returns: string
       }
       user_belongs_to_restaurant: {
         Args: { target_restaurant_id: string }
@@ -833,6 +882,31 @@ export type Database = {
         | "MARK_ORDER_DELIVERED"
         | "CREATE_WAITER_CALL"
         | "HANDLE_WAITER_CALL"
+        | "OPEN_BILL"
+        | "APPLY_DISCOUNT"
+        | "REMOVE_DISCOUNT"
+        | "SET_BILL_SPLIT"
+        | "RECORD_PAYMENT"
+        | "VOID_PAYMENT"
+        | "CLOSE_BILL"
+        | "VOID_BILL"
+        | "FORCE_CLOSE_SESSION"
+        | "OPEN_CASH_SESSION"
+        | "CLOSE_CASH_SESSION"
+        | "CASH_MOVEMENT"
+      bill_split_mode: "NONE" | "EQUAL" | "ITEMS"
+      bill_status: "OPEN" | "PAID" | "CLOSED" | "VOID"
+      cash_movement_reason:
+        | "FLOAT_TOPUP"
+        | "TIPS_PAYOUT"
+        | "SUPPLIER_PAYMENT"
+        | "EXPENSE"
+        | "REFUND"
+        | "WITHDRAWAL"
+        | "OTHER"
+      cash_movement_type: "IN" | "OUT"
+      cash_session_status: "OPEN" | "CLOSED"
+      discount_kind: "PERCENT" | "FIXED"
       member_role: "OWNER" | "ADMIN" | "WAITER" | "KITCHEN"
       member_status: "ACTIVE" | "INACTIVE"
       order_status:
@@ -843,6 +917,8 @@ export type Database = {
         | "DELIVERED"
         | "REJECTED"
         | "CANCELLED"
+      payment_method: "CASH" | "CARD" | "TRANSFER" | "OTHER"
+      payment_status: "COMPLETED" | "VOIDED"
       restaurant_status: "ACTIVE" | "INACTIVE" | "SUSPENDED"
       table_session_status: "ACTIVE" | "CLOSED" | "EXPIRED"
       table_status:
@@ -998,7 +1074,33 @@ export const Constants = {
         "MARK_ORDER_DELIVERED",
         "CREATE_WAITER_CALL",
         "HANDLE_WAITER_CALL",
+        "OPEN_BILL",
+        "APPLY_DISCOUNT",
+        "REMOVE_DISCOUNT",
+        "SET_BILL_SPLIT",
+        "RECORD_PAYMENT",
+        "VOID_PAYMENT",
+        "CLOSE_BILL",
+        "VOID_BILL",
+        "FORCE_CLOSE_SESSION",
+        "OPEN_CASH_SESSION",
+        "CLOSE_CASH_SESSION",
+        "CASH_MOVEMENT",
       ],
+      bill_split_mode: ["NONE", "EQUAL", "ITEMS"],
+      bill_status: ["OPEN", "PAID", "CLOSED", "VOID"],
+      cash_movement_reason: [
+        "FLOAT_TOPUP",
+        "TIPS_PAYOUT",
+        "SUPPLIER_PAYMENT",
+        "EXPENSE",
+        "REFUND",
+        "WITHDRAWAL",
+        "OTHER",
+      ],
+      cash_movement_type: ["IN", "OUT"],
+      cash_session_status: ["OPEN", "CLOSED"],
+      discount_kind: ["PERCENT", "FIXED"],
       member_role: ["OWNER", "ADMIN", "WAITER", "KITCHEN"],
       member_status: ["ACTIVE", "INACTIVE"],
       order_status: [
@@ -1010,6 +1112,8 @@ export const Constants = {
         "REJECTED",
         "CANCELLED",
       ],
+      payment_method: ["CASH", "CARD", "TRANSFER", "OTHER"],
+      payment_status: ["COMPLETED", "VOIDED"],
       restaurant_status: ["ACTIVE", "INACTIVE", "SUSPENDED"],
       table_session_status: ["ACTIVE", "CLOSED", "EXPIRED"],
       table_status: [

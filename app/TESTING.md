@@ -1801,3 +1801,24 @@ legibles por cualquiera. Rotarlas y sacarlas de aquí.
 
 **Datos de prueba creados:** pedidos #49 y #50 (Mesa 4, 1× Café tinto, $1.25,
 DELIVERED). No se borraron.
+
+## 2026-09-26 — Restaurante aislado de QA `monky-qa` (producción)
+
+Para probar cobro, caja, reportes e inventario sin tocar a Omm Siri. RLS lo aísla
+por `restaurant_id`. `billing_enabled = true` (Omm Siri sigue en `false`).
+
+- Semilla idempotente: `app/supabase/seeds/qa_restaurant.sql` (placeholder
+  `__QA_PASSWORD__`; volver a correrla rota la contraseña).
+- Credenciales (solo en `app/.env.qa.local`, gitignored): `QA_MONKY_OWNER_EMAIL`,
+  `QA_MONKY_WAITER_EMAIL`, `QA_MONKY_KITCHEN_EMAIL`, `QA_MONKY_PASSWORD`,
+  `QA_MONKY_TABLE_<1..3>_TOKEN`.
+- Contenido: 3 mesas, 2 categorías, 4 productos ($1,25 · $1,75 · $6,00 · $2,50).
+- Verificado: login del mesero QA → 200 y `get_my_restaurant` → `monky-qa`/WAITER.
+
+Migraciones aplicadas hoy (Fase 0 de base de datos): hora local
+(`business_day_bounds`, corte 04:00), "pedidos hoy" en hora de Guayaquil, estado de
+mesa en vivo (`table_effective_status`, solo cambia con `billing_enabled`), enums de
+cobro, protección OWNER de ajustes de cobro, índices parciales y `revoke update on
+restaurants from anon`. Único cambio visible en Omm Siri: `active_total` ignora
+sesiones sin actividad en 4 h (la Mesa 2 dejó de mostrar $8,00 de una sesión del
+18-sep).
