@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Minus, Plus, Trash2, MessageCircle, ShoppingBag, X } from "lucide-react";
 import {
@@ -46,7 +45,6 @@ export function CartSheetV2({
   suggestedProducts: PublicProduct[];
   onAddSuggestion: (product: PublicProduct) => void;
 }) {
-  const router = useRouter();
   const inTable = tableNumber !== null;
 
   const whatsappOrderUrl = useMemo(
@@ -266,7 +264,26 @@ export function CartSheetV2({
                   notify.orderPlaced();
                   onClearCart();
                   onOpenChange(false);
-                  router.push(`/r/${slug}/${tableNumber}/order/${orderId}`);
+                  // Navegación completa (no `router.push`) a propósito: el
+                  // pedido recién creado nunca fue prefetcheado (su id no
+                  // existía hasta este instante), así que la transición
+                  // cliente-a-cliente de Next intenta "resumir" el shell
+                  // PPR genérico de /order/[id] (construido con params de
+                  // fallback) contra este id real, y el servidor revienta
+                  // con `InvariantError: postponed state should not be
+                  // provided when fallback params are provided` (bug de
+                  // Next 16 con Cache Components + rutas dinámicas sin
+                  // generateStaticParams, vercel/next.js#98647). Una
+                  // recarga completa no pasa por ese protocolo de resume:
+                  // pide el documento entero y listo, sin tocar el shell
+                  // cacheado en build. Solo se pierde la navegación
+                  // instantánea en ESTE salto puntual (carrito → estado
+                  // del pedido); el resto de la carta sigue usando
+                  // `<Link>` con Partial Prerendering normal.
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- ver comentario arriba: el escape a navegación completa es intencional.
+                  window.location.assign(
+                    `/r/${slug}/${tableNumber}/order/${orderId}`
+                  );
                 }}
               />
             ) : whatsappOrderUrl ? (

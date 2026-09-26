@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: app
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      # El build hace prerender/PPR de rutas públicas que instancian un
+      # cliente de Supabase con las variables NEXT_PUBLIC_*. Se verificó
+      # localmente (2026-09-26, Next 16.3.4 con cacheComponents) que basta
+      # con que NEXT_PUBLIC_SUPABASE_URL sea una URL bien formada — el
+      # build NO llega a hacer red hacia Supabase durante el prerender, así
+      # que valores dummy (no secretos reales) son suficientes aquí. Si
+      # una futura ruta empieza a hacer fetch real contra Supabase en
+      # build time, este paso empezará a fallar y esas variables deberán
+      # pasar a ser GitHub Secrets con credenciales reales de un proyecto
+      # de QA en vez de estos valores dummy.
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "dummy-anon-key"
+          NEXT_PUBLIC_SITE_URL: "https://example.com"
+        run: npm run build

@@ -21,3 +21,6 @@
 
 # Videos de marketing generados (pesados, se regeneran desde su composición)
 brag-output*/
+
+# Lock de skills instaladas localmente (.claude/skills)
+skills-lock.json
