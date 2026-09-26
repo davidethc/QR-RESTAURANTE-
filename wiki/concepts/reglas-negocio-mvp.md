@@ -2,7 +2,7 @@
 title: "Reglas de Negocio MVP"
 type: "concept"
 created: "2026-09-01"
-updated: "2026-09-01"
+updated: "2026-09-24"
 sources: ["PROYECTO — FASES UX, REGLAS DE NEGOCIO, DATOS Y ARQUITECTURA DEL MVP.md"]
 tags: ["reglas", "negocio", "restricciones", "validacion"]
 ---
@@ -223,6 +223,32 @@ Sesión expirada
 Usuario intenta acceder a sección restringida
 → "No tienes permiso para acceder a esta sección."
 ```
+
+---
+
+## Reglas sobre Acceso del Cliente (QR de mesa vs. link de carta)
+
+Decisión del 2026-09-24. Hay **dos puertas** a la misma carta digital, y cada una permite cosas distintas.
+
+### 24. QR de mesa = pedir a cocina, por 1 h 30 min
+- El QR impreso en cada mesa apunta a `/scan/<token>` y abre una **sesión de mesa en ese celular**.
+- Con sesión activa el cliente: pide a cocina (el pedido entra al panel del mesero), llama al mesero y pide la cuenta.
+- La sesión del celular dura **1 h 30 min desde el escaneo** (absoluta, no por inactividad). Pasado ese tiempo se asume que el cliente se fue: la pantalla cambia sola a modo carta (solo WhatsApp) y ya no puede pedir a esa mesa.
+- Volver a escanear el QR de la mesa renueva la sesión otros 90 min (si sigue sentado, basta con escanear de nuevo).
+- **Solo el escaneo habilita pedir a cocina.** La mesa la decide el escaneo (cookie del celular), nunca el número en la URL: si alguien comparte `/r/<slug>/1`, quien lo abre ve la carta en modo WhatsApp. Si ya está sentado en otra mesa, se le lleva a la suya.
+- El link del QR (`/scan/<token>`) **no se muestra ni se copia** en el panel: solo debe llegar al cliente impreso en la mesa. La raíz del sitio lleva a la carta (modo WhatsApp), no a ninguna mesa.
+- Red de seguridad: todo pedido del cliente llega **pendiente** y el mesero lo acepta; un pedido a una mesa vacía se rechaza ahí.
+
+### 25. Link de carta = ver la carta y pedir solo por WhatsApp
+- Link público `/r/<slug>` (panel → Mesas → "Link de carta"), pensado para Instagram, Google Maps o para mandar a quien está fuera del local.
+- Muestra la misma carta, pero **nunca** abre sesión de mesa: el pedido se arma y se envía por WhatsApp al número de Configuración. No llega a cocina ni a ninguna mesa.
+- Aunque quien lo abra tenga una sesión de mesa viva, este link sigue siendo solo-WhatsApp.
+- Sin número de WhatsApp en Configuración, el link muestra la carta pero no permite pedir (el panel lo avisa).
+
+### 26. La cuenta de la mesa no se cierra sola a los 90 min
+- Lo que vence a los 90 min es la sesión **del celular**, no la cuenta de la mesa en la base. Los pedidos hechos siguen en la cuenta de la mesa hasta que el mesero la libera ("Liberar mesa").
+- La sesión de mesa en la base sigue expirando tras 4 h sin actividad (red de seguridad si nadie la libera).
+- Motivo: cerrar la cuenta automáticamente borraría de la vista pedidos todavía sin cobrar.
 
 ---
 

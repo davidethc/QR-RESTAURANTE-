@@ -56,3 +56,11 @@ export function getQrUrlWarning(): string | null {
   }
   return null;
 }
+
+/**
+ * Link de la carta para compartir fuera del local (Instagram, Maps,
+ * WhatsApp). Solo deja pedir por WhatsApp — ver /r/[slug]/page.tsx.
+ */
+export function buildCartaUrl(slug: string): string {
+  return `${getSiteOrigin()}/r/${slug}`;
+}

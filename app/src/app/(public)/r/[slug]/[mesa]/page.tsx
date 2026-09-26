@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getTableSession } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { getTableSession, getTableSessionExpiresAt } from "@/lib/session";
 import { getPublicMenu } from "@/lib/queries/menu";
 import { getTableStatus } from "@/lib/actions/table-status";
 import { getSessionChannelName } from "@/lib/session-channel";
@@ -7,6 +8,7 @@ import { MenuHeader } from "./_components/menu-header";
 import { MenuBrowser } from "./_components/menu-browser";
 import { TableStatusProvider } from "./_components/table-status-provider";
 import { ActiveOrderStrip } from "./_components/active-order-strip";
+import { SessionExpiryWatcher } from "./_components/session-expiry-watcher";
 
 export async function generateMetadata({
   params,
@@ -22,7 +24,7 @@ export default async function MenuPage({
 }: {
   params: Promise<{ slug: string; mesa: string }>;
 }) {
-  const { slug } = await params;
+  const { slug, mesa } = await params;
   // Las tres consultas se lanzan a la vez y se esperan después. Antes
   // los pedidos en curso salían en un `await` encadenado DESPUÉS de
   // resolver la carta (tres latencias en serie), así que el cliente no
@@ -46,12 +48,20 @@ export default async function MenuPage({
    *   compartido, o la sesión ya venció). Ve la carta completa y puede
    *   armar su pedido, pero se envía por WhatsApp — NO a una mesa.
    *
-   * Deliberadamente la sesión sigue siendo corta y atada a la mesa: si
-   * no expirara, alguien pidiendo desde su casa mandaría comida a una
-   * mesa donde ya está sentada otra gente, y la cuenta le caería a
-   * ellos.
+   * Deliberadamente la sesión es corta (1 h 30 min desde el escaneo,
+   * ver lib/session.ts) y atada a la mesa: si no expirara, alguien
+   * pidiendo desde su casa mandaría comida a una mesa donde ya está
+   * sentada otra gente, y la cuenta le caería a ellos.
    */
   const inTable = Boolean(session && session.restaurantSlug === slug);
+
+  // La mesa la decide el escaneo, nunca el número de la URL: el link
+  // /r/<slug>/1 compartido no sirve para pedir a la Mesa 1 (sin cookie
+  // se ve en modo carta). Si quien lo abre está sentado en otra mesa,
+  // se le lleva a la suya para que la pantalla no diga un número falso.
+  if (inTable && String(session!.tableNumber) !== mesa) {
+    redirect(`/r/${slug}/${session!.tableNumber}`);
+  }
 
   // Pedidos Y solicitudes en curso se resuelven en el servidor, para que
   // la franja de arriba y los botones de abajo salgan ya pintados en el
@@ -79,6 +89,9 @@ export default async function MenuPage({
           }
           channelName={channelName}
         >
+          <SessionExpiryWatcher
+            expiresAt={getTableSessionExpiresAt(session!)}
+          />
           <ActiveOrderStrip slug={slug} tableNumber={session!.tableNumber} />
           <MenuBrowser
             categories={menu.categories}

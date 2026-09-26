@@ -42,7 +42,7 @@ export const notify = {
     if (SESSION_EXPIRED_MESSAGES.includes(message)) {
       toast.error("Tu sesión expiró", {
         description:
-          "Escanea el código QR de tu mesa otra vez para seguir pidiendo.",
+          "La sesión de mesa dura 1 h 30 min. Escanea el código QR de tu mesa otra vez para seguir pidiendo.",
         duration: 6000,
       });
       return;

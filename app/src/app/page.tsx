@@ -7,10 +7,11 @@ import { redirect } from "next/navigation";
 export const instant = false;
 
 /**
- * Sin landing page propia todavía: mientras se decide si Monky.com
- * tendrá una página pública (marketing, login), la raíz lleva directo
- * a la demo — el QR real de la Mesa 1 de Omm Siri.
+ * Sin landing page propia todavía: la raíz lleva a la carta de la demo
+ * (Omm Siri) en modo carta, solo WhatsApp. Antes redirigía al QR de la
+ * Mesa 1, y eso dejaba a cualquiera que abriera el dominio sentado en
+ * esa mesa, pidiendo a cocina desde donde estuviera.
  */
 export default function Home() {
-  redirect("/scan/db88bbe3-dba1-4a5a-b3a2-11520d87a808");
+  redirect("/r/omm-siri");
 }

@@ -79,6 +79,15 @@ export function TableQrDialog({
             <p className="text-center text-sm text-muted-foreground">
               Apunta la cámara del celular aquí para probar el enlace.
             </p>
+            {/* A propósito no se muestra ni se copia el link: quien lo
+                tiene pide a cocina como si estuviera sentado. Solo debe
+                llegar al cliente impreso en la mesa. Para compartir
+                está "Link de carta" (solo WhatsApp). */}
+            <p className="text-center text-[13px] text-muted-foreground">
+              Imprímelo y pégalo en {tableLabel}. Quien lo escanea puede
+              pedir a cocina por 1 h 30 min. No lo mandes por chat ni
+              redes: para eso usa &quot;Link de carta&quot;.
+            </p>
             {/* Un QR impreso con el dominio equivocado es papel tirado:
                 el aviso tiene que salir ANTES de imprimir. */}
             {warning && (

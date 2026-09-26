@@ -5,7 +5,13 @@ import { TablesLive } from "./_components/tables-live";
 import { CreateTablesDialog } from "./_components/create-tables-dialog";
 import { TablesPdfButton } from "./_components/tables-pdf-button";
 import { TablesBoardV2 } from "./_components/tables-board-v2";
-import { getMyRestaurant, getTablesStatus } from "@/lib/queries/staff";
+import { CartaLinkDialog } from "./_components/carta-link-dialog";
+import {
+  getMyRestaurant,
+  getRestaurantSettings,
+  getTablesStatus,
+} from "@/lib/queries/staff";
+import { toWhatsappNumber } from "@/lib/whatsapp";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -20,8 +26,11 @@ export default async function TablesPage() {
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
   const session = await getMyRestaurant();
-  const tables = await getTablesStatus(session.restaurant.id);
   const canManage = session.role === "OWNER" || session.role === "ADMIN";
+  const [tables, settings] = await Promise.all([
+    getTablesStatus(session.restaurant.id),
+    canManage ? getRestaurantSettings(session.restaurant.id) : null,
+  ]);
   /** Quien atiende mesas: toma pedidos, marca la cuenta y libera. */
   const canServeTable =
     session.role === "OWNER" ||
@@ -38,6 +47,10 @@ export default async function TablesPage() {
             <TablesLive restaurantId={session.restaurant.id} />
             {canManage && (
               <>
+                <CartaLinkDialog
+                  slug={session.restaurant.slug}
+                  hasWhatsapp={Boolean(toWhatsappNumber(settings?.phone ?? null))}
+                />
                 <TablesPdfButton
                   restaurantName={session.restaurant.name}
                   slug={session.restaurant.slug}
