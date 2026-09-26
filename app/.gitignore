@@ -43,3 +43,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Skills y config local de agentes de IA (no forman parte del producto)
+/.agents/
+/.claude/
+/skills-lock.json
+/.playwright-cli/

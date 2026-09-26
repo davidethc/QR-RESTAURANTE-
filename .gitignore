@@ -14,3 +14,10 @@
 
 # Worktrees temporales de subagentes (checkouts locales, no contenido del repo)
 .claude/worktrees/
+
+# Configuración local de agentes / herramientas de IA (no es código del producto)
+.claude/
+.playwright-cli/
+
+# Videos de marketing generados (pesados, se regeneran desde su composición)
+brag-output*/
