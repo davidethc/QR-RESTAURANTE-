@@ -2068,3 +2068,22 @@ Build de producción + Playwright, restaurante `monky-qa`, Mesa 2 (script
 Regresión Omm Siri (`billing_enabled=false`): carta con "Llamar mesero"/"Pedir cuenta",
 panel del dueño (/orders, /tables, /kitchen, /menu) sin cambios, /tables sin "Cobrar y
 liberar", /cash muestra "cobro no activo". 0 errores.
+
+## 2026-09-27 — Cobro ACTIVADO en Omm Siri + prueba POS en producción real
+
+`billing_enabled = true` en `omm-siri` (decisión del dueño para la demo). Prueba con
+`scratchpad/rt/pos-prod.mjs` contra `https://qr-restaurante-d3b9.vercel.app`, Terraza (Mesa 5):
+
+| Paso | Resultado |
+|---|---|
+| `/cash` sin sesión → login; mesero sin "Caja" | ✓ |
+| Mesero toma Tigrillo mixto $6,00 de viva voz + cliente pide Café tinto $1,25 por QR | ✓ |
+| Mesero ve "La cuenta la cobra el administrador" (sin Cobrar) | ✓ |
+| Admin: una sola cuenta con ambos pedidos, total $7,25; recibe $10 → vuelto $2,75 | ✓ |
+| Cliente en la carta ve "Cuenta pagada" | ✓ 0,2 s |
+| Terraza vuelve a Disponible (verificado en BD y captura) | ✓ |
+| Cierre de caja: esperado $27,25 = contado | ✓ |
+| Consola / 5xx | 0 / 0 |
+
+Datos que quedan: cuenta #... de Terraza $7,25 CLOSED y una caja CLOSED cuadrada.
+Mesa 1 conserva $27,50 sin cobrar de la presentación del 26-sep (pedido #76 en READY).
