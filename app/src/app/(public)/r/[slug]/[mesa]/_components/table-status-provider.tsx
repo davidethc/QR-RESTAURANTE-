@@ -33,6 +33,8 @@ interface TableStatusValue {
    * justo al que se le bloquearía.
    */
   hasAnyOrder: boolean;
+  /** La cuenta de la sesión ya se cobró (módulo de cobro). */
+  billPaid: boolean;
 }
 
 /**
@@ -45,6 +47,7 @@ const TableStatusContext = createContext<TableStatusValue>({
   orders: [],
   calls: [],
   hasAnyOrder: false,
+  billPaid: false,
 });
 
 export function useTableStatus() {
@@ -61,6 +64,7 @@ function derive(status: TableStatus): TableStatusValue {
     orders: status.orders.filter((o) => ACTIVE_ORDER_STATUSES.has(o.status)),
     calls: status.calls.filter((c) => ACTIVE_CALL_STATUSES.includes(c.status)),
     hasAnyOrder: status.orders.some(countsForBill),
+    billPaid: status.billPaid,
   };
 }
 
@@ -70,6 +74,7 @@ function signature(v: TableStatusValue): string {
     ...v.orders.map((o) => `o${o.id}:${o.status}`),
     ...v.calls.map((c) => `c${c.id}:${c.status}`),
     `b${v.hasAnyOrder}`,
+    `p${v.billPaid}`,
   ].join("|");
 }
 

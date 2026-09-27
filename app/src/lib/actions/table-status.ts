@@ -9,6 +9,8 @@ import type { ActionResult } from "@/types/actions";
 export interface TableStatus {
   orders: SessionOrderSummary[];
   calls: SessionCall[];
+  /** La cuenta de la sesión ya se cobró por completo (módulo de cobro). */
+  billPaid: boolean;
 }
 
 /**
@@ -35,11 +37,16 @@ export async function getTableStatus(): Promise<ActionResult<TableStatus>> {
 
   const supabase = await createClient();
 
-  const [orders, calls] = await Promise.all([
+  const [orders, calls, bill] = await Promise.all([
     supabase.rpc("get_session_orders", {
       p_session_token: session.sessionToken,
     }),
     supabase.rpc("get_session_calls", {
+      p_session_token: session.sessionToken,
+    }),
+    // Solo informativo: si falla (o el restaurante no usa cobro) la carta
+    // sigue funcionando igual, sin aviso de "pagado".
+    supabase.rpc("get_session_bill", {
       p_session_token: session.sessionToken,
     }),
   ]);
@@ -52,6 +59,12 @@ export async function getTableStatus(): Promise<ActionResult<TableStatus>> {
     data: {
       orders: (orders.data ?? []) as unknown as SessionOrderSummary[],
       calls: (calls.data ?? []) as unknown as SessionCall[],
+      billPaid: isPaid(bill.error ? null : bill.data),
     },
   };
+}
+
+function isPaid(bill: unknown): boolean {
+  const status = (bill as { status?: string } | null)?.status;
+  return status === "PAID" || status === "CLOSED";
 }

@@ -31,12 +31,7 @@ export async function proxy(request: NextRequest) {
   const user = data?.claims;
 
   const path = request.nextUrl.pathname;
-  const isStaffArea =
-    path.startsWith("/orders") ||
-    path.startsWith("/kitchen") ||
-    path.startsWith("/menu") ||
-    path.startsWith("/tables") ||
-    path.startsWith("/settings");
+  const isStaffArea = STAFF_PREFIXES.some((prefix) => path.startsWith(prefix));
 
   if (!user && isStaffArea) {
     const url = request.nextUrl.clone();
@@ -46,6 +41,20 @@ export async function proxy(request: NextRequest) {
 
   return response;
 }
+
+// Toda ruta nueva del panel (src/app/(dashboard)/*) debe agregarse AQUÍ y en
+// `config.matcher` de abajo (Next exige que el matcher sea literal). Si falta,
+// la página se sirve sin exigir sesión: pasó con /cash el 2026-09-27.
+const STAFF_PREFIXES = [
+  "/orders",
+  "/kitchen",
+  "/menu",
+  "/tables",
+  "/settings",
+  "/cash",
+  "/reports",
+  "/inventory",
+];
 
 export const config = {
   // Solo el área de personal. El comensal no inicia sesión nunca, así que
@@ -58,5 +67,8 @@ export const config = {
     "/menu/:path*",
     "/tables/:path*",
     "/settings/:path*",
+    "/cash/:path*",
+    "/reports/:path*",
+    "/inventory/:path*",
   ],
 };

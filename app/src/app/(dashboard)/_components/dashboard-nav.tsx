@@ -28,7 +28,7 @@ const NAV_LINKS = [
   { href: "/orders", label: "Pedidos", icon: ClipboardList, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
   { href: "/kitchen", label: "Cocina", icon: ChefHat, roles: ["OWNER", "ADMIN", "KITCHEN"] as UserRole[] },
   { href: "/tables", label: "Mesas", icon: LayoutGrid, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
-  { href: "/cash", label: "Caja", icon: Wallet, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
+  { href: "/cash", label: "Caja", icon: Wallet, roles: ["OWNER", "ADMIN"] as UserRole[] },
   { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: ["OWNER", "ADMIN"] as UserRole[] },
   { href: "/settings", label: "Configuración", icon: Settings, roles: ["OWNER"] as UserRole[] },
 ];

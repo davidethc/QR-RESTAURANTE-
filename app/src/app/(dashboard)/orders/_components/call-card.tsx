@@ -1,5 +1,6 @@
 "use client";
 
+import { canHandleMoney } from "@/lib/permissions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -49,7 +50,10 @@ export function CallCard({
   const Icon = isBill ? Receipt : Bell;
   const label = isBill ? "Solicita la cuenta" : "Solicita atención";
   const pending = call.status === "PENDING";
-  const canCharge = isBill && billingEnabled && !!role && !!tableSessionId && call.status !== "ATTENDED";
+  const canCharge = isBill && billingEnabled && canHandleMoney(role) && !!tableSessionId && call.status !== "ATTENDED";
+  // Con cobro activo el mesero atiende la solicitud (va a la mesa) pero la
+  // cuenta la cobra el administrador/dueño desde su panel.
+  const chargedByAdmin = isBill && billingEnabled && !canHandleMoney(role);
 
   return (
     <motion.div
@@ -177,6 +181,11 @@ export function CallCard({
         </div>
       ) : (
         <>
+          {chargedByAdmin && call.status !== "ATTENDED" && (
+            <p className="mt-3 rounded-xl bg-honey-soft px-3 py-2 text-[13px] font-medium text-honey-soft-foreground">
+              La cuenta la cobra el administrador.
+            </p>
+          )}
           {call.status === "PENDING" && (
             <div className="mt-3 flex gap-2">
               <ActionButton

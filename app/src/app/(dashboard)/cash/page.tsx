@@ -1,3 +1,4 @@
+import { canHandleMoney } from "@/lib/permissions";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
@@ -29,7 +30,8 @@ export default async function CashPage() {
 
   const session = await getMyRestaurant();
   const role = session.role;
-  if (role !== "OWNER" && role !== "ADMIN" && role !== "WAITER") {
+  // Cobra el administrador/dueño (ver lib/permissions.ts).
+  if (!canHandleMoney(role)) {
     redirect("/orders");
   }
   const restaurantId = session.restaurant.id;

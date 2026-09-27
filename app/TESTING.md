@@ -2040,3 +2040,31 @@ aislado para esto):**
 **Pendiente:** el hallazgo menor de `aria-label` en el botón de vaciar carrito, y el
 pendiente ya anotado de la ronda anterior sobre verificar 10c con un pedido activo
 real en `/kitchen` (tampoco se pudo esta vez, no era parte del alcance pedido).
+
+## 2026-09-27 — Roles de cobro (solo admin cobra) + flujo POS completo, probado por el orquestador
+
+Decisión del negocio: 3 perfiles — **cliente** (sin login), **mesero** (toma y lleva
+pedidos) y **admin/dueño** (cobra y maneja la caja). La regla vive en
+`src/lib/permissions.ts` (`canHandleMoney`: OWNER/ADMIN). Además `/cash`, `/reports` e
+`/inventory` quedaron protegidos en `src/proxy.ts` (`/cash` se servía sin exigir
+sesión — solo el esqueleto estático, sin datos, pero corregido).
+
+Build de producción + Playwright, restaurante `monky-qa`, Mesa 2 (script
+`scratchpad/rt/pos.mjs`):
+
+| Paso | Resultado |
+|---|---|
+| `/cash` sin sesión → `/login` | ✓ |
+| Mesero no ve "Caja"; `/cash` lo envía a Pedidos | ✓ |
+| Mesero toma pedido de viva voz (Empanada QA $2,50) | ✓ |
+| Cliente pide por QR (Café QA $1,75) | ✓ |
+| Mesero entrega ambos; cliente pide la cuenta | ✓ |
+| Mesero ve "La cuenta la cobra el administrador", sin botón Cobrar | ✓ |
+| Admin: la cuenta trae **los dos pedidos** (mesero + cliente), total $4,25 | ✓ |
+| Efectivo recibido $5 → vuelto $0,75 → "Mesa cobrada ✓" | ✓ |
+| Cliente que se quedó en la carta ve "Cuenta pagada · ¡gracias!" sin recargar | ✓ 0,2 s (nuevo) |
+| Consola / 5xx | 0 / 0 |
+
+Regresión Omm Siri (`billing_enabled=false`): carta con "Llamar mesero"/"Pedir cuenta",
+panel del dueño (/orders, /tables, /kitchen, /menu) sin cambios, /tables sin "Cobrar y
+liberar", /cash muestra "cobro no activo". 0 errores.

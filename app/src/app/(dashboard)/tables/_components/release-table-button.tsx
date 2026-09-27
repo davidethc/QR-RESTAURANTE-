@@ -1,5 +1,6 @@
 "use client";
 
+import { canHandleMoney } from "@/lib/permissions";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -143,6 +144,15 @@ export function ReleaseTableButton({
 }) {
   const router = useRouter();
   const canForceClose = role === "OWNER" || role === "ADMIN";
+
+  if (billingEnabled && tableSessionId && !canHandleMoney(role)) {
+    // Con cobro activo el mesero no libera ni cobra: lo hace el administrador.
+    return (
+      <p className="w-full rounded-full bg-muted px-3 py-2 text-center text-[13px] font-medium text-muted-foreground">
+        Cobra el administrador
+      </p>
+    );
+  }
 
   if (billingEnabled && tableSessionId) {
     return (

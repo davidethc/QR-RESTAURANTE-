@@ -62,7 +62,18 @@ function usePastDeadline(deadline: number | null): boolean {
  * control que provoca el estado es el que debe mostrarlo.
  */
 export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
-  const { calls, hasAnyOrder } = useTableStatus();
+  const { calls, hasAnyOrder, billPaid } = useTableStatus();
+
+  if (billPaid) {
+    return (
+      <p
+        role="status"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-success/10 text-[15px] font-semibold text-success"
+      >
+        <Receipt aria-hidden className="h-4 w-4" /> Cuenta pagada · ¡gracias!
+      </p>
+    );
+  }
 
   return (
     <div className="flex gap-2">

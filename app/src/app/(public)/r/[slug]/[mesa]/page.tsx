@@ -85,7 +85,7 @@ export default async function MenuPage({
       {inTable ? (
         <TableStatusProvider
           initialStatus={
-            initialStatus?.ok ? initialStatus.data : { orders: [], calls: [] }
+            initialStatus?.ok ? initialStatus.data : { orders: [], calls: [], billPaid: false }
           }
           channelName={channelName}
         >
