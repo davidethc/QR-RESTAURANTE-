@@ -1973,3 +1973,70 @@ una ronda anterior de este archivo). No es específico del módulo de cobro.
 - Verificar el paso 10c (montos ocultos en `/kitchen`) con un pedido activo real en
   pantalla, no solo por lectura de código — no se pudo forzar un pedido nuevo sin
   tocar más datos de los ya dejados a propósito.
+
+### Re-verificación de arreglos (2026-09-27)
+
+Re-verificación corta y dirigida del commit local `6dff0df` (sin pushear, sin tocar
+código) sobre los 3 hallazgos P1/P2 de la ronda anterior. Build de producción real
+(`npx next build` + `npx next start -p 3311`), nunca `next dev`. `playwright-cli` con
+3 sesiones nombradas (`-s=waiter`, `-s=owner`, `-s=client1`) contra `monky-qa`.
+
+Skills cargadas y qué aportó cada una a esta ronda: `playwright-cli` (sesiones
+nombradas + `find`/`snapshot` por ref, igual que la ronda anterior); `webapp-testing`
+(recordatorio de esperar la app lista, aunque de nuevo se usó `playwright-cli` en vez
+de los scripts Python); `vercel:verification` (estructura de evidencia por boundary,
+en particular para el punto 3: se leyó la cookie `mk_session` con `cookie-list` para
+confirmar que el token no cambió entre el pedido original y el intento fallido, antes
+de asumir que era "sesión expirada" y no otro bug); `design:accessibility-review`
+(axe-core en el diálogo de cerrar caja **y** en la hoja de carrito con el aviso nuevo
+de sesión vencida — esto último no estaba en el alcance pedido pero al correr el
+checklist de la skill sobre el carrito salió un hallazgo nuevo, ver abajo).
+
+| # | Punto | Resultado |
+|---|-------|-----------|
+| 1a | Mesero abre caja `/cash` con fondo $10 | ✅ PASA — "Caja abierta", fondo $10,00 |
+| 1b | Cliente Mesa 1 pide 1 producto (Agua QA $1,25), envía | ✅ PASA — pedido #82 creado, tracker en 2,06 s (incluye el round-trip completo confirmar→navegar) |
+| 1c | Mesero acepta → preparando → listo → entregado | ✅ PASA — pedido visible al mesero **sin recargar** (Realtime, tab de "Nuevos" nunca navegada a mano) |
+| 1d | Mesero cobra Mesa 1 en efectivo exacto ($1,25) desde `/tables` → "Cobrar y liberar" | ✅ PASA — mesa vuelve a Disponible |
+| 1e | Mesero cierra caja escribiendo SOLO Efectivo ("11.25" = $10 fondo + $1,25 cobrado), Tarjeta/Transferencia/Otro **vacíos** | ✅ **PASA — el bug P1 quedó resuelto.** El diálogo cerró sin errores, sin necesidad del workaround "0" de la ronda anterior; "La caja está cerrada" y "Abrir caja" vuelven a aparecer. 0 mensajes de consola, 0 peticiones 5xx (`requests` confirmó `POST /cash => 200`). |
+| 1f | Mesero no ve esperado/diferencia ni "Cierres anteriores" | ✅ PASA — confirmado en 3 snapshots distintos del mesero (caja recién abierta, caja abierta con cobro, caja recién cerrada): nunca aparece la sección "Cierres anteriores" ni la palabra "esperado" en su vista. La query `getClosedCashSessions` ni se dispara para su rol (gate en `page.tsx` con `isAdmin`). |
+| 2a | Dueño ve "Cierres anteriores" con el cierre nuevo y el de la ronda anterior | ✅ PASA — lista ambos: "Fondo $10,00 · Cuadró" (nuevo) y "Fondo $20,00 · $-1,00" (anterior) |
+| 2b | Desglose por método al expandir, cierre nuevo | ✅ PASA — Efectivo esperado $11,25 · contado $11,25 · $0,00 (matemática correcta: $10 fondo + $1,25 cobrado); Tarjeta/Transferencia/Otro "esperado $0,00 · contado —" (no se contaron, correcto) |
+| 2c | Desglose por método al expandir, cierre anterior | ✅ PASA — coincide exacto con lo documentado el 26-sep: Efectivo esperado $28,75 / contado $27,75 / $-1,00; Tarjeta y Transferencia cuadradas en $4,25 y $1,75 |
+| 2d | Diferencia en rojo solo si ≠ 0 | ✅ PASA — verificado con `getComputedStyle` sobre los nodos reales, no solo leyendo clases: el `$-1,00` (efectivo del cierre con diferencia) resuelve a `lab(45.8, 62.95, 44.1)` (rojo, variant `destructive`); el `$0,00` de un método cuadrado resuelve a `lab(45.49, 2.48, 8.16)` (gris neutro, `muted-foreground`) |
+| 2e | Dueño abre otra caja ($5) y la cierra ($5 exacto) | ✅ PASA |
+| 2f | Tarjeta persistente de resultado no desaparece a los 5 s | ✅ PASA — snapshot tomado a los 7 s tras el cierre, la tarjeta "Caja cerrada · Caja principal" con su desglose seguía visible |
+| 2g | Se cierra con su botón X | ✅ PASA — clic en "Cerrar resultado del cierre" la quita; confirmado por snapshot sin el texto |
+| 3a | Simular sesión de mesa vencida sin tocar código | ✅ Logrado por el camino más limpio de los sugeridos: la mesa cuya sesión cerró el mesero antes de que el cliente reintentara enviar. La misma pestaña del cliente (Mesa 1, ya cobrada y liberada en el paso 1d) agregó un producto nuevo e intentó enviarlo. Se confirmó con `cookie-list` que el `sessionToken` de `mk_session` no cambió entre el pedido #82 original y este intento — es la misma sesión, ahora inválida server-side. |
+| 3b | Banner persistente en el carrito | ✅ PASA — tras el toast "Tu sesión expiró" (que desaparece solo, confirmado a los 7 s), queda un `role="alert"` fijo dentro de la hoja del carrito: "Tu sesión de mesa venció. Escanea el QR de tu mesa otra vez para enviar el pedido — tu carrito sigue aquí." y el botón "Enviar pedido" pasa a `disabled` en vez de abrir el `ConfirmDialog`. |
+| 3c | El carrito no se vacía | ✅ PASA — el ítem "1× Agua QA $1,25" seguía en el carrito en el mismo snapshot que mostró el banner y 7 s después |
+| 4 | Consola y 5xx en los 3 contextos (mesero, dueño, cliente) | ✅ PASA — `console` de las 3 sesiones reportó 0 mensajes en todo momento; `requests` no mostró ningún código 5xx en ninguna sesión |
+| 4 | axe-core en el diálogo de cerrar caja | ✅ PASA — 0 violaciones (Critical/Serious/Moderate/Minor), tanto en la vista de mesero como en la de dueño (con hint "esperado $X" agregado por el fix) |
+
+**Hallazgo nuevo, menor, fuera del alcance de este commit — no bloquea nada de lo pedido:**
+Al correr axe-core sobre la hoja del carrito con el nuevo aviso de sesión vencida
+(para no dejar el checklist de accesibilidad a medias), salió 1 violación `critical`
+`button-name` en un botón que **no forma parte de este fix**: el botón "vaciar
+carrito" (ícono `X`, `cart-sheet-v2.tsx:95-102`, ya existía antes del commit `6dff0df`)
+no tiene `aria-label` ni texto visible — un lector de pantalla lo anuncia sin nombre.
+No se tocó código para confirmarlo; se verificó leyendo el archivo actual y
+comparando con el diff del commit re-verificado (esas líneas no están en el diff).
+Vale la pena una línea `aria-label="Vaciar el pedido"` en el `Button` de esa línea,
+pero es un hallazgo aparte, no una regresión de esta ronda.
+
+**Datos de prueba nuevos dejados en `monky-qa` (no se limpiaron, es el restaurante
+aislado para esto):**
+- Pedido #82 (Mesa 1, 1× Agua QA, $1,25, DELIVERED).
+- 1 cuenta nueva CLOSED (Mesa 1, $1,25, efectivo).
+- 2 sesiones de caja nuevas, ambas CLOSED y cuadradas exactas: fondo $10,00 (cobro de
+  Mesa 1 incluido, esperado/contado $11,25) y fondo $5,00 (sin movimientos,
+  esperado/contado $5,00).
+- El carrito del cliente de prueba (solo estado de navegador, no persiste en DB) se
+  quedó con 1× Agua QA sin enviar — es el estado esperado del punto 3, no un pedido
+  fantasma en el sistema.
+- Sin cambios a los datos de la ronda anterior (Mesa 3 sigue con su cuenta OPEN de
+  $1,25 sin cobrar, a propósito, documentada arriba).
+
+**Pendiente:** el hallazgo menor de `aria-label` en el botón de vaciar carrito, y el
+pendiente ya anotado de la ronda anterior sobre verificar 10c con un pedido activo
+real en `/kitchen` (tampoco se pudo esta vez, no era parte del alcance pedido).

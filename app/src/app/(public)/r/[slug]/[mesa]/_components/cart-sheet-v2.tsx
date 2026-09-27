@@ -97,8 +97,9 @@ export function CartSheetV2({
                   variant="ghost"
                   size="icon"
                   className="h-10 w-10 rounded-full"
+                  aria-label="Vaciar el pedido"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </Button>
               }
               title="¿Vaciar el pedido?"
