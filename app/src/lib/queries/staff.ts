@@ -96,10 +96,11 @@ export async function getRestaurantSettings(
   const { data, error } = await supabase
     .from("restaurants")
     // billing_enabled y max_waiter_discount_pct: columnas del módulo de
-    // cobro (M5). No hace falta RPC nueva — restaurants_select_members ya
-    // deja leer cualquier columna de su restaurante a todo miembro.
+    // cobro (M5). timezone: la usa el ticket imprimible para la fecha/hora
+    // local. No hace falta RPC nueva — restaurants_select_members ya deja
+    // leer cualquier columna de su restaurante a todo miembro.
     .select(
-      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct"
+      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, timezone"
     )
     .eq("id", restaurantId)
     .single();

@@ -1,13 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice, cn } from "@/lib/utils";
-import { ChargeSheet } from "./charge-sheet";
-import type { UserRole } from "@/config/constants";
+import { useChargeSheet } from "./charge-sheet-host";
 import type { OpenBillSummary } from "@/types/billing";
 
 /**
@@ -18,14 +16,12 @@ import type { OpenBillSummary } from "@/types/billing";
  */
 export function OpenBillsList({
   bills,
-  role,
   maxWaiterDiscountPct,
 }: {
   bills: OpenBillSummary[];
-  role: UserRole;
   maxWaiterDiscountPct: number;
 }) {
-  const router = useRouter();
+  const { openCharge } = useChargeSheet();
 
   if (bills.length === 0) {
     return (
@@ -63,18 +59,20 @@ export function OpenBillsList({
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saldo</p>
               <p className="font-display tabular-nums text-wine">{formatPrice(bill.balance)}</p>
             </div>
-            <ChargeSheet
-              tableSessionId={bill.table_session_id}
-              tableLabel={bill.table_name ?? `Mesa ${bill.table_number}`}
-              role={role}
-              maxWaiterDiscountPct={maxWaiterDiscountPct}
-              onSettled={() => router.refresh()}
-              trigger={
-                <Button size="icon-lg" className="clay clay-primary h-11 w-11 rounded-full" aria-label="Cobrar">
-                  <Wallet className="h-5 w-5" />
-                </Button>
+            <Button
+              size="icon-lg"
+              className="clay clay-primary h-11 w-11 rounded-full"
+              aria-label="Cobrar"
+              onClick={() =>
+                openCharge({
+                  tableSessionId: bill.table_session_id,
+                  tableLabel: bill.table_name ?? `Mesa ${bill.table_number}`,
+                  maxWaiterDiscountPct,
+                })
               }
-            />
+            >
+              <Wallet className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       ))}

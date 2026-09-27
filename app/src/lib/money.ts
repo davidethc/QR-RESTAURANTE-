@@ -100,3 +100,31 @@ export function applyDiscount(base: number, kind: DiscountKind, value: number): 
   }
   return fromCents(valueCents);
 }
+
+/**
+ * Descompone un total que YA incluye IVA en base imponible + IVA, para
+ * mostrarlo en el ticket sin cambiar el precio (los precios de la carta
+ * incluyen IVA 15%, decisión del dueño 2026-09-27). A diferencia del resto
+ * de este archivo, trabaja directo en centavos enteros (no en dólares):
+ * el ticket ya tiene el total en centavos y no hace falta ida y vuelta.
+ *
+ * base = round(total / (1 + rate/100)); iva = total − base. Con la resta
+ * en vez de una segunda división, base + iva == total siempre, por
+ * construcción — no hay forma de que el redondeo los descuadre.
+ *
+ * Misma técnica de puntos básicos que applyDiscount (multiplicar antes de
+ * dividir) para no arrastrar imprecisión de punto flotante de dividir
+ * repetidas veces por 1.15.
+ */
+export function splitIncludedTax(
+  totalCents: number,
+  ratePct = 15
+): { baseCents: number; taxCents: number } {
+  assertCents(totalCents);
+  if (totalCents < 0) throw new Error("El total no puede ser negativo");
+  if (!(ratePct >= 0)) throw new Error("La tasa de IVA no puede ser negativa");
+
+  const rateBasis = Math.round(ratePct * 100); // 15 -> 1500
+  const baseCents = Math.round((totalCents * 10000) / (10000 + rateBasis));
+  return { baseCents, taxCents: totalCents - baseCents };
+}

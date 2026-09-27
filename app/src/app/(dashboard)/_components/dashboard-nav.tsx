@@ -42,7 +42,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
        pestañas de /orders). No se anima: sobre tablets de gama media
        animar un backdrop-filter es lo que provoca el scroll con
        tirones. */
-    <header className="glass sticky top-0 z-20 border-b border-border/50">
+    <header className="glass sticky top-0 z-20 border-b border-border/50 print:hidden">
       <div className="flex items-center justify-between gap-3 px-4 py-2.5">
         <div className="min-w-0">
           <p className="font-display truncate text-[15px] font-semibold leading-tight text-foreground">

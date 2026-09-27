@@ -5,11 +5,17 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
-import { getCashRegisters, getClosedCashSessions, getOpenCashSessionId } from "@/lib/queries/cash";
+import {
+  getCashRegisters,
+  getClosedBillsToday,
+  getClosedCashSessions,
+  getOpenCashSessionId,
+} from "@/lib/queries/cash";
 import { listOpenBills } from "@/lib/actions/billing";
 import { getCashSessionSummary } from "@/lib/actions/cash";
 import { CashPageLive } from "./_components/cash-page-live";
 import { CashSessionArea } from "./_components/cash-session-area";
+import { ClosedBillsToday } from "./_components/closed-bills-today";
 import { ClosedSessionsHistory } from "./_components/closed-sessions-history";
 import { OpenBillsList } from "./_components/open-bills-list";
 import type { CashSessionSummary } from "@/types/billing";
@@ -57,10 +63,11 @@ export default async function CashPage() {
   // tampoco ve el historial). El mesero ni siquiera dispara estas consultas.
   const isAdmin = role === "OWNER" || role === "ADMIN";
 
-  const [registers, openSessionId, closedSessionRows] = await Promise.all([
+  const [registers, openSessionId, closedSessionRows, closedBillsToday] = await Promise.all([
     getCashRegisters(restaurantId),
     getOpenCashSessionId(restaurantId),
     isAdmin ? getClosedCashSessions(restaurantId, 10) : Promise.resolve([]),
+    isAdmin ? getClosedBillsToday(restaurantId) : Promise.resolve([]),
   ]);
 
   const [summaryResult, openBillsResult, closedSummaryResults] = await Promise.all([
@@ -94,8 +101,12 @@ export default async function CashPage() {
           <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
             Cuentas abiertas
           </p>
-          <OpenBillsList bills={openBills} role={role} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
+          <OpenBillsList bills={openBills} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
         </div>
+
+        {isAdmin && (
+          <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />
+        )}
 
         {isAdmin && (
           <ClosedSessionsHistory sessions={closedSessions} timeZone={session.restaurant.timezone} />

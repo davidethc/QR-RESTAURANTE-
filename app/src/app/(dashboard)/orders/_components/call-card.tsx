@@ -2,7 +2,6 @@
 
 import { canHandleMoney } from "@/lib/permissions";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Bell, Receipt, ClipboardList, Wallet } from "lucide-react";
 import { CallStatusBadge } from "@/components/shared/status-badge";
@@ -10,7 +9,7 @@ import { ElapsedTimer } from "@/components/shared/elapsed-timer";
 import { ActionButton } from "@/components/shared/action-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { ChargeSheet } from "@/app/(dashboard)/cash/_components/charge-sheet";
+import { useChargeSheet } from "@/app/(dashboard)/cash/_components/charge-sheet-host";
 import { handleCall } from "@/lib/actions/waiter-calls";
 import { formatPrice, cn } from "@/lib/utils";
 import type { UserRole } from "@/config/constants";
@@ -45,7 +44,7 @@ export function CallCard({
   /** Sesión viva de la mesa. Sin ella no se puede abrir la hoja de cobro. */
   tableSessionId?: string;
 }) {
-  const router = useRouter();
+  const { openCharge } = useChargeSheet();
   const isBill = call.type === "BILL";
   const Icon = isBill ? Receipt : Bell;
   const label = isBill ? "Solicita la cuenta" : "Solicita atención";
@@ -163,21 +162,18 @@ export function CallCard({
           por completo, así que no hace falta ningún botón más acá. */}
       {canCharge ? (
         <div className="mt-3">
-          <ChargeSheet
-            tableSessionId={tableSessionId!}
-            tableLabel={call.table_name ?? `Mesa ${call.table_number}`}
-            role={role!}
-            maxWaiterDiscountPct={maxWaiterDiscountPct}
-            onSettled={() => {
-              onDone?.();
-              router.refresh();
-            }}
-            trigger={
-              <Button className="clay clay-primary h-12 w-full rounded-full text-[15px] font-semibold">
-                <Wallet aria-hidden className="h-4 w-4" /> Cobrar
-              </Button>
+          <Button
+            className="clay clay-primary h-12 w-full rounded-full text-[15px] font-semibold"
+            onClick={() =>
+              openCharge({
+                tableSessionId: tableSessionId!,
+                tableLabel: call.table_name ?? `Mesa ${call.table_number}`,
+                maxWaiterDiscountPct,
+              })
             }
-          />
+          >
+            <Wallet aria-hidden className="h-4 w-4" /> Cobrar
+          </Button>
         </div>
       ) : (
         <>

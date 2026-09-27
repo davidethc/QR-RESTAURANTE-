@@ -237,6 +237,16 @@
     font-variation-settings: "opsz" 32, "wdth" 105;
     letter-spacing: -0.02em;
     }
+  /* Ticket térmico (M13): en papel no va el grano de fondo ni ningún
+     color — la impresora es blanco y negro y el `@page` del ticket ya
+     define su propio tamaño de 80mm. Regla global para que cualquier
+     página que se imprima (no solo el ticket) salga limpia. */
+  @media print {
+    body {
+      background: #fff;
+      background-image: none;
+      }
+    }
 }
 
 @layer components {

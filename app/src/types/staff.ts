@@ -198,4 +198,8 @@ export interface RestaurantSettings {
   billing_enabled: boolean;
   /** Tope de descuento que puede aplicar un WAITER sin ser OWNER/ADMIN. */
   max_waiter_discount_pct: number;
+  /** Zona horaria IANA del restaurante (ej. "America/Guayaquil"). La usa
+   *  el ticket imprimible para mostrar la fecha/hora local, no la del
+   *  servidor. */
+  timezone: string;
 }

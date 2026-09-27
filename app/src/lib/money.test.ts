@@ -5,6 +5,7 @@ import {
   fromCents,
   nextEqualShare,
   splitEqually,
+  splitIncludedTax,
   toCents,
 } from "./money";
 
@@ -110,5 +111,31 @@ describe("applyDiscount", () => {
     expect(() => applyDiscount(10, "PERCENT", 0)).toThrow();
     expect(() => applyDiscount(10, "PERCENT", 101)).toThrow();
     expect(() => applyDiscount(10, "FIXED", -1)).toThrow();
+  });
+});
+
+describe("splitIncludedTax", () => {
+  it("separa base + IVA 15% de un total en centavos (diseño del ticket)", () => {
+    expect(splitIncludedTax(725)).toEqual({ baseCents: 630, taxCents: 95 });
+    expect(splitIncludedTax(115)).toEqual({ baseCents: 100, taxCents: 15 });
+    expect(splitIncludedTax(0)).toEqual({ baseCents: 0, taxCents: 0 });
+  });
+
+  it("base + IVA siempre suma el total, para cualquier monto (1000 valores)", () => {
+    for (let cents = 0; cents < 1000; cents++) {
+      const { baseCents, taxCents } = splitIncludedTax(cents);
+      expect(baseCents + taxCents).toBe(cents);
+      expect(baseCents).toBeGreaterThanOrEqual(0);
+      expect(taxCents).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("acepta otra tasa (0% = toda la base, sin IVA)", () => {
+    expect(splitIncludedTax(1000, 0)).toEqual({ baseCents: 1000, taxCents: 0 });
+  });
+
+  it("rechaza total negativo o con fracción de centavo", () => {
+    expect(() => splitIncludedTax(-1)).toThrow();
+    expect(() => splitIncludedTax(1.5)).toThrow();
   });
 });

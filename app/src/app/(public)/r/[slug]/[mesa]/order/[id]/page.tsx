@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { getOrderStatus } from "@/lib/actions/orders";
 import { getSessionBill } from "@/lib/actions/billing";
 import { OrderTracker } from "./_components/order-tracker";
@@ -12,6 +13,10 @@ export default async function OrderPage({
 }: {
   params: Promise<{ slug: string; mesa: string; id: string }>;
 }) {
+  // Página personal de cada cliente (lee su cookie de mesa): dinámica. Sin
+  // esto Next prerenderiza un shell y aborta las consultas en vuelo al
+  // descubrir la cookie ("fetch() rejects when the prerender is complete").
+  await connection();
   const { slug, mesa, id } = await params;
   // En paralelo: ninguna de las tres depende de las otras dos.
   const channelPromise = getSessionChannelName();

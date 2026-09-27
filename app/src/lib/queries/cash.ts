@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { fromUntyped } from "@/lib/supabase/untyped-table";
+import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 
 /**
  * Lecturas simples de caja (M6) que no necesitan RPC: las tablas ya
@@ -87,4 +88,72 @@ export async function getClosedCashSessions(
       ? (row.cash_registers[0]?.name ?? null)
       : (row.cash_registers?.name ?? null),
   }));
+}
+
+export interface ClosedBillToday {
+  id: string;
+  bill_number: number;
+  table_number: number;
+  table_name: string | null;
+  total: number;
+  closed_at: string;
+}
+
+/**
+ * Cuentas CLOSED del día comercial de hoy, para "Cobradas hoy" (solo se
+ * muestra en la UI a OWNER/ADMIN; `bills_select_staff` en RLS también deja
+ * leer a WAITER, pero esa sección no se les pinta). El corte del día no es
+ * medianoche UTC ni local: usa `business_today`/`business_day_bounds`
+ * (M1, 20260926160000) para respetar el corte configurado del restaurante
+ * (04:00 por defecto) en su zona horaria.
+ */
+export async function getClosedBillsToday(
+  restaurantId: string
+): Promise<ClosedBillToday[]> {
+  const supabase = await createClient();
+
+  const { data: today, error: todayError } = await callUntypedRpc<string>(
+    supabase,
+    "business_today",
+    { p_restaurant_id: restaurantId }
+  );
+  if (todayError) throw todayError;
+
+  const { data: boundsRows, error: boundsError } = await callUntypedRpc<
+    { start_at: string; end_at: string }[]
+  >(supabase, "business_day_bounds", {
+    p_restaurant_id: restaurantId,
+    p_from: today,
+    p_to: today,
+  });
+  if (boundsError) throw boundsError;
+  const bounds = boundsRows?.[0];
+  if (!bounds) throw new Error("No se pudo calcular el día comercial");
+
+  const { data, error } = await fromUntyped(supabase, "bills")
+    .select("id, bill_number, total, closed_at, tables(number, name)")
+    .eq("restaurant_id", restaurantId)
+    .eq("status", "CLOSED")
+    .gte("closed_at", bounds.start_at)
+    .lt("closed_at", bounds.end_at)
+    .order("closed_at", { ascending: false });
+
+  if (error) throw error;
+  return ((data ?? []) as unknown as Array<{
+    id: string;
+    bill_number: number;
+    total: number;
+    closed_at: string;
+    tables: { number: number; name: string | null } | { number: number; name: string | null }[] | null;
+  }>).map((row) => {
+    const table = Array.isArray(row.tables) ? row.tables[0] : row.tables;
+    return {
+      id: row.id,
+      bill_number: row.bill_number,
+      total: row.total,
+      closed_at: row.closed_at,
+      table_number: table?.number ?? 0,
+      table_name: table?.name ?? null,
+    };
+  });
 }

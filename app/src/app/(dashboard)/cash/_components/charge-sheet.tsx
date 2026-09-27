@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Loader2, Minus, Plus, Tag, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { CheckCircle2, Loader2, Minus, Plus, Printer, Receipt, Tag, X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +17,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { notify } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import { splitEqually } from "@/lib/money";
+import { PAYMENT_METHOD_LABEL } from "@/lib/payment-method-labels";
 import {
   openBill,
   setBillSplit,
@@ -24,17 +25,10 @@ import {
   closeBill,
 } from "@/lib/actions/billing";
 import { SPLIT_MODE } from "@/config/constants";
-import type { PaymentMethod, SplitMode, UserRole } from "@/config/constants";
+import type { SplitMode, UserRole } from "@/config/constants";
 import type { Bill, RecordPaymentResult } from "@/types/billing";
 import { PaymentForm } from "./payment-form";
 import { DiscountDialog } from "./discount-dialog";
-
-const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
-  CASH: "Efectivo",
-  CARD: "Tarjeta",
-  TRANSFER: "Transferencia",
-  OTHER: "Otro",
-};
 
 interface ChargeSheetProps {
   /** Sesión de mesa viva (ACTIVE o EXPIRED). openBill la crea o la reutiliza. */
@@ -43,7 +37,12 @@ interface ChargeSheetProps {
   role: UserRole;
   /** Tope de descuento del mesero (0 = no puede descontar). Ignorado para OWNER/ADMIN. */
   maxWaiterDiscountPct: number;
-  trigger: React.ReactNode;
+  /** Controlado desde `ChargeSheetProvider` (charge-sheet-host.tsx) — hay una
+   * sola instancia de esta hoja para todo el panel, montada en el layout, así
+   * ninguna lista (llamadas, mesas, cuentas abiertas) puede desmontarla a
+   * mitad de cobro cuando el refresco en tiempo real las actualiza. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** La cuenta quedó CLOSED (pagada y sin pedidos activos): la mesa se liberó sola. */
   onSettled?: () => void;
 }
@@ -59,10 +58,10 @@ export function ChargeSheet({
   tableLabel,
   role,
   maxWaiterDiscountPct,
-  trigger,
+  open,
+  onOpenChange,
   onSettled,
 }: ChargeSheetProps) {
-  const [open, setOpen] = useState(false);
   const [bill, setBill] = useState<Bill | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -88,6 +87,34 @@ export function ChargeSheet({
     });
   }, [tableSessionId]);
 
+  // `open` ahora lo controla `ChargeSheetProvider` (el host único del panel),
+  // no un <SheetTrigger> local — Radix ya no dispara `onOpenChange` cuando el
+  // padre abre la hoja por prop. El reinicio de estado de UI se ajusta acá,
+  // durante el render (patrón de React para "reaccionar a un cambio de
+  // prop" sin efecto: https://react.dev/learn/you-might-not-need-an-effect),
+  // y la carga de red —que sí es un efecto legítimo— vive en el useEffect
+  // de abajo.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setSelectedItems({});
+      setIdempotencyKey(crypto.randomUUID());
+    } else {
+      setBill(null);
+      setLoadError(null);
+    }
+  }
+
+  useEffect(() => {
+    // El efecto ES la sincronización con el sistema externo (la RPC
+    // `openBill`) — `load` marca `loading` antes de la llamada de red,
+    // igual que el patrón ya usado en `use-cart.ts`. El linter no
+    // distingue eso de estado derivado calculable en el render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, tableSessionId]);
 
   function handlePaid(result: RecordPaymentResult) {
     setBill(result.bill);
@@ -218,24 +245,7 @@ export function ChargeSheet({
     : "";
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (next) {
-          // Reinicio de cada apertura: se maneja acá (evento de usuario),
-          // no en un efecto — evita el "cascading render" de disparar
-          // setState de forma síncrona dentro de un effect.
-          setSelectedItems({});
-          setIdempotencyKey(crypto.randomUUID());
-          load();
-        } else {
-          setBill(null);
-          setLoadError(null);
-        }
-      }}
-    >
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
         <SheetHeader className="border-b border-border/60 bg-card/60 p-4">
           <SheetTitle className="font-display text-[18px]">Cobrar · {tableLabel}</SheetTitle>
@@ -270,10 +280,14 @@ export function ChargeSheet({
             <p className="text-[14px] text-muted-foreground">
               {tableLabel} quedó libre para el próximo cliente.
             </p>
+            <Button asChild variant="outline" className="mt-4 h-12 w-full rounded-full text-[15px] font-semibold">
+              <Link href={`/cash/ticket/${bill.id}?print=1`} target="_blank" rel="noopener noreferrer">
+                <Printer aria-hidden data-icon="inline-start" /> Imprimir ticket
+              </Link>
+            </Button>
             <Button
-              className="clay clay-primary mt-2 h-12 w-full rounded-full text-[15px] font-semibold"
+              className="clay clay-primary h-12 w-full rounded-full text-[15px] font-semibold"
               onClick={() => {
-                setOpen(false);
                 onSettled?.();
               }}
             >
@@ -340,6 +354,12 @@ export function ChargeSheet({
                   </div>
                 ))}
             </div>
+
+            <Button asChild variant="outline" className="h-11 w-full rounded-full text-[14px] font-semibold">
+              <Link href={`/cash/ticket/${bill.id}?print=1`} target="_blank" rel="noopener noreferrer">
+                <Receipt aria-hidden data-icon="inline-start" /> Pre-cuenta
+              </Link>
+            </Button>
 
             <div className="flex flex-col gap-1 rounded-2xl border border-border/60 bg-card p-3 text-[14px]">
               <div className="flex justify-between text-muted-foreground">

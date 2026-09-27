@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { ChargeSheet } from "@/app/(dashboard)/cash/_components/charge-sheet";
+import { useChargeSheet } from "@/app/(dashboard)/cash/_components/charge-sheet-host";
 import { closeTableSession } from "@/lib/actions/tables";
 import { forceCloseTableSession } from "@/lib/actions/billing";
 import { forceCloseTableSchema, type ForceCloseTableInput } from "@/lib/validations/billing";
@@ -143,6 +143,7 @@ export function ReleaseTableButton({
   tableSessionId?: string;
 }) {
   const router = useRouter();
+  const { openCharge } = useChargeSheet();
   const canForceClose = role === "OWNER" || role === "ADMIN";
 
   if (billingEnabled && tableSessionId && !canHandleMoney(role)) {
@@ -157,18 +158,12 @@ export function ReleaseTableButton({
   if (billingEnabled && tableSessionId) {
     return (
       <div className="flex w-full flex-col gap-1.5">
-        <ChargeSheet
-          tableSessionId={tableSessionId}
-          tableLabel={tableLabel}
-          role={role}
-          maxWaiterDiscountPct={maxWaiterDiscountPct}
-          onSettled={() => router.refresh()}
-          trigger={
-            <Button className="clay clay-primary h-9 w-full rounded-full text-[13px] font-semibold">
-              <Wallet className="h-4 w-4" /> Cobrar y liberar
-            </Button>
-          }
-        />
+        <Button
+          className="clay clay-primary h-9 w-full rounded-full text-[13px] font-semibold"
+          onClick={() => openCharge({ tableSessionId, tableLabel, maxWaiterDiscountPct })}
+        >
+          <Wallet className="h-4 w-4" /> Cobrar y liberar
+        </Button>
         {canForceClose && <ForceCloseDialog tableId={tableId} tableLabel={tableLabel} />}
       </div>
     );
