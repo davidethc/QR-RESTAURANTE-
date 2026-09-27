@@ -1822,3 +1822,154 @@ cobro, protección OWNER de ajustes de cobro, índices parciales y `revoke updat
 restaurants from anon`. Único cambio visible en Omm Siri: `active_total` ignora
 sesiones sin actividad en 4 h (la Mesa 2 dejó de mostrar $8,00 de una sesión del
 18-sep).
+
+## 2026-09-26 — QA en vivo Cobro y Caja (monky-qa)
+
+QA manual-automatizada del módulo de Cobro y Caja recién construido (commit local
+`e15065c`, sin pushear). Build de producción real (`npx next build` + `npx next
+start -p 3311`), nunca `next dev`. Playwright vía `playwright-cli`, 6 sesiones de
+navegador simultáneas y aisladas (`-s=waiter`, `-s=owner`, `-s=kitchen`, `-s=client1`,
+`-s=client2`, `-s=client3`) para simular mesero, dueño, cocina y 3 clientes de mesa a
+la vez, todo contra el restaurante aislado `monky-qa` (`billing_enabled=true`).
+Capturas en `app/test-results/qa-caja/01..19-*.png`. Verificación cruzada de montos
+con `execute_sql` (solo lecturas) contra `fvzxfbzujvkkvniyphps`.
+
+Skills cargadas y qué aportó cada una: `playwright-cli` (sesiones nombradas por rol,
+`find`/`snapshot` por ref para no perder contexto entre 6 navegadores a la vez);
+`webapp-testing` (recordatorio de esperar a que la app esté lista antes de inspeccionar,
+aunque aquí se usó `playwright-cli` en vez de los scripts Python del paquete);
+`vercel:verification` (estructura "Story → boundary por boundary → evidencia" que
+se siguió para no dar un paso por bueno sin captura/consola/red revisada);
+`design:accessibility-review` (checklist de contraste/teclado/touch-target que se
+aplicó a la hoja de cobro con axe-core); `ux-audit` (disciplina de manifest de
+interacción con timestamps reales, no simulados — cada paso de este informe salió de
+un click real, no de leer el código y asumir).
+
+### Resultados por paso
+
+| # | Paso | Resultado |
+|---|------|-----------|
+| 1 | Mesero abre caja (`/cash`, fondo $20) | ✅ PASA — "Caja abierta", fondo $20,00 visible |
+| 2 | Cliente Mesa 1 pide 2 productos (Almuerzo QA $6,00 + Empanada QA $2,50 = $8,50), envía | ✅ PASA — confirmación → tracker en 0,46 s |
+| 3 | Mesero acepta → preparando → listo → entregado | ✅ PASA — pedido visible al mesero **sin recargar** (Realtime), los 3 clics avanzan sin error |
+| 4 | Cliente "Pedir cuenta" → mesero ve "Cobrar" en Solicitudes con el detalle y $8,50 | ✅ PASA |
+| 5 | Cobro dividido 2 partes iguales: parte 1 efectivo $4,25 + propina $1,00 + recibido $10,00 | ✅ PASA — vuelto mostrado $4,75 = 10 − (4,25+1,00), correcto |
+| 5b | Parte 2 tarjeta $4,25 + referencia `AUTH-QA-0001` | ✅ PASA — cuenta queda CLOSED, saldo $0 |
+| 5c | Mesa vuelve a Disponible en `/tables`, llamada queda atendida, cliente ve "Pagado · ¡gracias!" sin recargar | ✅ PASA — confirmado también con SQL (`bills.status='CLOSED'`, `paid_total=8.50`) |
+| 6 | Mesa 2: pedido Agua QA $1,25 + Café QA $1,75 entregado → `/tables` "Cobrar y liberar" → por ítems: Agua efectivo exacto, Café transferencia | ✅ PASA — monto se autocompleta al marcar el ítem; mesa liberada; **cliente vio "Pagado · ¡gracias!" sin recargar, confirmado en vivo** (tab nunca navegada, banner apareció solo por sondeo) |
+| 7a | Mesa 3 entregado ($1,25) → mesero intenta liberar sin cobrar | ✅ PASA (por diseño) — el mesero **no tiene ningún botón** para liberar sin cobrar cuando `billing_enabled`; solo ve "Cobrar y liberar". Confirmado además a nivel RPC (`close_table_session`, `supabase/migrations/20260926170500_...sql`): con saldo pendiente y sin `p_force`, lanza `'La mesa tiene % pendiente de cobro...'`; con `p_force` y rol no admin, lanza `'Solo el dueño o un administrador pueden forzar...'`. No hay forma de que el mesero dispare este flujo desde la UI ni de que la RPC se lo permita si lo intentara por otra vía. |
+| 7b | Dueño "Forzar cierre" con motivo | ✅ PASA — mesa vuelve a Disponible, cuenta queda `OPEN` (no se pierde el cobro) y aparece en "Cuentas abiertas" de `/cash` con saldo $1,25 |
+| 8a | Mesero intenta aplicar descuento (tope 0%) | ✅ PASA (por diseño) — con `max_waiter_discount_pct=0` el botón "Aplicar descuento" **no se renderiza** para el mesero (`canDiscount = isAdmin || maxWaiterDiscountPct > 0`, `charge-sheet.tsx:76`); no hay forma de intentarlo desde la UI |
+| 8b | Dueño aplica 10% con motivo en cuenta nueva ($2,50 → $2,25) y cobra | ✅ PASA — descuento mostrado en vivo (Subtotal $2,50, Descuento −$0,25, Total $2,25), cobrado y cerrado correcto |
+| 9a | `/cash` como mesero no debe ver esperado/diferencia | ⚠️ PARCIAL — no ve "esperado" (correcto), pero tampoco ve el desglose "Efectivo/Tarjeta/Transferencia" de cobros de hoy que el propio código dice que debería mostrarle (ver bug P1 #1 abajo) |
+| 9b | Mesero cierra caja contando $1 menos a propósito | ⚠️ BLOQUEADO por un bug (ver P1 #2), solucionado dejando explícito "0" en el campo "Otro" en vez de vacío |
+| 9c | Dueño verifica esperado/contado/diferencia | ✅ PASA vía SQL directo (no hay pantalla en la UI para esto, ver bug P1 #3): Efectivo esperado $28,75, contado $27,75, diferencia **−$1,00** exacto. Tarjeta y Transferencia sin diferencia. |
+| 10a | Cocina no ve "Caja" en el menú | ✅ PASA — nav solo muestra "Cocina" |
+| 10b | `/cash` le niega acceso a cocina | ✅ PASA — redirige a `/orders` sin mostrar nada de caja |
+| 10c | `/kitchen` no muestra montos | ✅ PASA — sin pedidos activos para confirmar visualmente en esta ronda, pero `kitchen-order-card.tsx` no importa `formatPrice` en ningún lado (grep limpio) |
+
+### Latencias medidas (Realtime, no simuladas)
+
+- Cliente envía pedido → mesero lo ve en "Nuevos" sin recargar: instantáneo en las 3 corridas (< 1 s, mismo patrón ya documentado en la ronda de auditoría anterior).
+- Clic "Enviar pedido" → navegación al tracker: 0,46 s.
+- Pago que cierra la cuenta → cliente ve "Pagado · ¡gracias!" sin recargar (Mesa 2, tab nunca tocada desde el envío del pedido): confirmado, banner presente al revisar ~8-15 s después del cobro (sondeo periódico de `get_session_bill`, mismo patrón que el tracker de pedidos).
+
+### Bugs encontrados (priorizados)
+
+**P1 — `close_cash_session`: dejar en blanco Tarjeta/Transferencia/Otro rompe el cierre de caja sin ningún mensaje de error.**
+Archivo: `app/src/app/(dashboard)/cash/_components/close-cash-dialog.tsx` +
+`app/src/lib/validations/cash.ts` (`cashCountsSchema`).
+Repro: abrir "Cerrar caja", llenar solo "Efectivo" (el único campo marcado
+obligatorio) y dejar Tarjeta/Transferencia/Otro vacíos (su estado normal cuando esos
+métodos no se usaron en el turno) → clic en "Cerrar caja" no hace nada: sin toast, sin
+texto de error, sin petición de red, el diálogo se queda abierto indefinidamente.
+Causa raíz confirmada leyendo el código y replicando el schema con Node/Zod: el
+`register("counts.MÉTODO", { setValueAs: v => v === "" ? undefined : Number(v) })`
+dejaba la clave presente con valor `undefined` en vez de omitirla, y
+`z.partialRecord(...)` de Zod v4 sí valida claves presentes aunque su valor sea
+`undefined`, produciendo `NaN` y fallando con "Conteo: escribe un monto válido." en
+`errors.counts.OTHER` (o CARD/TRANSFER, el que se dejó vacío). El componente además
+solo muestra `<FieldError errors={[errors.counts?.CASH, errors.root]} />` — nunca
+mira `errors.counts?.CARD/TRANSFER/OTHER`, así que aunque el error sí se generó,
+jamás se hubiera visto. **Impacto**: cualquier turno real en que no se haya cobrado
+con los 4 métodos (el caso normal — la mayoría de turnos no tienen efectivo, tarjeta
+Y transferencia a la vez) deja al mesero sin poder cerrar caja, sin pista de por qué.
+Workaround usado en esta ronda: escribir "0" explícito en cada campo vacío.
+**Sugerencia de arreglo**: o bien `setValueAs` debe omitir la clave (no asignar
+`undefined`), o el schema debe tratar `undefined` como ausente antes de coaccionar, o
+como mínimo agregar `errors.counts?.CARD/TRANSFER/OTHER` a la lista que revisa
+`FieldError`. Cualquiera de las tres cierra el hueco; probablemente hace falta la
+primera para que el dato no llegue mal formado al server action tampoco.
+
+**P1 — No existe ninguna pantalla para ver esperado/contado/diferencia de una caja ya cerrada.**
+Archivo: `app/src/app/(dashboard)/cash/page.tsx` y todo `_components/cash/*`.
+El único lugar del código que lee `cash_difference`/`expected_cash`/`counted_cash` es
+el toast transitorio de `close-cash-dialog.tsx` (`onSubmit`), que solo lo ve quien
+cierra la caja y desaparece a los 5 s. En cuanto la sesión pasa a `CLOSED`, `/cash`
+solo ofrece "Abrir caja" para una sesión nueva — no hay historial, no hay lista de
+cajas cerradas, nada. **Impacto**: el dueño no tiene forma de revisar en la app si el
+turno de ayer cuadró o no — tiene que consultar la base de datos a mano (verificado
+en esta ronda con SQL directo: `cash_session_counts` sí guarda todo correctamente,
+$28,75 esperado / $27,75 contado / −$1,00 diferencia en Efectivo — el dato existe, la
+pantalla no). Esto contradice el objetivo del cierre ciego (que el dueño pueda
+auditar diferencias de caja) — hoy solo lo puede hacer si estaba mirando la pantalla
+en el instante exacto en que el mesero cerró.
+
+**P2 — Confusión de UX: reenviar un pedido desde una mesa cuya sesión ya se cerró falla en silencio (o casi).**
+Archivo: `app/src/app/(public)/r/[slug]/[mesa]/_components/cart-sheet-v2.tsx` +
+`app/src/components/shared/confirm-dialog.tsx`.
+Repro: mesa ya cobrada y liberada, un cliente que sigue con la pestaña vieja abierta
+en `/r/<slug>/<mesa>` (sin haber vuelto a escanear el QR) intenta enviar un pedido
+nuevo → `createOrder` devuelve `{ok:false, error:"Sesión de mesa inválida o
+expirada"}`, `notify.error(...)` sí se dispara (confirmado leyendo el código — no es
+un bug de lógica), pero el toast desaparece a los 5 s y no hay ningún estado
+persistente en la pantalla que explique qué pasó ni qué hacer (volver a escanear el
+QR). Si el cliente no ve el toast a tiempo, se queda con el carrito lleno y sin
+pistas. No es tan grave como los P1 (hay mensaje, aunque fugaz) pero vale la pena un
+estado visible en vez de solo un toast para este caso específico, ya que va a ser
+frecuente (cualquier mesa que ya cobró y un cliente nuevo llega sin que alguien le dé
+un QR fresco).
+
+**P3 (cosmético, no de este módulo) — `landmark-unique` de axe-core en la hoja de cobro.**
+axe-core reportó 1 violación `moderate` (no `critical`/`serious`, no bloquea el
+hard-gate de accesibilidad): dos regiones `aria-label="Notifications alt+T"`
+idénticas en el DOM (`goey-toast`, ya documentado como limitación de la librería en
+una ronda anterior de este archivo). No es específico del módulo de cobro.
+
+### Accesibilidad de la hoja de cobro (ChargeSheet)
+
+- axe-core (`4.9.1`, inyectado por CDN) sobre `/cash` con la hoja de cobro abierta:
+  **0 violaciones Critical, 0 Serious**, 1 Moderate (ver P3 arriba). PASA el hard-gate.
+- Teclado: `Tab` desde el fondo entra directo al primer control del diálogo
+  ("Completa"), el foco recorre radios → método de pago → montos → botón "Cobrar" en
+  orden lógico y se queda atrapado dentro del diálogo (Radix `Dialog`), `Escape`
+  cierra. Sin trampas de foco.
+- Tamaños táctiles: todos los controles interactivos de la hoja miden ≥ 40×40 CSS px
+  (radios de método de pago 82×64, "Cobrar" 351×56, montos 170×48/351×48); el único
+  al límite es el botón "Close" (X) a 40×40 — por debajo del ideal AAA de 44×44 pero
+  por encima del mínimo AA 2.5.8 (24×24). No es un hallazgo nuevo — es el mismo
+  patrón ya anotado para `ConfirmDialog` en la ronda "clay + glass" de 2026-09-04.
+
+### Datos de prueba que quedaron en `monky-qa` (no se limpiaron, es el restaurante aislado para esto)
+
+- Caja "Caja principal": 1 sesión `CLOSED` (fondo $20, efectivo esperado $28,75 /
+  contado $27,75 / diferencia −$1,00; tarjeta y transferencia cuadradas).
+- 4 cuentas (`bills`): #2 Mesa 1 CLOSED $8,50 (propina $1,00), #3 Mesa 2 CLOSED $3,00,
+  #4 Mesa 3 **OPEN** $1,25 (forzada sin cobrar a propósito — queda para probar el
+  flujo de "Cuentas abiertas" en la próxima ronda), #5 Mesa 1 CLOSED $2,25 (10% de
+  descuento, motivo "Cortesía QA 10%...").
+- 4 pedidos DELIVERED (Mesa 1 ×2, Mesa 2 ×1, Mesa 3 ×1).
+- Todas las mesas quedaron Disponibles. Corrección (verificado por SQL después de la
+  ronda): la Mesa 3 también está AVAILABLE — el cierre forzado cerró su sesión y la
+  cuenta #4 sigue OPEN ($1,25) solo en "Cuentas abiertas", que es el diseño. La nota
+  original "Mesa 3 Ocupada" era un error de transcripción, no un bug.
+
+### Pendiente para la próxima ronda
+
+- Repetir el paso 9 (cierre de caja) una vez corregido el bug P1 de validación, sin
+  el workaround de escribir "0" a mano.
+- Decidir y construir la pantalla de historial de cajas cerradas (P1 #2) — hoy
+  bloquea totalmente el propósito de auditoría del cierre ciego.
+- Verificar el paso 10c (montos ocultos en `/kitchen`) con un pedido activo real en
+  pantalla, no solo por lectura de código — no se pudo forzar un pedido nuevo sin
+  tocar más datos de los ya dejados a propósito.

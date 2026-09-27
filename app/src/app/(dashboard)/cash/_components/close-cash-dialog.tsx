@@ -23,7 +23,7 @@ import { closeCashSession } from "@/lib/actions/cash";
 import { closeCashSessionSchema, type CloseCashSessionInput } from "@/lib/validations/cash";
 import { formatPrice } from "@/lib/utils";
 import { PAYMENT_METHOD } from "@/config/constants";
-import type { CashMethodSummary } from "@/types/billing";
+import type { CashMethodSummary, CashSessionSummary } from "@/types/billing";
 
 const METHOD_LABEL: Record<string, string> = {
   CASH: "Efectivo",
@@ -43,11 +43,14 @@ export function CloseCashDialog({
   cashSessionId,
   canSeeExpected,
   byMethod,
+  onClosed,
 }: {
   cashSessionId: string;
   canSeeExpected: boolean;
   /** Solo con canSeeExpected: lo que ya calcula get_cash_session_summary. */
   byMethod?: CashMethodSummary[];
+  /** Solo OWNER/ADMIN: recibe el resumen completo del cierre para la tarjeta persistente. */
+  onClosed?: (result: CashSessionSummary) => void;
 }) {
   "use no memo";
   const router = useRouter();
@@ -86,6 +89,7 @@ export function CloseCashDialog({
             ? "Caja cerrada · cuadró exacto"
             : `Caja cerrada · diferencia en efectivo ${diff > 0 ? "+" : ""}${formatPrice(diff)}`
         );
+        onClosed?.(result.data);
       } else {
         notify.success("Caja cerrada");
       }
@@ -120,8 +124,9 @@ export function CloseCashDialog({
           <FieldGroup>
             {Object.values(PAYMENT_METHOD).map((method) => {
               const expected = expectedFor(method);
+              const fieldError = errors.counts?.[method];
               return (
-                <Field key={method}>
+                <Field key={method} data-invalid={fieldError ? true : undefined}>
                   <FieldLabel htmlFor={`count-${method}`}>
                     {METHOD_LABEL[method]}
                     {method !== PAYMENT_METHOD.CASH && " (opcional)"}
@@ -138,11 +143,13 @@ export function CloseCashDialog({
                     step="0.01"
                     min="0"
                     inputMode="decimal"
+                    aria-invalid={fieldError ? true : undefined}
                     className="h-12 font-display text-[17px] tabular-nums"
                     {...register(`counts.${method}` as const, {
                       setValueAs: (v: string) => (v === "" ? undefined : Number(v)),
                     })}
                   />
+                  <FieldError errors={[fieldError]} />
                 </Field>
               );
             })}
@@ -152,7 +159,7 @@ export function CloseCashDialog({
               <Textarea id="close-notes" rows={2} {...register("notes")} />
             </Field>
 
-            <FieldError errors={[errors.counts?.CASH, errors.root]} />
+            <FieldError errors={[errors.root]} />
           </FieldGroup>
           <DialogFooter className="mt-4">
             <Button type="submit" disabled={isSubmitting} className="clay clay-wine h-11 rounded-full">

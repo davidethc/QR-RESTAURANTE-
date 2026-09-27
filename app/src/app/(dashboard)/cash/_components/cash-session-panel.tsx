@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowDownCircle, ArrowUpCircle, Lock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
@@ -22,10 +24,13 @@ export function CashSessionPanel({
   summary,
   role,
   timeZone,
+  onClosed,
 }: {
   summary: CashSessionSummary;
   role: UserRole;
   timeZone: string;
+  /** Solo OWNER/ADMIN: recibe el resumen completo tras un cierre exitoso. */
+  onClosed?: (result: CashSessionSummary) => void;
 }) {
   const isAdmin = role === "OWNER" || role === "ADMIN";
   const openedAt = summary.opened_at
@@ -126,6 +131,7 @@ export function CashSessionPanel({
         cashSessionId={summary.id}
         canSeeExpected={isAdmin}
         byMethod={summary.by_method}
+        onClosed={onClosed}
       />
       <p className="flex items-center gap-1.5 text-center text-[12px] text-muted-foreground">
         <Lock className="h-3.5 w-3.5 shrink-0" />

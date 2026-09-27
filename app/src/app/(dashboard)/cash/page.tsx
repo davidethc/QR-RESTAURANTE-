@@ -4,13 +4,14 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
-import { getCashRegisters, getOpenCashSessionId } from "@/lib/queries/cash";
+import { getCashRegisters, getClosedCashSessions, getOpenCashSessionId } from "@/lib/queries/cash";
 import { listOpenBills } from "@/lib/actions/billing";
 import { getCashSessionSummary } from "@/lib/actions/cash";
 import { CashPageLive } from "./_components/cash-page-live";
-import { OpenCashCard } from "./_components/open-cash-card";
-import { CashSessionPanel } from "./_components/cash-session-panel";
+import { CashSessionArea } from "./_components/cash-session-area";
+import { ClosedSessionsHistory } from "./_components/closed-sessions-history";
 import { OpenBillsList } from "./_components/open-bills-list";
+import type { CashSessionSummary } from "@/types/billing";
 import { Wallet } from "lucide-react";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
@@ -50,18 +51,27 @@ export default async function CashPage() {
     );
   }
 
-  const [registers, openSessionId] = await Promise.all([
+  // "Cierres anteriores": solo OWNER/ADMIN (el mesero cierra a ciegas y
+  // tampoco ve el historial). El mesero ni siquiera dispara estas consultas.
+  const isAdmin = role === "OWNER" || role === "ADMIN";
+
+  const [registers, openSessionId, closedSessionRows] = await Promise.all([
     getCashRegisters(restaurantId),
     getOpenCashSessionId(restaurantId),
+    isAdmin ? getClosedCashSessions(restaurantId, 10) : Promise.resolve([]),
   ]);
 
-  const [summaryResult, openBillsResult] = await Promise.all([
+  const [summaryResult, openBillsResult, closedSummaryResults] = await Promise.all([
     openSessionId ? getCashSessionSummary(openSessionId) : Promise.resolve(null),
     listOpenBills(restaurantId),
+    Promise.all(closedSessionRows.map((row) => getCashSessionSummary(row.id))),
   ]);
 
   const summary = summaryResult && summaryResult.ok ? summaryResult.data : null;
   const openBills = openBillsResult.ok ? openBillsResult.data : [];
+  const closedSessions = closedSummaryResults
+    .map((r) => (r.ok ? r.data : null))
+    .filter((s): s is CashSessionSummary => s !== null);
 
   return (
     <main>
@@ -71,11 +81,12 @@ export default async function CashPage() {
         action={<CashPageLive restaurantId={restaurantId} />}
       />
       <div className="flex flex-col gap-6 px-4 pb-10 sm:px-6">
-        {!summary ? (
-          <OpenCashCard registers={registers} />
-        ) : (
-          <CashSessionPanel summary={summary} role={role} timeZone={session.restaurant.timezone} />
-        )}
+        <CashSessionArea
+          summary={summary}
+          registers={registers}
+          role={role}
+          timeZone={session.restaurant.timezone}
+        />
 
         <div className="flex flex-col gap-2">
           <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -83,6 +94,10 @@ export default async function CashPage() {
           </p>
           <OpenBillsList bills={openBills} role={role} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
         </div>
+
+        {isAdmin && (
+          <ClosedSessionsHistory sessions={closedSessions} timeZone={session.restaurant.timezone} />
+        )}
       </div>
     </main>
   );

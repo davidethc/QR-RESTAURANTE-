@@ -33,6 +33,7 @@ export function ConfirmDialog<T>({
   action,
   successMessage,
   onSuccess,
+  onError,
 }: {
   trigger: React.ReactNode;
   title: string;
@@ -43,6 +44,8 @@ export function ConfirmDialog<T>({
   action: () => Promise<ActionResult<T>>;
   successMessage?: string;
   onSuccess?: (data: T) => void;
+  /** Además del toast de siempre — para estados persistentes en la pantalla llamadora. */
+  onError?: (message: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -52,6 +55,7 @@ export function ConfirmDialog<T>({
       const result = await action();
       if (!result.ok) {
         notify.error(result.error);
+        onError?.(result.error);
         return;
       }
       setOpen(false);

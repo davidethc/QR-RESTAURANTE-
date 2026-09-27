@@ -33,13 +33,23 @@ const SESSION_EXPIRED_MESSAGES = [
   "No encontramos tu mesa. Escanea el código QR nuevamente.",
 ];
 
+/**
+ * Exportado para que las pantallas que necesitan un estado persistente
+ * además del toast (p. ej. el carrito, que no puede depender de que el
+ * comensal vea un aviso de 6 s) puedan detectar este error específico sin
+ * duplicar los textos exactos de las RPC.
+ */
+export function isSessionExpiredMessage(message: string): boolean {
+  return SESSION_EXPIRED_MESSAGES.includes(message);
+}
+
 export const notify = {
   // ── Genéricas: resultado de cualquier Server Action ──
   success(message: string) {
     toast.success(message, AUTO_DISMISS);
   },
   error(message: string) {
-    if (SESSION_EXPIRED_MESSAGES.includes(message)) {
+    if (isSessionExpiredMessage(message)) {
       toast.error("Tu sesión expiró", {
         description:
           "La sesión de mesa dura 1 h 30 min. Escanea el código QR de tu mesa otra vez para seguir pidiendo.",

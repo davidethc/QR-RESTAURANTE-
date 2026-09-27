@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Minus, Plus, Trash2, MessageCircle, ShoppingBag, X } from "lucide-react";
+import { Minus, Plus, Trash2, MessageCircle, ShoppingBag, X, QrCode } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { notify } from "@/lib/notifications";
+import { notify, isSessionExpiredMessage } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import { createOrder } from "@/lib/actions/orders";
 import { buildWhatsappUrl, composeOrderMessage } from "@/lib/whatsapp";
@@ -46,6 +46,14 @@ export function CartSheetV2({
   onAddSuggestion: (product: PublicProduct) => void;
 }) {
   const inTable = tableNumber !== null;
+
+  // Bug P2 de QA 2026-09-26: si la mesa ya se cobró y liberó (o pasaron los
+  // 90 min de sesión) `createOrder` devuelve el error de sesión expirada, el
+  // toast lo muestra 6 s y desaparece — si el comensal no lo ve a tiempo se
+  // queda con el carrito lleno sin ninguna pista. Este estado no se limpia
+  // solo ni se pierde el carrito: solo se va si vuelve a escanear el QR
+  // (lo que recarga la página entera y remonta este componente).
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const whatsappOrderUrl = useMemo(
     () =>
@@ -241,13 +249,36 @@ export function CartSheetV2({
               </span>
             </div>
 
-            {inTable ? (
+            {inTable && sessionExpired && (
+              <div
+                role="alert"
+                className="mb-3 flex items-start gap-2.5 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[13px] text-destructive"
+              >
+                <QrCode className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Tu sesión de mesa venció. Escanea el QR de tu mesa otra vez para enviar el
+                  pedido — tu carrito sigue aquí.
+                </span>
+              </div>
+            )}
+
+            {inTable && sessionExpired ? (
+              // Sin ConfirmDialog a propósito: con `asChild`, Radix pone el
+              // manejador de apertura en el `motion.div` envoltorio, no en
+              // el <button> — un <button disabled> anidado no lo hubiera
+              // bloqueado. Más simple y a prueba de eso: no renderizar el
+              // diálogo en absoluto mientras la sesión esté vencida.
+              <Button
+                size="lg"
+                disabled
+                className="h-12 w-full rounded-2xl text-[15px] font-semibold"
+              >
+                Enviar pedido
+              </Button>
+            ) : inTable ? (
               <ConfirmDialog
                 trigger={
-                  <motion.div
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                  >
+                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                     <Button
                       size="lg"
                       className="clay clay-primary h-12 w-full rounded-2xl text-[15px] font-semibold"
@@ -260,6 +291,9 @@ export function CartSheetV2({
                 description={`Mesa ${tableNumber} · ${formatPrice(total)} · Revisa tu pedido antes de enviarlo.`}
                 confirmLabel="Enviar pedido"
                 action={() => createOrder(items)}
+                onError={(message) => {
+                  if (isSessionExpiredMessage(message)) setSessionExpired(true);
+                }}
                 onSuccess={(orderId) => {
                   notify.orderPlaced();
                   onClearCart();

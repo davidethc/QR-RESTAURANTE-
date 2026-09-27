@@ -36,9 +36,18 @@ export const addCashMovementSchema = z
     { message: "Describe el motivo del movimiento.", path: ["description"] }
   );
 
-/** Conteo por método: CASH obligatorio, el resto opcional. */
+/**
+ * Conteo por método: CASH obligatorio, el resto opcional (un método vacío
+ * significa "no se contó", no "se contó cero"). El campo llega del form con
+ * `setValueAs: v => v === "" ? undefined : Number(v)`, pero React Hook Form
+ * igual deja la clave presente con valor `undefined` en vez de omitirla — y
+ * `z.partialRecord` de Zod v4 SÍ valida claves presentes aunque su valor sea
+ * `undefined`, produciendo NaN. Envolver cada valor en `.optional()` hace que
+ * una clave presente-pero-`undefined` se trate como ausente (válida) en vez
+ * de forzar la coerción a número.
+ */
 export const cashCountsSchema = z
-  .partialRecord(z.enum(PAYMENT_METHOD), money("Conteo"))
+  .partialRecord(z.enum(PAYMENT_METHOD), money("Conteo").optional())
   .refine((counts) => counts.CASH !== undefined, {
     message: "Falta el conteo de efectivo.",
     path: ["CASH"],
