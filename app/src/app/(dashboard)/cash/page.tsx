@@ -13,11 +13,14 @@ import {
 } from "@/lib/queries/cash";
 import { listOpenBills } from "@/lib/actions/billing";
 import { getCashSessionSummary } from "@/lib/actions/cash";
+import { getPublicMenu } from "@/lib/queries/menu";
+import { getTopProducts } from "@/lib/queries/staff";
 import { CashPageLive } from "./_components/cash-page-live";
 import { CashSessionArea } from "./_components/cash-session-area";
 import { ClosedBillsToday } from "./_components/closed-bills-today";
 import { ClosedSessionsHistory } from "./_components/closed-sessions-history";
 import { OpenBillsList } from "./_components/open-bills-list";
+import { QuickSaleSheet } from "./_components/quick-sale-sheet";
 import type { CashSessionSummary } from "@/types/billing";
 import { Wallet } from "lucide-react";
 
@@ -70,10 +73,12 @@ export default async function CashPage() {
     isAdmin ? getClosedBillsToday(restaurantId) : Promise.resolve([]),
   ]);
 
-  const [summaryResult, openBillsResult, closedSummaryResults] = await Promise.all([
+  const [summaryResult, openBillsResult, closedSummaryResults, menu, topProducts] = await Promise.all([
     openSessionId ? getCashSessionSummary(openSessionId) : Promise.resolve(null),
     listOpenBills(restaurantId),
     Promise.all(closedSessionRows.map((row) => getCashSessionSummary(row.id))),
+    getPublicMenu(session.restaurant.slug),
+    getTopProducts(restaurantId),
   ]);
 
   const summary = summaryResult && summaryResult.ok ? summaryResult.data : null;
@@ -97,12 +102,14 @@ export default async function CashPage() {
           timeZone={session.restaurant.timezone}
         />
 
-        <div className="flex flex-col gap-2">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Cuentas abiertas
-          </p>
-          <OpenBillsList bills={openBills} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
-        </div>
+        <QuickSaleSheet
+          categories={menu.categories}
+          topProducts={topProducts}
+          maxWaiterDiscountPct={settings.max_waiter_discount_pct}
+          hasOpenSession={summary !== null}
+        />
+
+        <OpenBillsList bills={openBills} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
 
         {isAdmin && (
           <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />

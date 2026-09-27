@@ -19,7 +19,7 @@ export function KitchenOrderCard({
     <div className="shadow-card flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-5">
       <div className="flex items-center justify-between gap-3">
         <p className="font-display text-[26px] font-semibold leading-tight text-foreground">
-          {order.table_name ?? `Mesa ${order.table_number}`}
+          {order.place_label ?? order.table_name ?? `Mesa ${order.table_number}`}
         </p>
         <ElapsedTimer
           since={order.created_at}

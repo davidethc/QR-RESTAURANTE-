@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, ClipboardList, LayoutGrid, ChefHat, UtensilsCrossed, Settings, Wallet } from "lucide-react";
+import { LogOut, ClipboardList, LayoutGrid, ChefHat, UtensilsCrossed, Settings, Wallet, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,7 @@ const NAV_LINKS = [
   { href: "/kitchen", label: "Cocina", icon: ChefHat, roles: ["OWNER", "ADMIN", "KITCHEN"] as UserRole[] },
   { href: "/tables", label: "Mesas", icon: LayoutGrid, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
   { href: "/cash", label: "Caja", icon: Wallet, roles: ["OWNER", "ADMIN"] as UserRole[] },
+  { href: "/reports", label: "Reportes", icon: BarChart3, roles: ["OWNER", "ADMIN"] as UserRole[] },
   { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: ["OWNER", "ADMIN"] as UserRole[] },
   { href: "/settings", label: "Configuración", icon: Settings, roles: ["OWNER"] as UserRole[] },
 ];
