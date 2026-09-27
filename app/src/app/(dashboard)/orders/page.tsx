@@ -7,6 +7,8 @@ import {
   getStaffOrders,
   getWaiterCalls,
   getTablesStatus,
+  getRestaurantSettings,
+  getActiveTableSessionsMap,
 } from "@/lib/queries/staff";
 import { OrdersBoard } from "./_components/orders-board";
 import { QuickTakeOrder } from "./_components/quick-take-order";
@@ -37,11 +39,15 @@ export default async function OrdersPage({
     session.role === "ADMIN" ||
     session.role === "WAITER";
 
-  const [summary, orders, calls, tables] = await Promise.all([
+  const [summary, orders, calls, tables, settings, tableSessionMap] = await Promise.all([
     getDashboardSummary(restaurantId),
     getStaffOrders(restaurantId, ["PENDING", "ACCEPTED", "PREPARING", "READY"]),
     getWaiterCalls(restaurantId, ["PENDING", "ACCEPTED"]),
     canServeTable ? getTablesStatus(restaurantId) : Promise.resolve([]),
+    // Módulo de cobro (M5): billing_enabled y el tope de descuento del
+    // mesero, para el botón "Cobrar" de las llamadas de cuenta.
+    canServeTable ? getRestaurantSettings(restaurantId) : Promise.resolve(null),
+    canServeTable ? getActiveTableSessionsMap(restaurantId) : Promise.resolve({}),
   ]);
 
   return (
@@ -62,6 +68,10 @@ export default async function OrdersPage({
         initialView={
           view === "calls" ? "calls" : view === "progress" ? "progress" : null
         }
+        role={session.role}
+        billingEnabled={settings?.billing_enabled ?? false}
+        maxWaiterDiscountPct={settings?.max_waiter_discount_pct ?? 0}
+        tableSessionMap={tableSessionMap}
       />
       {canServeTable && <QuickTakeOrder tables={tables} />}
     </main>

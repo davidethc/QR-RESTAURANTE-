@@ -8,12 +8,17 @@ import { TableQrDialog } from "./table-qr-dialog";
 import { ReleaseTableButton } from "./release-table-button";
 import { TakeOrderButton } from "./take-order-button";
 import { formatPrice } from "@/lib/utils";
+import type { UserRole } from "@/config/constants";
 import type { TableStatusRow } from "@/types/staff";
 
 interface TablesBoardV2Props {
   tables: TableStatusRow[];
   canManage: boolean;
   canServeTable: boolean;
+  role: UserRole;
+  billingEnabled: boolean;
+  maxWaiterDiscountPct: number;
+  tableSessionMap: Record<string, string>;
 }
 
 function getStatusColors(status: TableStatusRow["status"]) {
@@ -51,10 +56,18 @@ function TableCard({
   table,
   canManage,
   canServeTable,
+  role,
+  billingEnabled,
+  maxWaiterDiscountPct,
+  tableSessionId,
 }: {
   table: TableStatusRow;
   canManage: boolean;
   canServeTable: boolean;
+  role: UserRole;
+  billingEnabled: boolean;
+  maxWaiterDiscountPct: number;
+  tableSessionId?: string;
 }) {
   const { bg, border } = getStatusColors(table.status);
 
@@ -121,6 +134,10 @@ function TableCard({
               <ReleaseTableButton
                 tableId={table.id}
                 tableLabel={table.name ?? `Mesa ${table.number}`}
+                role={role}
+                billingEnabled={billingEnabled}
+                maxWaiterDiscountPct={maxWaiterDiscountPct}
+                tableSessionId={tableSessionId}
               />
             </div>
           )}
@@ -130,7 +147,15 @@ function TableCard({
   );
 }
 
-export function TablesBoardV2({ tables, canManage, canServeTable }: TablesBoardV2Props) {
+export function TablesBoardV2({
+  tables,
+  canManage,
+  canServeTable,
+  role,
+  billingEnabled,
+  maxWaiterDiscountPct,
+  tableSessionMap,
+}: TablesBoardV2Props) {
   const availableCount = tables.filter((t) => t.status === "AVAILABLE").length;
   const billRequested = tables.filter((t) => t.status === "BILL_REQUESTED").length;
   const totalTables = tables.length;
@@ -176,6 +201,10 @@ export function TablesBoardV2({ tables, canManage, canServeTable }: TablesBoardV
                 table={table}
                 canManage={canManage}
                 canServeTable={canServeTable}
+                role={role}
+                billingEnabled={billingEnabled}
+                maxWaiterDiscountPct={maxWaiterDiscountPct}
+                tableSessionId={tableSessionMap[table.id]}
               />
             ))}
           </AnimatePresence>

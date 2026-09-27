@@ -10,6 +10,7 @@ import {
   getMyRestaurant,
   getRestaurantSettings,
   getTablesStatus,
+  getActiveTableSessionsMap,
 } from "@/lib/queries/staff";
 import { toWhatsappNumber } from "@/lib/whatsapp";
 
@@ -27,9 +28,14 @@ export default async function TablesPage() {
   await connection();
   const session = await getMyRestaurant();
   const canManage = session.role === "OWNER" || session.role === "ADMIN";
-  const [tables, settings] = await Promise.all([
+  // Antes solo se pedía para OWNER/ADMIN (el enlace de WhatsApp de
+  // CartaLinkDialog). El módulo de cobro también necesita billing_enabled
+  // y el tope de descuento del mesero para CUALQUIER rol que atienda
+  // mesas, así que ahora se pide siempre.
+  const [tables, settings, tableSessionMap] = await Promise.all([
     getTablesStatus(session.restaurant.id),
-    canManage ? getRestaurantSettings(session.restaurant.id) : null,
+    getRestaurantSettings(session.restaurant.id),
+    getActiveTableSessionsMap(session.restaurant.id),
   ]);
   /** Quien atiende mesas: toma pedidos, marca la cuenta y libera. */
   const canServeTable =
@@ -66,6 +72,10 @@ export default async function TablesPage() {
         tables={tables}
         canManage={canManage}
         canServeTable={canServeTable}
+        role={session.role}
+        billingEnabled={settings.billing_enabled}
+        maxWaiterDiscountPct={settings.max_waiter_discount_pct}
+        tableSessionMap={tableSessionMap}
       />
     </main>
   );

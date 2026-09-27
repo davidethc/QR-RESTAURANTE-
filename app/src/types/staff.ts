@@ -193,4 +193,9 @@ export interface RestaurantSettings {
   logo_url: string | null;
   phone: string | null;
   address: string | null;
+  /** Módulo de cobro (M5). Columna ya existe en restaurants; RLS la deja
+   *  leer a cualquier miembro (restaurants_select_members). */
+  billing_enabled: boolean;
+  /** Tope de descuento que puede aplicar un WAITER sin ser OWNER/ADMIN. */
+  max_waiter_discount_pct: number;
 }

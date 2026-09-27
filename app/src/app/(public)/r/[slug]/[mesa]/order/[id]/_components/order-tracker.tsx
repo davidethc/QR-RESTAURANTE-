@@ -6,9 +6,11 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { notify } from "@/lib/notifications";
 import { getOrderStatus } from "@/lib/actions/orders";
+import { getSessionBill } from "@/lib/actions/billing";
 import { useSessionUpdates } from "@/hooks/use-session-updates";
 import type { OrderStatus } from "@/config/constants";
 import type { CustomerOrder } from "@/types/staff";
+import type { SessionBill } from "@/types/billing";
 
 const MAX_FAILURES = 3;
 
@@ -54,34 +56,53 @@ function notifyTransition(status: OrderStatus, orderNumber: number) {
 export function OrderTracker({
   initialOrder,
   channelName,
+  initialSessionBill = null,
 }: {
   initialOrder: CustomerOrder;
   /** null = sin sesión de mesa viva: no se suscribe ni consulta. */
   channelName: string | null;
+  /** null = sin cobro activo o sin cuenta todavía. Ver get_session_bill. */
+  initialSessionBill?: SessionBill;
 }) {
   const [order, setOrder] = useState(initialOrder);
+  const [sessionBill, setSessionBill] = useState(initialSessionBill);
   const statusRef = useRef(initialOrder.status);
+  const billStatusRef = useRef(initialSessionBill?.status ?? null);
   const failures = useRef(0);
 
   const refresh = useCallback(async () => {
-    // Estado final: no hay nada más que esperar.
-    if (TERMINAL.includes(statusRef.current)) return;
+    const orderDone = TERMINAL.includes(statusRef.current);
+    // La cuenta pasa a CLOSED cuando la sesión de mesa terminó: ya no hay
+    // nada más que pueda cambiar. Mientras tanto (null, OPEN o PAID) se
+    // sigue consultando — el cliente puede pedir la cuenta y pagar bien
+    // después de que su pedido ya se entregó.
+    const billDone = billStatusRef.current === "CLOSED";
+    if (orderDone && billDone) return;
 
-    const result = await getOrderStatus(initialOrder.id);
+    const [orderResult, billResult] = await Promise.all([
+      orderDone ? null : getOrderStatus(initialOrder.id),
+      billDone ? null : getSessionBill(),
+    ]);
 
-    if (!result.ok) {
-      // Antes se ignoraba el fallo y se seguía sondeando en silencio
-      // para siempre, incluso con la sesión ya expirada.
-      if (++failures.current >= MAX_FAILURES) notify.error(result.error);
-      return;
+    if (orderResult) {
+      if (!orderResult.ok) {
+        // Antes se ignoraba el fallo y se seguía sondeando en silencio
+        // para siempre, incluso con la sesión ya expirada.
+        if (++failures.current >= MAX_FAILURES) notify.error(orderResult.error);
+      } else {
+        failures.current = 0;
+        if (orderResult.data.status !== statusRef.current) {
+          notifyTransition(orderResult.data.status, orderResult.data.order_number);
+          statusRef.current = orderResult.data.status;
+        }
+        setOrder(orderResult.data);
+      }
     }
-    failures.current = 0;
 
-    if (result.data.status !== statusRef.current) {
-      notifyTransition(result.data.status, result.data.order_number);
-      statusRef.current = result.data.status;
+    if (billResult && billResult.ok) {
+      billStatusRef.current = billResult.data?.status ?? null;
+      setSessionBill(billResult.data);
     }
-    setOrder(result.data);
   }, [initialOrder.id]);
 
   useSessionUpdates({ channelName, onUpdate: refresh });
@@ -108,6 +129,21 @@ export function OrderTracker({
           </span>
         </p>
       </div>
+
+      {sessionBill && (sessionBill.status === "PAID" || sessionBill.status === "CLOSED") && (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 p-4"
+        >
+          <CheckCircle2 aria-hidden className="h-6 w-6 shrink-0 text-success" />
+          <div>
+            <p className="font-medium text-success">Pagado · ¡gracias!</p>
+            <p className="text-sm text-muted-foreground">
+              Cuenta #{sessionBill.bill_number} · {formatPrice(sessionBill.total)}
+            </p>
+          </div>
+        </div>
+      )}
 
       {isRejectedOrCancelled ? (
         <div

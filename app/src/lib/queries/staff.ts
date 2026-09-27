@@ -95,12 +95,47 @@ export async function getRestaurantSettings(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("restaurants")
-    .select("id, name, slug, description, logo_url, phone, address")
+    // billing_enabled y max_waiter_discount_pct: columnas del módulo de
+    // cobro (M5). No hace falta RPC nueva — restaurants_select_members ya
+    // deja leer cualquier columna de su restaurante a todo miembro.
+    .select(
+      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct"
+    )
     .eq("id", restaurantId)
     .single();
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Mapa mesa -> sesión de mesa viva (ACTIVE o EXPIRED, la más reciente),
+ * para el módulo de cobro. `open_bill` y `get_session_bill` necesitan el
+ * id de la sesión, pero ni `get_tables_status` ni `get_waiter_calls` lo
+ * devuelven (solo agregan `bill_id`/`bill_status`/`bill_balance` cuando ya
+ * existe una cuenta abierta). Select directo en vez de una RPC nueva:
+ * `table_sessions_select_staff` ya deja leer a cualquier miembro.
+ */
+export async function getActiveTableSessionsMap(
+  restaurantId: string
+): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("table_sessions")
+    .select("id, table_id, started_at")
+    .eq("restaurant_id", restaurantId)
+    .in("status", ["ACTIVE", "EXPIRED"])
+    .order("started_at", { ascending: false });
+
+  if (error) throw error;
+
+  const map: Record<string, string> = {};
+  for (const row of data ?? []) {
+    // Ordenado por más reciente primero: la primera vez que se ve una
+    // mesa es su sesión viva actual.
+    if (!(row.table_id in map)) map[row.table_id] = row.id;
+  }
+  return map;
 }
 
 /**

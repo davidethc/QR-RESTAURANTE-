@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Bell, Receipt, ClipboardList } from "lucide-react";
+import { Bell, Receipt, ClipboardList, Wallet } from "lucide-react";
 import { CallStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
 import { ActionButton } from "@/components/shared/action-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { ChargeSheet } from "@/app/(dashboard)/cash/_components/charge-sheet";
 import { handleCall } from "@/lib/actions/waiter-calls";
 import { formatPrice, cn } from "@/lib/utils";
+import type { UserRole } from "@/config/constants";
 import type { StaffWaiterCall } from "@/types/staff";
 
 /**
@@ -27,14 +30,26 @@ import type { StaffWaiterCall } from "@/types/staff";
 export function CallCard({
   call,
   onDone,
+  billingEnabled = false,
+  role,
+  maxWaiterDiscountPct = 0,
+  tableSessionId,
 }: {
   call: StaffWaiterCall;
   onDone?: () => void;
+  /** Módulo de cobro (M5). Con false, "Pedir cuenta" se atiende como hoy (sin cobrar aquí). */
+  billingEnabled?: boolean;
+  role?: UserRole;
+  maxWaiterDiscountPct?: number;
+  /** Sesión viva de la mesa. Sin ella no se puede abrir la hoja de cobro. */
+  tableSessionId?: string;
 }) {
+  const router = useRouter();
   const isBill = call.type === "BILL";
   const Icon = isBill ? Receipt : Bell;
   const label = isBill ? "Solicita la cuenta" : "Solicita atención";
   const pending = call.status === "PENDING";
+  const canCharge = isBill && billingEnabled && !!role && !!tableSessionId && call.status !== "ATTENDED";
 
   return (
     <motion.div
@@ -137,43 +152,70 @@ export function CallCard({
         </div>
       )}
 
-      {call.status === "PENDING" && (
-        <div className="mt-3 flex gap-2">
-          <ActionButton
-            onSuccess={onDone}
-            action={() => handleCall(call.id, "ACCEPTED")}
-            successMessage="En proceso"
-            className="clay clay-primary h-12 flex-1 rounded-full text-[15px] font-semibold"
-          >
-            Atender
-          </ActionButton>
-          <ConfirmDialog
+      {/* Con cobro activo, "atender" una solicitud de cuenta es cobrarla —
+          marcarla atendida a mano sin cobrar dejaría el saldo pendiente y
+          la mesa ocupada (M12). record_payment/finalize_bill se encargan
+          de pasar esta llamada a ATENDIDA solos cuando la cuenta se paga
+          por completo, así que no hace falta ningún botón más acá. */}
+      {canCharge ? (
+        <div className="mt-3">
+          <ChargeSheet
+            tableSessionId={tableSessionId!}
+            tableLabel={call.table_name ?? `Mesa ${call.table_number}`}
+            role={role!}
+            maxWaiterDiscountPct={maxWaiterDiscountPct}
+            onSettled={() => {
+              onDone?.();
+              router.refresh();
+            }}
             trigger={
-              <Button
-                variant="outline"
-                className="h-12 flex-1 rounded-full border-border/70 text-[15px] font-semibold"
-              >
-                Rechazar
+              <Button className="clay clay-primary h-12 w-full rounded-full text-[15px] font-semibold">
+                <Wallet aria-hidden className="h-4 w-4" /> Cobrar
               </Button>
             }
-            title="¿Rechazar solicitud?"
-            destructive
-            confirmLabel="Rechazar"
-            action={() => handleCall(call.id, "REJECTED")}
-            successMessage="Solicitud rechazada"
           />
         </div>
-      )}
+      ) : (
+        <>
+          {call.status === "PENDING" && (
+            <div className="mt-3 flex gap-2">
+              <ActionButton
+                onSuccess={onDone}
+                action={() => handleCall(call.id, "ACCEPTED")}
+                successMessage="En proceso"
+                className="clay clay-primary h-12 flex-1 rounded-full text-[15px] font-semibold"
+              >
+                Atender
+              </ActionButton>
+              <ConfirmDialog
+                trigger={
+                  <Button
+                    variant="outline"
+                    className="h-12 flex-1 rounded-full border-border/70 text-[15px] font-semibold"
+                  >
+                    Rechazar
+                  </Button>
+                }
+                title="¿Rechazar solicitud?"
+                destructive
+                confirmLabel="Rechazar"
+                action={() => handleCall(call.id, "REJECTED")}
+                successMessage="Solicitud rechazada"
+              />
+            </div>
+          )}
 
-      {call.status === "ACCEPTED" && (
-        <ActionButton
-            onSuccess={onDone}
-          action={() => handleCall(call.id, "ATTENDED")}
-          successMessage="Solicitud atendida"
-          className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
-        >
-          Marcar atendida
-        </ActionButton>
+          {call.status === "ACCEPTED" && (
+            <ActionButton
+                onSuccess={onDone}
+              action={() => handleCall(call.id, "ATTENDED")}
+              successMessage="Solicitud atendida"
+              className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
+            >
+              Marcar atendida
+            </ActionButton>
+          )}
+        </>
       )}
 
       {/* Quien llama al mesero suele querer pedir. Desde acá se va directo a

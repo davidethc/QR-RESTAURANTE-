@@ -66,6 +66,68 @@ export const AUDIT_ACTION = {
   MARK_ORDER_DELIVERED: "MARK_ORDER_DELIVERED",
   CREATE_WAITER_CALL: "CREATE_WAITER_CALL",
   HANDLE_WAITER_CALL: "HANDLE_WAITER_CALL",
+  OPEN_BILL: "OPEN_BILL",
+  APPLY_DISCOUNT: "APPLY_DISCOUNT",
+  REMOVE_DISCOUNT: "REMOVE_DISCOUNT",
+  SET_BILL_SPLIT: "SET_BILL_SPLIT",
+  RECORD_PAYMENT: "RECORD_PAYMENT",
+  VOID_PAYMENT: "VOID_PAYMENT",
+  CLOSE_BILL: "CLOSE_BILL",
+  VOID_BILL: "VOID_BILL",
+  FORCE_CLOSE_SESSION: "FORCE_CLOSE_SESSION",
+  OPEN_CASH_SESSION: "OPEN_CASH_SESSION",
+  CLOSE_CASH_SESSION: "CLOSE_CASH_SESSION",
+  CASH_MOVEMENT: "CASH_MOVEMENT",
+} as const;
+
+export const PAYMENT_METHOD = {
+  CASH: "CASH",
+  CARD: "CARD",
+  TRANSFER: "TRANSFER",
+  OTHER: "OTHER",
+} as const;
+
+export const PAYMENT_STATUS = {
+  COMPLETED: "COMPLETED",
+  VOIDED: "VOIDED",
+} as const;
+
+export const BILL_STATUS = {
+  OPEN: "OPEN",
+  PAID: "PAID",
+  CLOSED: "CLOSED",
+  VOID: "VOID",
+} as const;
+
+export const CASH_SESSION_STATUS = {
+  OPEN: "OPEN",
+  CLOSED: "CLOSED",
+} as const;
+
+export const DISCOUNT_KIND = {
+  PERCENT: "PERCENT",
+  FIXED: "FIXED",
+} as const;
+
+export const SPLIT_MODE = {
+  NONE: "NONE",
+  EQUAL: "EQUAL",
+  ITEMS: "ITEMS",
+} as const;
+
+export const CASH_MOVEMENT_TYPE = {
+  IN: "IN",
+  OUT: "OUT",
+} as const;
+
+export const CASH_MOVEMENT_REASON = {
+  FLOAT_TOPUP: "FLOAT_TOPUP",
+  TIPS_PAYOUT: "TIPS_PAYOUT",
+  SUPPLIER_PAYMENT: "SUPPLIER_PAYMENT",
+  EXPENSE: "EXPENSE",
+  REFUND: "REFUND",
+  WITHDRAWAL: "WITHDRAWAL",
+  OTHER: "OTHER",
 } as const;
 
 export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
@@ -77,3 +139,11 @@ export type RestaurantStatus = (typeof RESTAURANT_STATUS)[keyof typeof RESTAURAN
 export type MemberStatus = (typeof MEMBER_STATUS)[keyof typeof MEMBER_STATUS];
 export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
+export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD];
+export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+export type BillStatus = (typeof BILL_STATUS)[keyof typeof BILL_STATUS];
+export type CashSessionStatus = (typeof CASH_SESSION_STATUS)[keyof typeof CASH_SESSION_STATUS];
+export type DiscountKind = (typeof DISCOUNT_KIND)[keyof typeof DISCOUNT_KIND];
+export type SplitMode = (typeof SPLIT_MODE)[keyof typeof SPLIT_MODE];
+export type CashMovementType = (typeof CASH_MOVEMENT_TYPE)[keyof typeof CASH_MOVEMENT_TYPE];
+export type CashMovementReason = (typeof CASH_MOVEMENT_REASON)[keyof typeof CASH_MOVEMENT_REASON];

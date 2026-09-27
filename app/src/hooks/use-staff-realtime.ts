@@ -12,7 +12,15 @@ import { createClient } from "@/lib/supabase/client";
 /** Cada cuánto corre la red de seguridad, con o sin socket vivo. */
 const SAFETY_NET_MS = 20_000;
 
-export type StaffTable = "orders" | "waiter_calls" | "tables";
+export type StaffTable =
+  | "orders"
+  | "waiter_calls"
+  | "tables"
+  // Módulo de cobro (M6-M7): la página de Caja también quiere enterarse
+  // en vivo de cuentas y turnos de caja. Ampliación retrocompatible — el
+  // resto de llamadas sigue usando DEFAULT_TABLES sin tocar esto.
+  | "bills"
+  | "cash_sessions";
 
 const DEFAULT_TABLES: StaffTable[] = ["orders", "waiter_calls", "tables"];
 

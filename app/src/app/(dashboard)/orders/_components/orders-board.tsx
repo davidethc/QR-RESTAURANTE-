@@ -12,7 +12,7 @@ import { CallCard } from "./call-card";
 import { ConnectionStatus } from "@/components/shared/connection-status";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
-import type { OrderStatus } from "@/config/constants";
+import type { OrderStatus, UserRole } from "@/config/constants";
 import { cn } from "@/lib/utils";
 import type { StaffOrder, StaffWaiterCall } from "@/types/staff";
 
@@ -29,12 +29,22 @@ export function OrdersBoard({
   initialCalls,
   initialTableFilter,
   initialView,
+  role,
+  billingEnabled = false,
+  maxWaiterDiscountPct = 0,
+  tableSessionMap = {},
 }: {
   restaurantId: string;
   initialOrders: StaffOrder[];
   initialCalls: StaffWaiterCall[];
   initialTableFilter: number | null;
   initialView?: "calls" | "progress" | null;
+  role?: UserRole;
+  /** Módulo de cobro (M5). Con false, "Pedir cuenta" se sigue atendiendo como hoy. */
+  billingEnabled?: boolean;
+  maxWaiterDiscountPct?: number;
+  /** mesa -> sesión viva, para abrir la hoja de cobro desde la tarjeta de solicitud. */
+  tableSessionMap?: Record<string, string>;
 }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
@@ -222,7 +232,15 @@ export function OrdersBoard({
           ) : (
             <AnimatePresence mode="popLayout">
               {visibleCalls.map((call) => (
-                <CallCard key={call.id} call={call} onDone={refresh} />
+                <CallCard
+                  key={call.id}
+                  call={call}
+                  onDone={refresh}
+                  billingEnabled={billingEnabled}
+                  role={role}
+                  maxWaiterDiscountPct={maxWaiterDiscountPct}
+                  tableSessionId={tableSessionMap[call.table_id]}
+                />
               ))}
             </AnimatePresence>
           )}

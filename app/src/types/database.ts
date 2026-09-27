@@ -65,6 +65,447 @@ export type Database = {
           },
         ]
       }
+      bill_discounts: {
+        Row: {
+          amount: number
+          applied_at: string
+          applied_by: string | null
+          bill_id: string
+          id: string
+          kind: Database["public"]["Enums"]["discount_kind"]
+          order_item_id: string | null
+          reason: string
+          removed_at: string | null
+          removed_by: string | null
+          removed_reason: string | null
+          restaurant_id: string
+          value: number
+        }
+        Insert: {
+          amount?: number
+          applied_at?: string
+          applied_by?: string | null
+          bill_id: string
+          id?: string
+          kind: Database["public"]["Enums"]["discount_kind"]
+          order_item_id?: string | null
+          reason: string
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_reason?: string | null
+          restaurant_id: string
+          value: number
+        }
+        Update: {
+          amount?: number
+          applied_at?: string
+          applied_by?: string | null
+          bill_id?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["discount_kind"]
+          order_item_id?: string | null
+          reason?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_reason?: string | null
+          restaurant_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_discounts_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_discounts_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_discounts_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_discounts_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_discounts_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bills: {
+        Row: {
+          balance: number
+          bill_number: number
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_tax_id: string | null
+          discount_total: number
+          id: string
+          invoice_id: string | null
+          opened_at: string
+          opened_by: string | null
+          paid_at: string | null
+          paid_total: number
+          restaurant_id: string
+          split_mode: Database["public"]["Enums"]["bill_split_mode"]
+          split_parts: number
+          status: Database["public"]["Enums"]["bill_status"]
+          subtotal: number
+          table_id: string
+          table_session_id: string
+          tip_total: number
+          total: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          balance?: number
+          bill_number?: never
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_tax_id?: string | null
+          discount_total?: number
+          id?: string
+          invoice_id?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          paid_at?: string | null
+          paid_total?: number
+          restaurant_id: string
+          split_mode?: Database["public"]["Enums"]["bill_split_mode"]
+          split_parts?: number
+          status?: Database["public"]["Enums"]["bill_status"]
+          subtotal?: number
+          table_id: string
+          table_session_id: string
+          tip_total?: number
+          total?: number
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          balance?: number
+          bill_number?: never
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_tax_id?: string | null
+          discount_total?: number
+          id?: string
+          invoice_id?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          paid_at?: string | null
+          paid_total?: number
+          restaurant_id?: string
+          split_mode?: Database["public"]["Enums"]["bill_split_mode"]
+          split_parts?: number
+          status?: Database["public"]["Enums"]["bill_status"]
+          subtotal?: number
+          table_id?: string
+          table_session_id?: string
+          tip_total?: number
+          total?: number
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_table_session_id_fkey"
+            columns: ["table_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_movements: {
+        Row: {
+          amount: number
+          cash_session_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expense_id: string | null
+          id: string
+          idempotency_key: string
+          purchase_id: string | null
+          reason: Database["public"]["Enums"]["cash_movement_reason"]
+          restaurant_id: string
+          type: Database["public"]["Enums"]["cash_movement_type"]
+        }
+        Insert: {
+          amount: number
+          cash_session_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_id?: string | null
+          id?: string
+          idempotency_key: string
+          purchase_id?: string | null
+          reason: Database["public"]["Enums"]["cash_movement_reason"]
+          restaurant_id: string
+          type: Database["public"]["Enums"]["cash_movement_type"]
+        }
+        Update: {
+          amount?: number
+          cash_session_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_id?: string | null
+          id?: string
+          idempotency_key?: string
+          purchase_id?: string | null
+          reason?: Database["public"]["Enums"]["cash_movement_reason"]
+          restaurant_id?: string
+          type?: Database["public"]["Enums"]["cash_movement_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_cash_session_id_fkey"
+            columns: ["cash_session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_session_counts: {
+        Row: {
+          cash_session_id: string
+          counted: number | null
+          difference: number | null
+          expected: number
+          method: Database["public"]["Enums"]["payment_method"]
+          restaurant_id: string
+        }
+        Insert: {
+          cash_session_id: string
+          counted?: number | null
+          difference?: number | null
+          expected: number
+          method: Database["public"]["Enums"]["payment_method"]
+          restaurant_id: string
+        }
+        Update: {
+          cash_session_id?: string
+          counted?: number | null
+          difference?: number | null
+          expected?: number
+          method?: Database["public"]["Enums"]["payment_method"]
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_session_counts_cash_session_id_fkey"
+            columns: ["cash_session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_session_counts_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string | null
+          opening_float: number
+          register_id: string
+          restaurant_id: string
+          status: Database["public"]["Enums"]["cash_session_status"]
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          opening_float?: number
+          register_id: string
+          restaurant_id: string
+          status?: Database["public"]["Enums"]["cash_session_status"]
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          opening_float?: number
+          register_id?: string
+          restaurant_id?: string
+          status?: Database["public"]["Enums"]["cash_session_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           active: boolean
@@ -277,6 +718,154 @@ export type Database = {
             columns: ["table_session_id"]
             isOneToOne: false
             referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_items: {
+        Row: {
+          order_item_id: string
+          payment_id: string
+          quantity: number
+          restaurant_id: string
+        }
+        Insert: {
+          order_item_id: string
+          payment_id: string
+          quantity: number
+          restaurant_id: string
+        }
+        Update: {
+          order_item_id?: string
+          payment_id?: string
+          quantity?: number
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_items_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_items_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          bill_id: string
+          card_type: string | null
+          cash_session_id: string
+          change_amount: number | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          invoice_id: string | null
+          method: Database["public"]["Enums"]["payment_method"]
+          received_at: string
+          received_by: string | null
+          reference: string | null
+          restaurant_id: string
+          status: Database["public"]["Enums"]["payment_status"]
+          tendered_amount: number | null
+          tip_amount: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          bill_id: string
+          card_type?: string | null
+          cash_session_id: string
+          change_amount?: number | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          invoice_id?: string | null
+          method: Database["public"]["Enums"]["payment_method"]
+          received_at?: string
+          received_by?: string | null
+          reference?: string | null
+          restaurant_id: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          tendered_amount?: number | null
+          tip_amount?: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          bill_id?: string
+          card_type?: string | null
+          cash_session_id?: string
+          change_amount?: number | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          invoice_id?: string | null
+          method?: Database["public"]["Enums"]["payment_method"]
+          received_at?: string
+          received_by?: string | null
+          reference?: string | null
+          restaurant_id?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          tendered_amount?: number | null
+          tip_amount?: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_cash_session_id_fkey"
+            columns: ["cash_session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -732,6 +1321,28 @@ export type Database = {
         Returns: undefined
       }
       accept_order: { Args: { p_order_id: string }; Returns: undefined }
+      add_cash_movement: {
+        Args: {
+          p_amount: number
+          p_cash_session_id: string
+          p_description: string
+          p_idempotency_key: string
+          p_reason: Database["public"]["Enums"]["cash_movement_reason"]
+          p_type: Database["public"]["Enums"]["cash_movement_type"]
+        }
+        Returns: Json
+      }
+      apply_bill_discount: {
+        Args: {
+          p_bill_id: string
+          p_kind: Database["public"]["Enums"]["discount_kind"]
+          p_order_item_id?: string
+          p_reason: string
+          p_value: number
+        }
+        Returns: Json
+      }
+      bill_json: { Args: { p_bill_id: string }; Returns: Json }
       business_date: {
         Args: { p_restaurant_id: string; p_ts?: string }
         Returns: string
@@ -748,7 +1359,22 @@ export type Database = {
         Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
       }
-      close_table_session: { Args: { p_table_id: string }; Returns: undefined }
+      cash_session_expected: {
+        Args: { p_cash_session_id: string }
+        Returns: {
+          expected: number
+          method: Database["public"]["Enums"]["payment_method"]
+        }[]
+      }
+      close_bill: { Args: { p_bill_id: string }; Returns: Json }
+      close_cash_session: {
+        Args: { p_cash_session_id: string; p_counts: Json; p_notes?: string }
+        Returns: Json
+      }
+      close_table_session: {
+        Args: { p_force?: boolean; p_reason?: string; p_table_id: string }
+        Returns: undefined
+      }
       create_customer_order: {
         Args: { p_items: Json; p_notes?: string; p_session_token: string }
         Returns: string
@@ -763,6 +1389,46 @@ export type Database = {
           p_type: Database["public"]["Enums"]["waiter_call_type"]
         }
         Returns: string
+      }
+      finalize_bill: {
+        Args: { p_bill_id: string; p_user_id: string }
+        Returns: {
+          balance: number
+          bill_number: number
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_tax_id: string | null
+          discount_total: number
+          id: string
+          invoice_id: string | null
+          opened_at: string
+          opened_by: string | null
+          paid_at: string | null
+          paid_total: number
+          restaurant_id: string
+          split_mode: Database["public"]["Enums"]["bill_split_mode"]
+          split_parts: number
+          status: Database["public"]["Enums"]["bill_status"]
+          subtotal: number
+          table_id: string
+          table_session_id: string
+          tip_total: number
+          total: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bills"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       find_or_create_active_table_session: {
         Args: { p_restaurant_id: string; p_table_id: string }
@@ -784,6 +1450,11 @@ export type Database = {
         }
       }
       get_admin_menu: { Args: { p_restaurant_id: string }; Returns: Json }
+      get_bill: { Args: { p_bill_id: string }; Returns: Json }
+      get_cash_session_summary: {
+        Args: { p_cash_session_id: string }
+        Returns: Json
+      }
       get_customer_order: {
         Args: { p_order_id: string; p_session_token: string }
         Returns: Json
@@ -794,6 +1465,7 @@ export type Database = {
       }
       get_my_restaurant: { Args: never; Returns: Json }
       get_public_menu: { Args: { p_slug: string }; Returns: Json }
+      get_session_bill: { Args: { p_session_token: string }; Returns: Json }
       get_session_calls: { Args: { p_session_token: string }; Returns: Json }
       get_session_orders: { Args: { p_session_token: string }; Returns: Json }
       get_staff_members: { Args: { p_restaurant_id: string }; Returns: Json }
@@ -825,12 +1497,122 @@ export type Database = {
         Returns: undefined
       }
       health_check: { Args: never; Returns: string }
+      list_open_bills: { Args: { p_restaurant_id: string }; Returns: Json }
+      lock_bill: {
+        Args: { p_bill_id: string }
+        Returns: {
+          balance: number
+          bill_number: number
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_tax_id: string | null
+          discount_total: number
+          id: string
+          invoice_id: string | null
+          opened_at: string
+          opened_by: string | null
+          paid_at: string | null
+          paid_total: number
+          restaurant_id: string
+          split_mode: Database["public"]["Enums"]["bill_split_mode"]
+          split_parts: number
+          status: Database["public"]["Enums"]["bill_status"]
+          subtotal: number
+          table_id: string
+          table_session_id: string
+          tip_total: number
+          total: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bills"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       mark_order_delivered: { Args: { p_order_id: string }; Returns: undefined }
       mark_order_ready: { Args: { p_order_id: string }; Returns: undefined }
+      open_bill: { Args: { p_table_session_id: string }; Returns: Json }
+      open_cash_session: {
+        Args: { p_opening_float?: number; p_register_id: string }
+        Returns: Json
+      }
+      recompute_bill: {
+        Args: { p_bill_id: string }
+        Returns: {
+          balance: number
+          bill_number: number
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_tax_id: string | null
+          discount_total: number
+          id: string
+          invoice_id: string | null
+          opened_at: string
+          opened_by: string | null
+          paid_at: string | null
+          paid_total: number
+          restaurant_id: string
+          split_mode: Database["public"]["Enums"]["bill_split_mode"]
+          split_parts: number
+          status: Database["public"]["Enums"]["bill_status"]
+          subtotal: number
+          table_id: string
+          table_session_id: string
+          tip_total: number
+          total: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bills"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      record_payment: {
+        Args: {
+          p_amount: number
+          p_auto_close?: boolean
+          p_bill_id: string
+          p_card_type?: string
+          p_cash_session_id?: string
+          p_idempotency_key: string
+          p_items?: Json
+          p_method: Database["public"]["Enums"]["payment_method"]
+          p_reference?: string
+          p_tendered_amount?: number
+          p_tip_amount?: number
+        }
+        Returns: Json
+      }
       refresh_table_status: { Args: { p_table_id: string }; Returns: undefined }
       reject_order: {
         Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
+      }
+      remove_bill_discount: {
+        Args: { p_discount_id: string; p_reason?: string }
+        Returns: Json
+      }
+      resolve_open_cash_session: {
+        Args: { p_cash_session_id?: string; p_restaurant_id: string }
+        Returns: string
       }
       resolve_table_qr: {
         Args: { p_qr_token: string }
@@ -844,6 +1626,14 @@ export type Database = {
         }[]
       }
       restaurant_tz: { Args: { p_restaurant_id: string }; Returns: string }
+      set_bill_split: {
+        Args: {
+          p_bill_id: string
+          p_mode: Database["public"]["Enums"]["bill_split_mode"]
+          p_parts?: number
+        }
+        Returns: Json
+      }
       start_order_preparing: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -866,6 +1656,14 @@ export type Database = {
           target_role: Database["public"]["Enums"]["member_role"]
         }
         Returns: boolean
+      }
+      void_bill: {
+        Args: { p_bill_id: string; p_reason: string }
+        Returns: Json
+      }
+      void_payment: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: Json
       }
     }
     Enums: {
