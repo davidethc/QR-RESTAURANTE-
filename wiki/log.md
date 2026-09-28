@@ -332,12 +332,25 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 
 ---
 
+---
+
+## [2026-09-28] lint+audit | Auditoría completa y actualización de docs
+
+- **Resumen**: Actualización de CLAUDE.md (estructura actual, prioridades P0–P3), corrección de contradicciones en wiki (cobro solo OWNER/ADMIN, roles 4 no 5, reglas 27–28 en lugar de 25–26), evolución del alcance MVP (cobro y reportes ya incluidos), y nueva página de auditoría 2026-09-28. Cambio de nombres viejos de migraciones en app/TESTING.md.
+- **Páginas actualizadas**: [[Wiki Index]] (estadísticas actualizadas), [[Roles del Sistema]] (4 roles, sin Superadmin), [[Reglas de Negocio MVP]] (reglas renumeradas 27–28), [[MVP - Alcance y Especificaciones]] (evolución, módulos nuevos)
+- **Nuevas páginas**: [[Estado del Sistema — Auditoría 2026-09-28]]
+- **Archivos actualizados**: CLAUDE.md (raíz), app/TESTING.md (nombres de migraciones: 20260928024924 y 20260928024941)
+- **Contradiciones resueltas**: Quién cobra (mesero → solo OWNER/ADMIN), Superadmin (futuro, no MVP), números de reglas duplicados (25–26 → 27–28)
+- **Duración**: 45min
+
+---
+
 ## Próximos pasos
 
 1. **Loop automático**: ✅ Configurado. Chequea `raw/assets/` cada 10 min, ingesta automática de archivos nuevos
 2. **Query**: Hacer preguntas profundas (e.g. "¿Validaciones necesarias para acceptOrder()?")
 3. **Lint**: Revisar salud del wiki (consistency, gaps, orphans)
-4. **Phase 2**: DATABASE DESIGN V1 (ER diagram, SQL migrations, RLS policies)
+4. **Roadmap**: Implementar P0 (backups, repo privado) → P1 (staging, tests) → P2 (SRI, inventario)
 
 ---
 

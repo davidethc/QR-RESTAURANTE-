@@ -31,7 +31,9 @@ Catálogo de todas las páginas en el wiki. Se actualiza con cada ingesta.
 
 - [[Proyecto QR - Visión General]] — Síntesis completa del proyecto: visión, problema, solución, propuesta de valor, fases
 - [[Fase UX — Wireframes (Síntesis)]] — Resumen de wireframes para Cliente, Mesero y Cocina
-- [[Estado del Sistema — Auditoría 2026-09-26]] — Qué existe, qué está a medias, qué falta (cobro, reportes, SRI, inventario), bugs y riesgos de producción, latencias reales de tiempo real
+- [[Estado del Sistema — Auditoría 2026-09-26]] — Qué existe, qué está a medias, qué falta; bugs y riesgos
+- [[Estado del Sistema — Auditoría 2026-09-28]] — Producción con cobro y reportes, P0/P1/P2 actualizado
+- [[Diseño: Cobro y Caja, Reportes, Inventario y Costos]] — Base de datos para los tres módulos
 
 ## Comparisons
 *Análisis comparativos entre fuentes o conceptos*
@@ -58,12 +60,12 @@ Catálogo de todas las páginas en el wiki. Se actualiza con cada ingesta.
 ---
 
 **Estadísticas**
-- Total páginas: 12 (+ index + log = 14) ⬆️ +1
+- Total páginas: 19 (+ index + log = 21) ⬆️ +2
 - Entidades: 1
-- Conceptos: 7 ⬆️ +1 (Modelo de Datos Definitivo)
-- Síntesis: 2
+- Conceptos: 8 ⬆️ +1 (Panel del Admin actualizado)
+- Síntesis: 5 ⬆️ +2 (Estado 2026-09-28, Diseño de Cobro)
 - Comparaciones: 1
 - Referencias: 2 (Fuentes Originales + Índice de Búsqueda)
-- Fuentes ingestionadas: 8 (raw/assets) ⬆️ +1
+- Fuentes ingestionadas: 8 (raw/assets)
 
-**Última actualización**: 2026-09-02 ⬅️ Ingesta DATABASE DESIGN V2
+**Última actualización**: 2026-09-28 ⬅️ Auditoría de producción, correcciones de contradicciones

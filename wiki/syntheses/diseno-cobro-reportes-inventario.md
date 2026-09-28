@@ -13,7 +13,7 @@ aliases: ["diseno-cobro-reportes-inventario"]
 Diseño a nivel de base de datos y RPC de los tres módulos que convierten Monky en un sistema de gestión, de la carta al estado de resultados. Es la **fuente de verdad** para los agentes que lo implementan. La facturación electrónica SRI queda fuera, pero sus puntos de extensión se dejan marcados.
 
 ## Decisiones tomadas (2026-09-26)
-- **Quién cobra**: mesero, admin y dueño. Los descuentos y los movimientos de caja son solo para admin y dueño; el mesero puede descontar hasta `max_waiter_discount_pct`, que es 0 por defecto.
+- **Quién cobra**: solo OWNER y ADMIN (desde 2026-09-27, migración `only_admin_handles_money`). Los descuentos y movimientos de caja son exclusivos del admin y dueño.
 - **Cajas**: una por restaurante. El modelo soporta varias, pero se crea "Caja principal".
 - **Cierre de caja**: ciego para el mesero; admin y dueño ven el monto esperado.
 - **Stock**: se descuenta al pasar el pedido a **DELIVERED**.
