@@ -3,22 +3,46 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTableSession } from "@/lib/session";
-import type { CartItem, StaffCartItem } from "@/types/menu";
-import type { CustomerOrder, SessionOrderSummary } from "@/types/staff";
+import { dbFailure } from "@/lib/db-errors";
+import {
+  customerOrderSchema,
+  staffOrderSchema,
+  type CustomerOrderInput,
+  type StaffOrderInput,
+} from "@/lib/validations/orders";
+import type { CustomerOrder } from "@/types/staff";
 import type { ActionResult } from "@/types/actions";
 
 const NO_SESSION_ERROR =
   "No encontramos tu mesa. Escanea el código QR nuevamente.";
 
+function firstIssue(error: { issues: { message: string }[] }): string {
+  return error.issues[0]?.message ?? "Pedido inválido.";
+}
+
+function toRpcItems(items: { productId: string; quantity: number; notes: string | null }[]) {
+  return items.map((item) => ({
+    product_id: item.productId,
+    quantity: item.quantity,
+    notes: item.notes,
+  }));
+}
+
 /**
  * El token de sesión vive en una cookie httpOnly — el navegador nunca
  * lo ve ni puede pasarlo como argumento. Estas actions lo leen ellas
  * mismas, del lado del servidor; el cliente solo llama sin token.
+ *
+ * `clientRequestId` es la clave de idempotencia del envío: el carrito la
+ * reutiliza en los reintentos del mismo contenido, así un "Enviar" que
+ * llegó a la base pero cuya respuesta se perdió no crea un pedido doble.
  */
 export async function createOrder(
-  items: CartItem[],
-  notes?: string
+  input: CustomerOrderInput
 ): Promise<ActionResult<string>> {
+  const parsed = customerOrderSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
   const session = await getTableSession();
   if (!session) return { ok: false, error: NO_SESSION_ERROR };
 
@@ -26,15 +50,12 @@ export async function createOrder(
 
   const { data, error } = await supabase.rpc("create_customer_order", {
     p_session_token: session.sessionToken,
-    p_items: items.map((item) => ({
-      product_id: item.product.id,
-      quantity: item.quantity,
-      notes: item.notes || null,
-    })),
-    p_notes: notes,
+    p_items: toRpcItems(parsed.data.items),
+    p_notes: parsed.data.notes ?? undefined,
+    p_client_request_id: parsed.data.clientRequestId,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "createOrder");
   return { ok: true, data };
 }
 
@@ -51,23 +72,21 @@ export async function createOrder(
  * acto seguido, así que no tiene sentido hacerle dar ese segundo paso.
  */
 export async function createStaffOrder(
-  tableId: string,
-  items: StaffCartItem[],
-  notes?: string
+  input: StaffOrderInput
 ): Promise<ActionResult<string>> {
+  const parsed = staffOrderSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("create_staff_order", {
-    p_table_id: tableId,
-    p_items: items.map((item) => ({
-      product_id: item.productId,
-      quantity: item.quantity,
-      notes: item.notes || null,
-    })),
-    p_notes: notes,
+    p_table_id: parsed.data.tableId,
+    p_items: toRpcItems(parsed.data.items),
+    p_notes: parsed.data.notes ?? undefined,
+    p_client_request_id: parsed.data.clientRequestId,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "createStaffOrder");
 
   revalidatePath("/tables");
   revalidatePath("/orders");
@@ -88,24 +107,8 @@ export async function getOrderStatus(
     p_order_id: orderId,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "getOrderStatus");
   return { ok: true, data: data as unknown as CustomerOrder };
-}
-
-export async function getSessionOrders(): Promise<
-  ActionResult<SessionOrderSummary[]>
-> {
-  const session = await getTableSession();
-  if (!session) return { ok: false, error: NO_SESSION_ERROR };
-
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("get_session_orders", {
-    p_session_token: session.sessionToken,
-  });
-
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, data: (data ?? []) as unknown as SessionOrderSummary[] };
 }
 
 /**
@@ -117,8 +120,7 @@ export async function getSessionOrders(): Promise<
  * transacción de Postgres — si algo falla, no queda a medias (nunca
  * un pedido "aceptado pero no marcado preparando" por un error de red
  * entre dos llamadas separadas). `accept_order` y `start_order_preparing`
- * (y `startPreparing` abajo) quedan sin pantalla que las use: son
- * inofensivas y se conservan por compatibilidad con PWAs en caché.
+ * quedan en la base sin pantalla que las use.
  */
 export async function acceptOrder(orderId: string): Promise<ActionResult> {
   const supabase = await createClient();
@@ -126,7 +128,7 @@ export async function acceptOrder(orderId: string): Promise<ActionResult> {
   const { error } = await supabase.rpc("accept_and_prepare_order", {
     p_order_id: orderId,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "acceptOrder");
 
   revalidatePath("/orders");
   revalidatePath("/kitchen");
@@ -143,19 +145,7 @@ export async function rejectOrder(
     p_reason: reason,
   });
 
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/orders");
-  return { ok: true, data: undefined };
-}
-
-export async function startPreparing(orderId: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("start_order_preparing", {
-    p_order_id: orderId,
-  });
-
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/kitchen");
+  if (error) return dbFailure(error, "rejectOrder");
   revalidatePath("/orders");
   return { ok: true, data: undefined };
 }
@@ -171,7 +161,7 @@ export async function markReady(orderId: string): Promise<ActionResult> {
     p_order_id: orderId,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "markReady");
   revalidatePath("/kitchen");
   revalidatePath("/orders");
   return { ok: true, data: undefined };
@@ -190,7 +180,7 @@ export async function markDelivered(orderId: string): Promise<ActionResult> {
     p_order_id: orderId,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "markDelivered");
   revalidatePath("/orders");
   revalidatePath("/kitchen");
   return { ok: true, data: undefined };

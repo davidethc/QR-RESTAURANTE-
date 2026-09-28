@@ -1857,7 +1857,7 @@ un click real, no de leer el código y asumir).
 | 5b | Parte 2 tarjeta $4,25 + referencia `AUTH-QA-0001` | ✅ PASA — cuenta queda CLOSED, saldo $0 |
 | 5c | Mesa vuelve a Disponible en `/tables`, llamada queda atendida, cliente ve "Pagado · ¡gracias!" sin recargar | ✅ PASA — confirmado también con SQL (`bills.status='CLOSED'`, `paid_total=8.50`) |
 | 6 | Mesa 2: pedido Agua QA $1,25 + Café QA $1,75 entregado → `/tables` "Cobrar y liberar" → por ítems: Agua efectivo exacto, Café transferencia | ✅ PASA — monto se autocompleta al marcar el ítem; mesa liberada; **cliente vio "Pagado · ¡gracias!" sin recargar, confirmado en vivo** (tab nunca navegada, banner apareció solo por sondeo) |
-| 7a | Mesa 3 entregado ($1,25) → mesero intenta liberar sin cobrar | ✅ PASA (por diseño) — el mesero **no tiene ningún botón** para liberar sin cobrar cuando `billing_enabled`; solo ve "Cobrar y liberar". Confirmado además a nivel RPC (`close_table_session`, `supabase/migrations/20260926170500_...sql`): con saldo pendiente y sin `p_force`, lanza `'La mesa tiene % pendiente de cobro...'`; con `p_force` y rol no admin, lanza `'Solo el dueño o un administrador pueden forzar...'`. No hay forma de que el mesero dispare este flujo desde la UI ni de que la RPC se lo permita si lo intentara por otra vía. |
+| 7a | Mesa 3 entregado ($1,25) → mesero intenta liberar sin cobrar | ✅ PASA (por diseño) — el mesero **no tiene ningún botón** para liberar sin cobrar cuando `billing_enabled`; solo ve "Cobrar y liberar". Confirmado además a nivel RPC (`close_table_session`, `supabase/migrations/20260926201950_close_table_session_requires_payment.sql`): con saldo pendiente y sin `p_force`, lanza `'La mesa tiene % pendiente de cobro...'`; con `p_force` y rol no admin, lanza `'Solo el dueño o un administrador pueden forzar...'`. No hay forma de que el mesero dispare este flujo desde la UI ni de que la RPC se lo permita si lo intentara por otra vía. |
 | 7b | Dueño "Forzar cierre" con motivo | ✅ PASA — mesa vuelve a Disponible, cuenta queda `OPEN` (no se pierde el cobro) y aparece en "Cuentas abiertas" de `/cash` con saldo $1,25 |
 | 8a | Mesero intenta aplicar descuento (tope 0%) | ✅ PASA (por diseño) — con `max_waiter_discount_pct=0` el botón "Aplicar descuento" **no se renderiza** para el mesero (`canDiscount = isAdmin || maxWaiterDiscountPct > 0`, `charge-sheet.tsx:76`); no hay forma de intentarlo desde la UI |
 | 8b | Dueño aplica 10% con motivo en cuenta nueva ($2,50 → $2,25) y cobra | ✅ PASA — descuento mostrado en vivo (Subtotal $2,50, Descuento −$0,25, Total $2,25), cobrado y cerrado correcto |
@@ -2090,8 +2090,8 @@ Mesa 1 conserva $27,50 sin cobrar de la presentación del 26-sep (pedido #76 en 
 
 ## Panel del admin: Personal, Ventas, Hoy y cobro en Configuración (2026-09-28)
 
-Rama `claude/peaceful-turing-6mhpzs`. Migraciones `20260928120000_staff_management`
-y `20260928120100_sales_report` **aplicadas** a `fvzxfbzujvkkvniyphps`.
+Rama `claude/peaceful-turing-6mhpzs`. Migraciones `20260928024924_staff_management`
+y `20260928024941_sales_report` **aplicadas** a `fvzxfbzujvkkvniyphps`.
 
 ### Verificado
 

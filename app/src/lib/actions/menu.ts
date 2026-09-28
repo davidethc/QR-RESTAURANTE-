@@ -1,7 +1,9 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { refreshPublicMenuTag } from "@/lib/public-menu-tag";
 import { createClient } from "@/lib/supabase/server";
+import { dbFailure } from "@/lib/db-errors";
 import { categorySchema, productSchema } from "@/lib/validations/menu";
 import type { ActionResult } from "@/types/actions";
 
@@ -14,9 +16,21 @@ import type { ActionResult } from "@/types/actions";
  * el cliente vería el producto viejo hasta 5 minutos.
  */
 
+/**
+ * RLS no lanza error cuando bloquea un UPDATE/DELETE: simplemente afecta 0
+ * filas. Por eso cada escritura pide `.select("id")` y, si no volvió nada,
+ * el cambio no ocurrió (sin permiso o el registro ya no existe) y no se
+ * reporta como éxito.
+ */
+function notFoundOrForbidden(what: string): { ok: false; error: string } {
+  return {
+    ok: false,
+    error: `No se pudo modificar ${what}: ya no existe o no tienes permiso.`,
+  };
+}
+
 export async function createCategory(
   restaurantId: string,
-  slug: string,
   input: unknown
 ): Promise<ActionResult<string>> {
   const parsed = categorySchema.safeParse(input);
@@ -35,15 +49,14 @@ export async function createCategory(
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "createCategory");
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: data.id };
 }
 
 export async function updateCategory(
   categoryId: string,
-  slug: string,
   input: unknown
 ): Promise<ActionResult> {
   const parsed = categorySchema.safeParse(input);
@@ -52,39 +65,41 @@ export async function updateCategory(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("categories")
     .update({
       name: parsed.data.name,
       description: parsed.data.description || null,
     })
-    .eq("id", categoryId);
+    .eq("id", categoryId)
+    .select("id");
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "updateCategory");
+  if (!data?.length) return notFoundOrForbidden("la categoría");
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
 export async function deleteCategory(
   categoryId: string,
-  slug: string
 ): Promise<ActionResult> {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("categories")
     .delete()
-    .eq("id", categoryId);
+    .eq("id", categoryId)
+    .select("id");
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "deleteCategory");
+  if (!data?.length) return notFoundOrForbidden("la categoría");
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
 export async function createProduct(
   restaurantId: string,
-  slug: string,
   input: unknown
 ): Promise<ActionResult<string>> {
   const parsed = productSchema.safeParse(input);
@@ -108,15 +123,14 @@ export async function createProduct(
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "createProduct");
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: data.id };
 }
 
 export async function updateProduct(
   productId: string,
-  slug: string,
   input: unknown
 ): Promise<ActionResult> {
   const parsed = productSchema.safeParse(input);
@@ -125,7 +139,7 @@ export async function updateProduct(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("products")
     .update({
       category_id: parsed.data.category_id || null,
@@ -136,41 +150,48 @@ export async function updateProduct(
       featured: parsed.data.featured,
       paired_drink_id: parsed.data.paired_drink_id || null,
     })
-    .eq("id", productId);
+    .eq("id", productId)
+    .select("id");
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "updateProduct");
+  if (!data?.length) return notFoundOrForbidden("el producto");
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
 export async function deleteProduct(
   productId: string,
-  slug: string
 ): Promise<ActionResult> {
   const supabase = await createClient();
-  const { error } = await supabase.from("products").delete().eq("id", productId);
+  const { data, error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId)
+    .select("id");
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "deleteProduct");
+  if (!data?.length) return notFoundOrForbidden("el producto");
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
 export async function toggleProductAvailable(
   productId: string,
-  slug: string,
   available: boolean
 ): Promise<ActionResult> {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("products")
     .update({ available })
-    .eq("id", productId);
+    .eq("id", productId)
+    .select("id");
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "toggleProductAvailable");
+  if (!data?.length) return notFoundOrForbidden("el producto");
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
@@ -187,7 +208,6 @@ export async function toggleProductAvailable(
  * existe) se reportaría como éxito aunque no haya cambiado nada.
  */
 export async function reorderCategories(
-  slug: string,
   orderedIds: string[]
 ): Promise<ActionResult> {
   const supabase = await createClient();
@@ -197,18 +217,17 @@ export async function reorderCategories(
     )
   );
   const failed = results.find((r) => r.error);
-  if (failed?.error) return { ok: false, error: failed.error.message };
+  if (failed?.error) return dbFailure(failed.error, "reorderCategories");
   if (results.some((r) => (r.data?.length ?? 0) === 0)) {
     return { ok: false, error: "No autorizado para reordenar categorías." };
   }
 
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
 export async function reorderProducts(
-  slug: string,
   orderedIds: string[]
 ): Promise<ActionResult> {
   const supabase = await createClient();
@@ -218,13 +237,13 @@ export async function reorderProducts(
     )
   );
   const failed = results.find((r) => r.error);
-  if (failed?.error) return { ok: false, error: failed.error.message };
+  if (failed?.error) return dbFailure(failed.error, "reorderProducts");
   if (results.some((r) => (r.data?.length ?? 0) === 0)) {
     return { ok: false, error: "No autorizado para reordenar productos." };
   }
 
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
@@ -234,7 +253,6 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export async function uploadProductImage(
   restaurantId: string,
   productId: string,
-  slug: string,
   formData: FormData
 ): Promise<ActionResult<string>> {
   const file = formData.get("file");
@@ -256,20 +274,25 @@ export async function uploadProductImage(
     .from("product-images")
     .upload(path, file, { contentType: file.type, upsert: false });
 
-  if (uploadError) return { ok: false, error: uploadError.message };
+  if (uploadError) return dbFailure(uploadError, "uploadProductImage");
 
   const {
     data: { publicUrl },
   } = supabase.storage.from("product-images").getPublicUrl(path);
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("products")
     .update({ image_url: publicUrl })
-    .eq("id", productId);
+    .eq("id", productId)
+    .select("id");
 
-  if (updateError) return { ok: false, error: updateError.message };
+  if (updateError || !updated?.length) {
+    await supabase.storage.from("product-images").remove([path]);
+    if (updateError) return dbFailure(updateError, "uploadProductImage");
+    return notFoundOrForbidden("el producto");
+  }
 
   revalidatePath("/menu");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: publicUrl };
 }

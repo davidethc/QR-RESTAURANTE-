@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { dbFailure } from "@/lib/db-errors";
 import type { ActionResult } from "@/types/actions";
 
 /** Tope por operación: un dedo resbalado no debe crear mil filas. */
@@ -64,7 +65,7 @@ export async function createTables(
           : `Alguna mesa entre la ${fromNumber} y la ${toNumber} ya existe. No se creó ninguna.`,
       };
     }
-    return { ok: false, error: error.message };
+    return dbFailure(error, "createTables");
   }
 
   revalidatePath("/tables");
@@ -80,7 +81,7 @@ export async function closeTableSession(
     p_table_id: tableId,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "closeTableSession");
   revalidatePath("/tables");
   return { ok: true, data: undefined };
 }

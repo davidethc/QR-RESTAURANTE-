@@ -24,11 +24,9 @@ import type { AdminCategory } from "@/types/staff";
 
 export function CategoryDialog({
   restaurantId,
-  slug,
   category,
 }: {
   restaurantId: string;
-  slug: string;
   category?: AdminCategory;
 }) {
   const [open, setOpen] = useState(false);
@@ -53,8 +51,8 @@ export function CategoryDialog({
   function onSubmit(values: CategoryInput) {
     startTransition(async () => {
       const result = isEdit
-        ? await updateCategory(category.id, slug, values)
-        : await createCategory(restaurantId, slug, values);
+        ? await updateCategory(category.id, values)
+        : await createCategory(restaurantId, values);
 
       if (!result.ok) {
         setError("root", { message: result.error });

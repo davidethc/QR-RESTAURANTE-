@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { LoginForm } from "./_components/login-form";
+import { LoginNotice } from "./_components/login-notice";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -21,6 +23,9 @@ export default function LoginPage() {
             Inicia sesión para gestionar pedidos y solicitudes.
           </p>
         </div>
+        <Suspense fallback={null}>
+          <LoginNotice />
+        </Suspense>
         <LoginForm />
       </div>
     </main>

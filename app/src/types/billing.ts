@@ -108,8 +108,10 @@ export type Bill = {
 };
 
 export type OpenBillSummary = {
-  id: string;
-  bill_number: number;
+  /** null cuando la mesa tiene consumo sin cobrar pero aún no abrió cuenta (has_bill=false). */
+  id: string | null;
+  bill_number: number | null;
+  has_bill: boolean;
   table_id: string;
   table_number: number;
   table_name: string | null;

@@ -25,6 +25,12 @@ export async function GET(
     p_qr_token: token,
   });
 
+  // Sesión inactiva con consumo sin cobrar: no se entrega a otro cliente
+  // (vería y sumaría a la cuenta ajena); el personal la cobra o la cierra.
+  if (error?.code === "P0001" && error.message.includes("cuenta pendiente")) {
+    redirect("/mesa-pendiente");
+  }
+
   if (error || !data?.length) {
     redirect("/qr-invalido");
   }

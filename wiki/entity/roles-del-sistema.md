@@ -3,13 +3,16 @@ title: "Roles del Sistema"
 type: "entity"
 created: "2026-09-01"
 updated: "2026-09-28"
+aliases: ["roles-del-sistema"]
 sources: ["Roles y flujo operativo — MVP.md", "PROYECTO_ SISTEMA DIGITAL DE ATENCIÓN Y PEDIDOS PARA RESTAURANTES.md"]
 tags: ["roles", "usuarios", "sistema"]
 ---
 
 # Roles del Sistema
 
-El MVP implementa cinco roles operativos con responsabilidades claramente definidas.
+El MVP implementa cuatro roles operativos en la base de datos (`OWNER`, `ADMIN`, `WAITER`, `KITCHEN`), que se mapean a tres perfiles de usuario en el negocio: Cliente, Mesero, y Admin/Dueño.
+
+**Nota**: El rol `SUPERADMIN` (propietario de la plataforma) no existe aún en producción; se reserva para fases futuras de SaaS.
 
 ## 1. Cliente
 
@@ -238,46 +241,27 @@ Nota: Especial preparación
 
 ---
 
-## 5. Superadministrador (Propietario de la Plataforma)
+## 5. Superadministrador (Propietario de la Plataforma) — *Futuro*
 
-**Definición**: Tú, como propietario de la plataforma, con acceso total al sistema.
-
-### Acciones principales
-- Crear restaurantes
-- Suspender restaurantes
-- Ver todos los restaurantes
-- Ver planes y suscripciones
-- Administrar suscripciones
-- Ver actividad del sistema
-- Gestionar cuentas
-- Dar soporte
-- Configurar funcionalidades globales
-- Ver métricas de plataforma
-
-### Lo que superadmin gestiona
-- Infraestructura
-- Usuarios de todo restaurante
-- Políticas de plataforma
-- Integraciones
-- Actualizaciones
+**Nota**: Este rol **no existe en el MVP**. Se reserva para cuando Monky evolucione a un modelo SaaS multi-restaurante.
 
 ---
 
 ## Matriz de Permisos (MVP)
 
-| Acción | Cliente | Mesero | Cocina | Admin | SuperAdmin |
-|--------|---------|--------|--------|-------|------------|
-| Ver carta | ✅ | ❌ | ❌ | ✅ | ❌ |
-| Hacer pedido | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Aceptar/Rechazar pedido | ❌ | ✅ | ❌ | ✅ | ❌ |
-| Preparar (marcar listo) | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Crear/editar productos | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Cambiar precios | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Gestionar mesas | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Ver todos los pedidos | ❌ | ✅* | ❌ | ✅ | ✅ |
-| Crear usuarios | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Ver configuración | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Crear restaurantes | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Acción | Cliente | Mesero | Cocina | Admin |
+|--------|---------|--------|--------|-------|
+| Ver carta | ✅ | ❌ | ❌ | ✅ |
+| Hacer pedido | ✅ | ❌ | ❌ | ❌ |
+| Aceptar/Rechazar pedido | ❌ | ✅ | ❌ | ✅ |
+| Preparar (marcar listo) | ❌ | ❌ | ✅ | ✅ |
+| Crear/editar productos | ❌ | ❌ | ❌ | ✅ |
+| Cambiar precios | ❌ | ❌ | ❌ | ✅ |
+| Gestionar mesas | ❌ | ❌ | ❌ | ✅ |
+| Ver todos los pedidos | ❌ | ✅* | ❌ | ✅ |
+| Cobrar/Hacer pagos | ❌ | ❌ | ❌ | ✅ |
+| Crear usuarios (personal) | ❌ | ❌ | ❌ | ✅ |
+| Ver configuración | ❌ | ❌ | ❌ | ✅ |
 
 *Mesero ve solo pedidos de sus mesas activas
 

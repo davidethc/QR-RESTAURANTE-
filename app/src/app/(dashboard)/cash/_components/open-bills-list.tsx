@@ -39,7 +39,7 @@ export function OpenBillsList({
         ) : (
           <div className="flex flex-col gap-2">
             {tableBills.map((bill) => (
-              <BillRow key={bill.id} bill={bill} maxWaiterDiscountPct={maxWaiterDiscountPct} />
+              <BillRow key={bill.id ?? bill.table_session_id} bill={bill} maxWaiterDiscountPct={maxWaiterDiscountPct} />
             ))}
           </div>
         )}
@@ -53,7 +53,7 @@ export function OpenBillsList({
           <div className="flex flex-col gap-2">
             {counterBills.map((bill) => (
               <BillRow
-                key={bill.id}
+                key={bill.id ?? bill.table_session_id}
                 bill={bill}
                 maxWaiterDiscountPct={maxWaiterDiscountPct}
                 cancelable={bill.paid_total === 0}
@@ -127,7 +127,7 @@ function BillRow({
         </div>
       </div>
 
-      {cancelable && (
+      {cancelable && bill.id && (
         <div className="flex justify-end border-t border-border/60 pt-1">
           <CancelCounterSaleDialog billId={bill.id} placeLabel={bill.place_label} />
         </div>

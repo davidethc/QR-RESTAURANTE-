@@ -15,6 +15,7 @@ import {
 import { QuantityStepper } from "@/components/shared/quantity-stepper";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useStaffCart } from "@/hooks/use-staff-cart";
+import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
 import { addItemsToBill, getChargeMenu } from "@/lib/actions/billing";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { notify } from "@/lib/notifications";
@@ -31,7 +32,9 @@ import type { TopProduct } from "@/types/staff";
  * barra); con "Mandar a cocina" entra a cocina como cualquier pedido.
  *
  * La carta se pide al abrir (no viaja con la hoja, que vive en el layout).
- * La clave de idempotencia se genera al abrir y se reutiliza en reintentos.
+ * La clave de idempotencia se reutiliza en reintentos de la MISMA tanda y
+ * cambia en cuanto cambia el carrito (o "Mandar a cocina"): con la clave
+ * vieja, la base devolvería la tanda anterior en vez de agregar la nueva.
  */
 export function ChargeProductPicker({
   billId,
@@ -48,7 +51,19 @@ export function ChargeProductPicker({
   const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set());
   const [sendToKitchen, setSendToKitchen] = useState(false);
   const [pending, setPending] = useState(false);
-  const idempotencyKeyRef = useRef<string>("");
+  // Un envío que falló pudo haber llegado a la base (wifi). Mientras no se
+  // resuelva, cerrar la hoja conserva carrito y clave: el reintento no duplica.
+  const unresolvedSend = useRef(false);
+  const batchLines = useMemo(
+    () =>
+      cart.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        notes: item.notes || undefined,
+      })),
+    [cart.items]
+  );
+  const batchKey = useIdempotencyKey(JSON.stringify([batchLines, sendToKitchen]));
 
   const results = useMemo(() => {
     const term = normalizeText(query.trim());
@@ -72,9 +87,9 @@ export function ChargeProductPicker({
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (next) {
-      idempotencyKeyRef.current = crypto.randomUUID();
+      if (!unresolvedSend.current) batchKey.renew();
       if (!menu) loadMenu();
-    } else {
+    } else if (!unresolvedSend.current) {
       cart.clear();
       setQuery("");
       setSendToKitchen(false);
@@ -94,19 +109,17 @@ export function ChargeProductPicker({
     setPending(true);
     const result = await addItemsToBill({
       billId,
-      items: cart.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        notes: item.notes || undefined,
-      })),
-      idempotencyKey: idempotencyKeyRef.current,
+      items: batchLines,
+      idempotencyKey: batchKey.get(),
       sendToKitchen,
     });
     setPending(false);
     if (!result.ok) {
+      unresolvedSend.current = true;
       notify.error(result.error);
       return;
     }
+    unresolvedSend.current = false;
     notify.success(
       result.data.replayed
         ? "Esos productos ya estaban agregados"

@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { notify, isSessionExpiredMessage } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import { createOrder } from "@/lib/actions/orders";
+import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
 import { buildWhatsappUrl, composeOrderMessage } from "@/lib/whatsapp";
 import type { CartItem, PublicProduct } from "@/types/menu";
 
@@ -54,6 +55,20 @@ export function CartSheet({
   // solo ni se pierde el carrito: solo se va si vuelve a escanear el QR
   // (lo que recarga la página entera y remonta este componente).
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Clave de idempotencia del envío: la misma mientras el carrito no cambie
+  // (un reintento tras un corte de red no duplica el pedido), otra en cuanto
+  // cambia el contenido o después de un envío exitoso.
+  const orderLines = useMemo(
+    () =>
+      items.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        notes: item.notes || undefined,
+      })),
+    [items]
+  );
+  const requestKey = useIdempotencyKey(JSON.stringify(orderLines));
 
   const whatsappOrderUrl = useMemo(
     () =>
@@ -291,11 +306,14 @@ export function CartSheet({
                 title="¿Confirmar pedido?"
                 description={`Mesa ${tableNumber} · ${formatPrice(total)} · Revisa tu pedido antes de enviarlo.`}
                 confirmLabel="Enviar pedido"
-                action={() => createOrder(items)}
+                action={() =>
+                  createOrder({ items: orderLines, clientRequestId: requestKey.get() })
+                }
                 onError={(message) => {
                   if (isSessionExpiredMessage(message)) setSessionExpired(true);
                 }}
                 onSuccess={(orderId) => {
+                  requestKey.renew();
                   notify.orderPlaced();
                   onClearCart();
                   onOpenChange(false);

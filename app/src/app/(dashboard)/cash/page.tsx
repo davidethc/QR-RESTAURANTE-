@@ -17,6 +17,7 @@ import { listOpenBills } from "@/lib/actions/billing";
 import { getCashSessionSummary } from "@/lib/actions/cash";
 import { getPublicMenu } from "@/lib/queries/menu";
 import { getTopProducts } from "@/lib/queries/staff";
+import { OfflineBanner } from "@/components/shared/offline-banner";
 import { CashPageLive } from "./_components/cash-page-live";
 import { CashSessionArea } from "./_components/cash-session-area";
 import { ClosedBillsToday } from "./_components/closed-bills-today";
@@ -104,6 +105,7 @@ export default async function CashPage() {
         action={<CashPageLive restaurantId={restaurantId} />}
       />
       <div className="flex flex-col gap-6 px-4 pb-10 sm:px-6">
+        <OfflineBanner message="No se puede cobrar ni registrar pagos hasta que vuelva la red." />
         <CashSessionArea
           summary={summary}
           registers={registers}

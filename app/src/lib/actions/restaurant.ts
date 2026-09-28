@@ -1,13 +1,14 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import { refreshPublicMenuTag } from "@/lib/public-menu-tag";
 import { createClient } from "@/lib/supabase/server";
+import { dbFailure } from "@/lib/db-errors";
 import { billingSettingsSchema, restaurantSettingsSchema } from "@/lib/validations/restaurant";
 import type { ActionResult } from "@/types/actions";
 
 export async function updateRestaurantSettings(
   restaurantId: string,
-  slug: string,
   input: unknown
 ): Promise<ActionResult> {
   const parsed = restaurantSettingsSchema.safeParse(input);
@@ -16,7 +17,7 @@ export async function updateRestaurantSettings(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("restaurants")
     .update({
       name: parsed.data.name,
@@ -24,11 +25,16 @@ export async function updateRestaurantSettings(
       phone: parsed.data.phone || null,
       address: parsed.data.address || null,
     })
-    .eq("id", restaurantId);
+    .eq("id", restaurantId)
+    .select("id");
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "updateRestaurantSettings");
+  // RLS bloquea en silencio (0 filas): sin esto se reportaría éxito.
+  if (!data?.length) {
+    return { ok: false, error: "No tienes permiso para cambiar estos datos." };
+  }
   revalidatePath("/settings");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }
 
@@ -43,7 +49,6 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
  */
 export async function uploadRestaurantLogo(
   restaurantId: string,
-  slug: string,
   formData: FormData
 ): Promise<ActionResult<string>> {
   const file = formData.get("file");
@@ -65,21 +70,26 @@ export async function uploadRestaurantLogo(
     .from("product-images")
     .upload(path, file, { contentType: file.type, upsert: false });
 
-  if (uploadError) return { ok: false, error: uploadError.message };
+  if (uploadError) return dbFailure(uploadError, "uploadRestaurantLogo");
 
   const {
     data: { publicUrl },
   } = supabase.storage.from("product-images").getPublicUrl(path);
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("restaurants")
     .update({ logo_url: publicUrl })
-    .eq("id", restaurantId);
+    .eq("id", restaurantId)
+    .select("id");
 
-  if (updateError) return { ok: false, error: updateError.message };
+  if (updateError || !updated?.length) {
+    await supabase.storage.from("product-images").remove([path]);
+    if (updateError) return dbFailure(updateError, "uploadRestaurantLogo");
+    return { ok: false, error: "No tienes permiso para cambiar el logo de este restaurante." };
+  }
 
   revalidatePath("/settings");
-  updateTag(`menu-${slug}`);
+  await refreshPublicMenuTag();
   return { ok: true, data: publicUrl };
 }
 
@@ -108,8 +118,7 @@ export async function updateBillingSettings(
 
   if (error) {
     if (error.code === "42501") return { ok: false, error: "Solo el dueño puede cambiar el cobro." };
-    console.error("[updateBillingSettings]", error.code, error.message);
-    return { ok: false, error: "No se pudo guardar. Intenta de nuevo." };
+    return dbFailure(error, "updateBillingSettings", "No se pudo guardar. Intenta de nuevo.");
   }
   revalidatePath("/settings");
   revalidatePath("/cash");

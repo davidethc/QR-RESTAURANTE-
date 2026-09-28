@@ -94,7 +94,8 @@ export interface DashboardSummary {
   occupied_tables: number;
   total_tables: number;
   orders_today: number;
-  revenue_today: number;
+  /** null para WAITER/KITCHEN: solo dueño y administrador ven dinero. */
+  revenue_today: number | null;
 }
 
 export interface TableStatusRow {

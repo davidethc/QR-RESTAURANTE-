@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import type { OrderStatus, CallStatus } from "@/config/constants";
@@ -20,13 +21,17 @@ import type {
  * la pantalla recibe todo lo que necesita pintar, sin peticiones en cascada.
  */
 
-export async function getMyRestaurant(): Promise<MyRestaurant> {
+/**
+ * Envuelta en `cache()` de React: el layout del panel y la página la piden
+ * en el mismo render; así es una sola ida a la base por petición.
+ */
+export const getMyRestaurant = cache(async (): Promise<MyRestaurant> => {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_my_restaurant");
 
   if (error) throw error;
   return data as unknown as MyRestaurant;
-}
+});
 
 export async function getStaffOrders(
   restaurantId: string,

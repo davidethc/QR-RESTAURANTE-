@@ -2,7 +2,7 @@
 title: "MVP - Alcance y Especificaciones"
 type: "concept"
 created: "2026-09-01"
-updated: "2026-09-01"
+updated: "2026-09-28"
 sources: ["PROYECTO_ SISTEMA DIGITAL DE ATENCIÓN Y PEDIDOS PARA RESTAURANTES.md"]
 tags: ["mvp", "alcance", "especificaciones"]
 ---
@@ -164,32 +164,35 @@ Mínimo Producto Viable que permite:
 - Confirmación
 - Notificación automática a mesero
 
+## Evolución del Alcance (2026-09-28)
+
+**Módulos añadidos desde la versión inicial del MVP:**
+- ✅ **Cobro y Caja**: Métodos de pago (efectivo, tarjeta, transferencia), propina, descuentos, apertura/cierre de caja
+- ✅ **Reportes**: Ventas por día/semana/mes, por producto, por mesero, ticket promedio, exportación a Excel
+- ✅ **Gestión de Personal**: Alta de usuarios (mesero, cocina), roles, acceso, baja de personal
+
+Ver [[Panel del Admin]] y [[Diseño: Cobro y Caja, Reportes, Inventario y Costos]] para detalles.
+
 ## Lo que NO entra en el MVP
 
 ### No incluir
 - App móvil nativa (solo web responsive)
-- Pago online
-- Facturación electrónica
-- Integración bancaria
-- Contabilidad
-- Inventario avanzado (stock numérico)
+- Facturación electrónica (SRI) — en diseño como punto de extensión
+- Inventario avanzado (recetas, stock, costos) — diseño completo pero no implementado
 - Reservaciones
 - Delivery
 - Programa de puntos/fidelización
 - IA/Recomendaciones
 - Marketing avanzado
-- Integración con POS
-- Reportes empresariales
+- Integración con terminales de pago
 - Multidioma (solo español)
 - Chat de soporte (solo email)
 - Impresora de cocina (KDS)
 - Notificaciones push
-- División de cuenta
-- Propinas
 - Análisis predictivo
 
 ### Justificación
-Estas funciones pueden añadirse después. El MVP debe ser lo más pequeño posible que valide el problema y permita vender.
+Las funciones excluidas pueden añadirse después (fases P2–P3 del roadmap). El MVP validó el problema y permite operar un restaurante; la versión actual ya incluye cobro y reportes básicos.
 
 ## Criterios de Éxito del MVP
 

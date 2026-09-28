@@ -9,7 +9,7 @@ Sistema dual: **Wiki LLM** (documentación persistente) + **Sistema QR para Rest
 Construir y documentar un sistema digital de atención y pedidos para restaurantes (QR-based), manteniendo:
 1. **Wiki LLM** (`wiki/`) — Base de conocimiento actualizada, síntesis de decisiones, documentación de diseño
 2. **Raw Sources** (`raw/`) — Documentos originales de UX, arquitectura, reglas de negocio (inmutables)
-3. **Código** (TBD) — Implementación del MVP (cuando empecemos desarrollo)
+3. **Código** (`app/`) — Sistema en producción (Next.js 16 + Supabase + PostgreSQL, desplegado en Vercel)
 
 ---
 
@@ -26,6 +26,22 @@ monky.com/
 │       ├── MAPA DE PANTALLAS.md
 │       ├── Roles y flujo operativo.md
 │       └── [nuevas fuentes aquí]
+├── app/                      # 🚀 Código en producción (Next.js 16 + Supabase)
+│   ├── src/
+│   │   ├── app/              # Rutas y layouts de Next.js
+│   │   ├── components/       # Componentes reutilizables (shadcn + custom)
+│   │   ├── lib/              # Utilidades, acciones, validaciones
+│   │   ├── hooks/            # Hooks custom de React
+│   │   ├── types/            # TypeScript types (generados de Supabase)
+│   │   └── proxy.ts          # Rutas protegidas del panel (en Next 16 reemplaza a middleware)
+│   ├── supabase/
+│   │   ├── migrations/       # Migraciones SQL (versión = la aplicada en producción)
+│   │   └── tests/            # Pruebas SQL (BEGIN … ROLLBACK, restaurante monky-qa)
+│   ├── AGENTS.md             # Documentación de API cambios en Next.js 16
+│   ├── TESTING.md            # Registro de QA (versionado: nunca poner credenciales; están en .env.qa.local)
+│   └── package.json          # Dependencias (React 19, Tailwind, shadcn)
+├── .github/workflows/ci.yml  # CI: typegen, tsc, lint, vitest, build
+├── .claude/agents/           # Agentes especializados del proyecto
 ├── wiki/                     # ✏️ GENERADA POR CLAUDE — síntesis
 │   ├── index.md              # Catálogo maestro (actualizar siempre)
 │   ├── log.md                # Registro cronológico de cambios
@@ -39,16 +55,18 @@ monky.com/
 │   │   ├── mapa-pantallas-general.md
 │   │   ├── mvp-alcance.md
 │   │   ├── pantallas-cliente-detalles.md
-│   │   └── reglas-negocio-mvp.md
+│   │   ├── reglas-negocio-mvp.md
+│   │   ├── modelo-datos-definitivo.md
+│   │   └── panel-del-admin.md
 │   ├── comparisons/          # Análisis comparativos (problema vs solución)
 │   │   └── problema-vs-solucion.md
 │   ├── syntheses/            # Síntesis cross-referenciadas
+│   │   ├── proyecto-qr-vision-general.md
 │   │   ├── fase-ux-wireframes.md
-│   │   └── proyecto-qr-vision-general.md
+│   │   ├── estado-del-sistema-2026-09-26.md
+│   │   ├── estado-del-sistema-2026-09-28.md
+│   │   └── diseno-cobro-reportes-inventario.md
 │   └── .obsidian/            # Config de Obsidian (plugins, graph settings)
-├── src/ (TBD)                # Código fuente (cuando empiece desarrollo)
-├── tests/ (TBD)              # Tests automatizados
-├── docs/ (TBD)               # Documentación técnica derivada del wiki
 └── .git                       # Control de versión
 ```
 
@@ -282,12 +300,15 @@ Listar todos los archivos en `raw/` con:
 
 ## 📊 Métricas del Proyecto (actualizar periódicamente)
 
-- **Páginas wiki**: 12 (conceptos, entities, syntheses, comparisons)
-- **Fuentes raw**: 7 (documentos UX, wireframes, especificaciones)
-- **Wikilinks totales**: 60+ (red densa, bien interconectada)
-- **Nodos centrales**: 5 (Flujos, Mapa, Reglas, MVP-Alcance, Pantallas)
-- **Tasa de actualización**: Variable (depende de ingesta)
-- **Estado del código**: en producción (`app/`, Next.js 16 + Supabase). Primer restaurante: Cafetería Omm Siri. Ver `README.md` y `app/TESTING.md`.
+- **Páginas wiki**: 16 (entities, concepts, syntheses, comparisons, references)
+- **Fuentes raw**: 8 (documentos UX, wireframes, especificaciones, arquitectura)
+- **Wikilinks totales**: 100+ (red densa, bien interconectada)
+- **Nodos centrales**: 8 (Proyecto, Flujos, Mapa, Reglas, MVP-Alcance, Pantallas, Modelo de Datos, Panel del Admin)
+- **Tasa de actualización**: Activa (última 2026-09-28)
+- **Código en producción**: Next.js 16 + Supabase (`fvzxfbzujvkkvniyphps`) + Vercel (`qr-restaurante-d3b9.vercel.app`)
+- **Migraciones versionadas**: 85+ (v20260902 a v20260928)
+- **Módulos funcionales**: Pedidos QR, Cocina, Mesero, Cobro/Caja, Reportes, Personal, Dashboard "Hoy"
+- **Primer restaurante**: Cafetería Omm Siri (`slug: omm-siri`)
 
 ---
 
@@ -310,14 +331,45 @@ R: Periódicamente (ej. cada 10-15 pages nuevas, o cuando el usuario lo pide).
 
 ---
 
-## 🚀 Próximas Prioridades
+## 🔧 Flujo de trabajo del código
 
-1. ✅ Definir arquitectura (ESTE DOCUMENTO)
-2. ✅ Crear memoria persistente del proyecto
-3. ⏳ Corregir aliases en todas las páginas wiki (para Obsidian)
-4. ⏳ Definir arquitectura del código/MVP
-5. ⏳ Iniciar desarrollo (si aplica)
+```
+Rama feature → CI (lint, test, build) → PR → code review + security-reviewer
+              ↓
+            Merge a main → Deploy automático a Vercel (producción)
+```
+
+**Migraciones**:
+- `db-architect`: Escribe migraciones SQL versionadas en `app/supabase/migrations/`
+- `security-reviewer`: Audita RLS, grants, transacciones antes de merge
+- Se aplican en `fvzxfbzujvkkvniyphps` antes de mergear el código que las usa
+- Regenerar tipos con `npx supabase gen types typescript --project-id fvzxfbzujvkkvniyphps > app/src/types/database.ts`
+
+**Testing**: Ver `app/TESTING.md` (QA en `monky-qa`, nunca en `omm-siri`)
 
 ---
 
-*Última actualización: 2026-09-01 (arquitectura initial + workflow definido)*
+## 🚀 Próximas Prioridades
+
+1. ✅ Arquitectura del proyecto (CLAUDE.md, wiki actualizada)
+2. ✅ Sistema en producción con módulos de negocio (cobro, caja, reportes, personal)
+3. **P0 — Seguridad y estabilidad**
+   - [ ] Backups automáticos (plan Supabase Pro, PITR)
+   - [ ] Repo privado en GitHub y rotar `qr_token` de mesas
+   - [ ] Ambiente staging aislado de producción
+4. **P1 — Confiabilidad operativa**
+   - [ ] Tests de dinero en CI (Vitest + SQL de transacciones)
+   - [ ] Monitoreo con Sentry y dashboards Vercel
+   - [ ] Revisión de permisos: cocina no ve tokens ni ventas
+5. **P2 — Roadmap del producto**
+   - [ ] Módulo SRI (facturación electrónica) — punto de extensión ya marcado
+   - [ ] Módulo Inventario completo (recetas, costos, waste, stock)
+   - [ ] Página de Para Llevar/Delivery y pedidos por WhatsApp
+6. **P3 — Escalabilidad**
+   - [ ] Multi-restaurante (SaaS con planes y facturación)
+   - [ ] Impresoras térmicas de cocina (integración CUPS o similar)
+   - [ ] Cartas con IA, pronóstico de demanda, reportes inteligentes
+
+---
+
+*Última actualización: 2026-09-28 (sistema en producción, prioridades actualizadas)*

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { notFound } from "next/navigation";
+import { z } from "zod";
 import { getOrderStatus } from "@/lib/actions/orders";
 import { getSessionBill } from "@/lib/actions/billing";
 import { OrderTracker } from "./_components/order-tracker";
@@ -18,6 +20,9 @@ export default async function OrderPage({
   // descubrir la cookie ("fetch() rejects when the prerender is complete").
   await connection();
   const { slug, mesa, id } = await params;
+  // Un id que ni siquiera es UUID no puede ser un pedido: 404 directo, sin
+  // ir a la base (que respondería con un error de tipo de Postgres).
+  if (!z.uuid().safeParse(id).success) notFound();
   // En paralelo: ninguna de las tres depende de las otras dos.
   const channelPromise = getSessionChannelName();
   // null si el restaurante no usa cobro o no hay cuenta — el banner

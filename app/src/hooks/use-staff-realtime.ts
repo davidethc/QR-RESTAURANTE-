@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useOnline } from "@/hooks/use-online";
 
 /** Cada cuánto corre la red de seguridad, con o sin socket vivo. */
 const SAFETY_NET_MS = 20_000;
@@ -23,24 +18,6 @@ export type StaffTable =
   | "cash_sessions";
 
 const DEFAULT_TABLES: StaffTable[] = ["orders", "waiter_calls", "tables"];
-
-/** El ejemplo canónico de `useSyncExternalStore`: leer `navigator.onLine`
- * sin el doble setState (inicial + listener) que dispara el aviso de
- * React de "no llames a setState de forma síncrona dentro de un efecto". */
-function subscribeToOnline(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
-}
-function getOnlineSnapshot() {
-  return navigator.onLine;
-}
-function getOnlineServerSnapshot() {
-  return true;
-}
 
 /**
  * Actualización en vivo del panel del personal.
@@ -105,22 +82,29 @@ export function useStaffRealtime(
   //    el wifi, pero no sabe nada de si el canal funciona.
   // Conectado = las dos a la vez.
   const [channelOk, setChannelOk] = useState(false);
-  const online = useSyncExternalStore(
-    subscribeToOnline,
-    getOnlineSnapshot,
-    getOnlineServerSnapshot
-  );
+  const online = useOnline();
   const connected = channelOk && online;
 
   // Evita que dos eventos seguidos lancen dos recargas a la vez: la
   // segunda leería datos a medio escribir y competiría con la primera.
+  // Pero el evento que llega con una recarga en vuelo NO se descarta: esa
+  // recarga pudo haber leído la base justo antes del cambio. Se marca como
+  // pendiente y, al terminar, se recarga una vez más (varios eventos
+  // durante la misma recarga se funden en una sola repetición).
   const inFlight = useRef(false);
+  const pending = useRef(false);
 
   const refresh = useCallback(async () => {
-    if (inFlight.current) return;
+    if (inFlight.current) {
+      pending.current = true;
+      return;
+    }
     inFlight.current = true;
     try {
-      await onChangeRef.current();
+      do {
+        pending.current = false;
+        await onChangeRef.current();
+      } while (pending.current);
     } finally {
       inFlight.current = false;
     }
@@ -195,7 +179,7 @@ export function useStaffRealtime(
 
     // La tablet que se durmió o el celular que recuperó señal se ponen
     // al día al instante, sin esperar al siguiente ciclo.
-    // `online` ya lo sigue `useSyncExternalStore` arriba — este listener
+    // `online` ya lo sigue `useOnline` arriba — este listener
     // solo dispara el refetch al recuperar señal, no duplica el estado.
     function onWake() {
       if (!document.hidden) void refresh();

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { KitchenOrderCard } from "./kitchen-order-card";
 import { kitchenStatuses, sentToKitchenAt } from "./kitchen-statuses";
 import { ConnectionStatus } from "@/components/shared/connection-status";
+import { OfflineBanner } from "@/components/shared/offline-banner";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { fetchStaffOrders } from "@/lib/actions/staff";
 import { cn } from "@/lib/utils";
@@ -179,6 +180,10 @@ export function KitchenBoard({
           </div>
           <ConnectionStatus connected={connected} />
         </div>
+        <OfflineBanner
+          className="mt-4"
+          message="Los pedidos nuevos no están llegando. Aparecen solos al volver la red."
+        />
       </div>
 
       <div className="flex flex-1 flex-col gap-4 px-4 py-4 lg:flex-row lg:items-start lg:px-6">

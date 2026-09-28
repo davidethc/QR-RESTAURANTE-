@@ -53,7 +53,6 @@ export function SettingsForm({
     startTransition(async () => {
       const result = await updateRestaurantSettings(
         restaurant.id,
-        restaurant.slug,
         values
       );
       if (!result.ok) {
@@ -67,7 +66,6 @@ export function SettingsForm({
         formData.set("file", file);
         const uploadResult = await uploadRestaurantLogo(
           restaurant.id,
-          restaurant.slug,
           formData
         );
         if (!uploadResult.ok) {

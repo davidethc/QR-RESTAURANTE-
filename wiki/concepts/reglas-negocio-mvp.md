@@ -254,7 +254,7 @@ Decisión del 2026-09-24. Hay **dos puertas** a la misma carta digital, y cada u
 
 ## Reglas sobre Datos Históricos
 
-### 25. Snapshot de Producto en Pedido
+### 27. Snapshot de Producto en Pedido
 Cuando se crea un pedido:
 ```
 order_item:
@@ -271,7 +271,7 @@ Aunque después se edite el producto:
 
 ## Reglas sobre Auditoría
 
-### 26. Log de Acciones Críticas
+### 28. Log de Acciones Críticas
 Registrar:
 ```
 Pedido aceptado
