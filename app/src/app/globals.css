@@ -81,12 +81,13 @@
     --color-info-soft-foreground: var(--info-soft-foreground);
     --color-info-border: var(--info-border);
     --color-primary-hover: var(--primary-hover);
+    --color-border-strong: var(--border-strong);
     --shadow-sheet: var(--shadow-sheet);
     /* Radios por rol: todos salen de --radius (tokens.css). */
-    --radius-control: var(--radius);
-    --radius-button: calc(var(--radius) * 1.25);
-    --radius-card: calc(var(--radius) * 1.4);
-    --radius-badge: calc(var(--radius) * 2.6);
+    --radius-control: var(--radius-role-control);
+    --radius-button: var(--radius-role-button);
+    --radius-card: var(--radius-role-card);
+    --radius-badge: var(--radius-role-badge);
     /* Escala tipográfica semántica. Sin line-height propio a
        propósito: hereda el del contenedor, igual que los text-[Npx]
        que reemplaza. */

@@ -3,33 +3,171 @@
   layout de (dashboard). Solo sobreescribe CONTROLES de tokens.css;
   los derivados (ring, accent, sidebar, success…) se recalculan solos.
 
-  Vacío a propósito: el panel hereda hoy la identidad de marca. Para
-  cambiar su aspecto entero, descomenta y ajusta aquí. Ejemplos:
-
-  Tema A — verde + blanco cálido
-    --primary: oklch(0.47 0.12 141);
-    --background: oklch(0.975 0.006 95);
-    --card: oklch(1 0 0);
-
-  Tema B — azul + blanco
-    --primary: oklch(0.52 0.17 255);
-    --primary-dark: oklch(0.42 0.15 255);
-    --primary-soft: oklch(0.96 0.02 255);
-    --background: oklch(0.985 0 0);
-
-  Tema C — negro + blanco
-    --primary: oklch(0.2 0 0);
-    --primary-dark: oklch(0.1 0 0);
-    --primary-soft: oklch(0.95 0 0);
-    --background: oklch(0.99 0 0);
-
-  Forma, letra y densidad también:
-    --radius: 0.625rem;
-    --font-sans: "Inter", sans-serif;
-    --spacing: 0.25rem;
+  Dirección aprobada 2026-09-28: blanco cálido + verde Monky solo como
+  acento, superficies blancas, bordes casi imperceptibles, Geist.
+  Para otro look (azul, negro…) basta con cambiar los valores de abajo:
+    azul:  --primary #2F5FD0; --primary-dark #244BA8; --primary-soft #ECF1FC;
+    negro: --primary #18181B; --primary-dark #000; --primary-soft #F1F1F2;
 */
 /* body:has(...) cubre también los portales (Sheet, Dialog, menús),
    que se montan en <body>, fuera del contenedor del layout. */
 [data-theme="admin"],
 body:has([data-theme="admin"]) {
+    --primary: #2E6B23;
+    --primary-focus: #2E6B23;
+    --primary-dark: #245B1A;
+    --primary-soft: #EDF3E9;
+    --background: #F8F7F2;
+    --foreground: #182016;
+    --card: #FFFFFF;
+    --secondary: #F3F2EC;
+    --muted: #F3F2EC;
+    --muted-foreground: #756B5F;
+    --border: #ECE9E1;
+    --border-strong: #DDD9CE;
+    --success-soft: #EDF3E9;
+    --success-soft-foreground: #2E6B23;
+    --success-border: #D5E3CE;
+    --success-indicator: #2E6B23;
+    --warning-soft: #FBF3DF;
+    --warning-soft-foreground: #8A5A06;
+    --warning-border: #F0DFB4;
+    --warning-indicator: #C98A12;
+    --wine: #8A5A06;
+    --info-soft: #EEF2F8;
+    --info-soft-foreground: #3D5A80;
+    --info-border: #D8E0EC;
+
+    --radius: 0.5625rem;
+    --radius-role-control: 0.5625rem;
+    --radius-role-button: 0.5625rem;
+    --radius-role-card: 0.875rem;
+    --radius-role-badge: 999px;
+
+    --shadow-sm: 0 1px 2px rgb(24 32 22 / 0.04);
+    --shadow-md: 0 1px 2px rgb(24 32 22 / 0.04), 0 8px 24px -12px rgb(24 32 22 / 0.12);
+    --shadow-lg: 0 12px 32px -16px rgb(24 32 22 / 0.18);
+
+    --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-sans);
+}
+
+/* Sin el grano de papel de la carta: el panel es una herramienta. */
+body:has([data-theme="admin"]) {
+    background-color: var(--background);
+    background-image: none;
+}
+
+/* La marca Bricolage ajustaba ancho y tracking; en Geist sobra. */
+[data-theme="admin"] .font-display,
+body:has([data-theme="admin"]) .font-display {
+    font-variation-settings: normal;
+    letter-spacing: -0.01em;
+}
+
+/* Clay y glass son lenguaje de la carta; en el panel, superficies planas. */
+[data-theme="admin"] .clay,
+body:has([data-theme="admin"]) .clay {
+    box-shadow: none;
+}
+[data-theme="admin"] .clay:active,
+body:has([data-theme="admin"]) .clay:active {
+    transform: none;
+}
+[data-theme="admin"] .glass {
+    background-color: var(--card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/*
+  Métricas de componentes en el panel. En @layer components para que
+  una clase utilitaria puesta en la pantalla siga ganando. Aquí y no en
+  components/ui porque esos componentes también los usa la carta.
+*/
+@layer components {
+  :is([data-theme="admin"], body:has([data-theme="admin"])) {
+    & [data-slot="button"] {
+      box-shadow: none;
+      font-weight: 500;
+      transition: background-color 150ms, border-color 150ms, color 150ms;
+    }
+    & [data-slot="button"][data-size="default"] {
+      height: 2.5rem;
+      padding-inline: 1rem;
+      gap: 0.5rem;
+    }
+    & [data-slot="button"][data-size="lg"] { height: 2.75rem; padding-inline: 1.25rem; gap: 0.5rem; }
+    & [data-slot="button"][data-size="sm"] { height: 2rem; padding-inline: 0.75rem; }
+    & [data-slot="button"][data-size="icon"] { width: 2.25rem; height: 2.25rem; }
+    & [data-slot="button"][data-variant="default"]:hover {
+      background-image: none;
+      background-color: var(--primary-dark);
+    }
+    & [data-slot="button"][data-variant="outline"] {
+      background-color: var(--card);
+      border-color: var(--border-strong);
+    }
+    & [data-slot="button"][data-variant="outline"]:hover { background-color: var(--secondary); }
+    & [data-slot="button"][data-variant="ghost"] { color: var(--muted-foreground); }
+    & [data-slot="button"][data-variant="ghost"]:hover { color: var(--foreground); background-color: var(--secondary); }
+
+    & :is([data-slot="input"], [data-slot="select-trigger"]) {
+      height: 2.5rem;
+      padding-inline: 0.75rem;
+      background-color: var(--card);
+      border-color: var(--border-strong);
+      font-size: var(--font-size-body-sm);
+    }
+    & [data-slot="textarea"] {
+      padding: 0.625rem 0.75rem;
+      background-color: var(--card);
+      border-color: var(--border-strong);
+      font-size: var(--font-size-body-sm);
+    }
+    & :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]):focus-visible {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+    & :is([data-slot="input"], [data-slot="textarea"])::placeholder { color: color-mix(in oklch, var(--muted-foreground), transparent 30%); }
+
+    & [data-slot="card"] {
+      box-shadow: none;
+      --tw-ring-color: var(--border);
+    }
+
+    & [data-slot="badge"] {
+      height: 1.375rem;
+      padding-inline: 0.5625rem;
+      font-size: var(--font-size-caption);
+    }
+
+    & [data-slot="table-head"] {
+      height: 2.5rem;
+      font-size: var(--font-size-caption);
+      font-weight: 500;
+      color: var(--muted-foreground);
+    }
+    & [data-slot="table-cell"] { padding-block: 0.75rem; }
+    & [data-slot="table-row"] { border-color: var(--border); }
+    & [data-slot="table-body"] [data-slot="table-row"]:hover { background-color: color-mix(in oklch, var(--secondary), var(--card) 50%); }
+
+    & [data-slot="dialog-overlay"], & [data-slot="sheet-overlay"] {
+      background-color: rgb(24 32 22 / 0.16);
+      backdrop-filter: none;
+    }
+    & [data-slot="dialog-content"] {
+      --tw-ring-color: var(--border);
+      box-shadow: var(--shadow-lg);
+    }
+    & [data-slot="sheet-content"] {
+      box-shadow: var(--shadow-lg);
+      border-color: var(--border);
+    }
+    & [data-slot="sheet-content"][data-side="right"] {
+      width: min(28rem, 100%);
+      max-width: 100%;
+    }
+  }
 }
