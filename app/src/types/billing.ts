@@ -8,6 +8,7 @@ import type {
   PaymentMethod,
   PaymentStatus,
   SplitMode,
+  TableKind,
   TableSessionStatus,
 } from "@/config/constants";
 
@@ -72,6 +73,12 @@ export type Bill = {
   table_id: string;
   table_number: number;
   table_name: string | null;
+  /** Venta de mostrador (C3): "COUNTER", con su "#N" y nombre opcional. */
+  table_kind: TableKind;
+  counter_number: number | null;
+  customer_label: string | null;
+  /** "Mesa 4" o "Para llevar #12 · Ana", listo para mostrar. */
+  place_label: string;
   table_session_id: string;
   session_status: TableSessionStatus;
   status: BillStatus;
@@ -106,6 +113,12 @@ export type OpenBillSummary = {
   table_id: string;
   table_number: number;
   table_name: string | null;
+  /** Venta de mostrador (C3): "COUNTER", con su "#N" y nombre opcional. */
+  table_kind: TableKind;
+  counter_number: number | null;
+  customer_label: string | null;
+  /** "Mesa 4" o "Para llevar #12 · Ana", listo para mostrar. */
+  place_label: string;
   table_session_id: string;
   session_status: TableSessionStatus;
   status: BillStatus;
@@ -202,4 +215,17 @@ export type CashSessionSummary = {
   by_method?: CashMethodSummary[];
   movements?: CashMovement[];
   voided_payments_count?: number;
+};
+
+/** Respuesta de create_counter_sale (C5). `replayed` = reintento con la misma clave. */
+export type CounterSale = {
+  order_id: string;
+  bill_id: string;
+  bill_number: number;
+  table_session_id: string;
+  counter_number: number;
+  customer_label: string | null;
+  place_label: string;
+  replayed: boolean;
+  bill: Bill;
 };

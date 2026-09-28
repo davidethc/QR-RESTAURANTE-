@@ -44,7 +44,7 @@ export function OrderCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-display truncate text-[17px] font-semibold leading-tight text-foreground">
-            {order.table_name ?? `Mesa ${order.table_number}`}
+            {order.place_label ?? order.table_name ?? `Mesa ${order.table_number}`}
           </p>
           <div className="mt-1 flex items-center gap-2">
             <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold tabular-nums leading-tight text-muted-foreground">

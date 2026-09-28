@@ -6,6 +6,7 @@ import type {
   UserRole,
   MemberStatus,
   PaymentMethod,
+  TableKind,
 } from "@/config/constants";
 
 /* Lo que devuelven los RPC del panel. Cada uno es una sola llamada
@@ -47,6 +48,11 @@ export interface StaffOrder {
   delivered_at: string | null;
   table_number: number;
   table_name: string | null;
+  /** Venta de mostrador (C3): "Para llevar #N" en vez de mesa. */
+  table_kind: TableKind;
+  counter_number: number | null;
+  customer_label: string | null;
+  place_label: string;
   accepted_by_name: string | null;
   items: StaffOrderItem[];
 }

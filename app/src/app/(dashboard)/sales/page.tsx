@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { BarChart3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getSalesReport } from "@/lib/queries/staff";
 import { isManager } from "@/lib/permissions";
@@ -29,7 +32,17 @@ export default async function SalesPage({
 
   return (
     <main>
-      <PageHeader title="Ventas" description="Cuánto vendiste, cómo te pagaron y qué se pidió más." />
+      <PageHeader
+        title="Ventas"
+        description="Cuánto vendiste, cómo te pagaron y qué se pidió más."
+        action={
+          <Button asChild variant="outline" className="h-10">
+            <Link href="/reports">
+              <BarChart3 /> <span className="hidden sm:inline">Reporte completo</span>
+            </Link>
+          </Button>
+        }
+      />
       <div className="flex flex-col gap-6 px-4 pb-10 sm:px-6">
         <RangeTabs active={range} />
         <SalesSummary report={report} />

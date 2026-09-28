@@ -13,6 +13,7 @@ import {
   Home,
   TrendingUp,
   Users,
+  BarChart3,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,6 +51,7 @@ const NAV_LINKS = [
 /** Administración de vez en cuando: va en el menú del avatar. */
 const ADMIN_LINKS = [
   { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: MANAGERS },
+  { href: "/reports", label: "Reportes", icon: BarChart3, roles: MANAGERS },
   { href: "/staff", label: "Personal", icon: Users, roles: MANAGERS },
   { href: "/settings", label: "Configuración", icon: Settings, roles: MANAGERS },
 ];

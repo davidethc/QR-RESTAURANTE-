@@ -58,7 +58,7 @@ export default async function TicketPage({
   // (ya cobrada, esperando que salgan los pedidos en curso para liberar la
   // mesa) y CLOSED se imprimen como el ticket final: ya no hay saldo.
   const isPreAccount = bill.status === "OPEN";
-  const tableLabel = bill.table_name ?? `Mesa ${bill.table_number}`;
+  const tableLabel = bill.place_label ?? bill.table_name ?? `Mesa ${bill.table_number}`;
 
   const dateFormatter = new Intl.DateTimeFormat("es-EC", {
     day: "2-digit",
