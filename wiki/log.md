@@ -312,6 +312,16 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 
 ---
 
+## [2026-09-28] code | Panel del admin: Personal, Ventas, Hoy y cobro en Configuración
+
+- **Resumen**: El dueño/admin ya gestiona su personal (alta con clave temporal, rol, acceso, nueva clave), ve ventas de hoy/7/30 días, tiene una pantalla de inicio "Hoy" y el dueño activa el cobro desde Configuración. Barra más corta (Carta/Personal/Configuración al menú del avatar). Limpieza de código muerto y nombres `-v2`. Se cerró un hueco: un ADMIN podía darse rol OWNER escribiendo directo en `restaurant_members`.
+- **Páginas actualizadas**: [[Wiki Index]]
+- **Nuevas páginas**: [[Panel del Admin]]
+- **Contradiciones detectadas**: "Ventas" (`/sales`) se solapa con el módulo `/reports` de la rama `feat/venta-rapida-y-reportes`; pendiente decidir cuál queda.
+- **Duración**: 120min
+
+---
+
 ## Próximos pasos
 
 1. **Loop automático**: ✅ Configurado. Chequea `raw/assets/` cada 10 min, ingesta automática de archivos nuevos

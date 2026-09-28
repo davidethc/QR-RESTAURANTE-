@@ -2087,3 +2087,37 @@ liberar", /cash muestra "cobro no activo". 0 errores.
 
 Datos que quedan: cuenta #... de Terraza $7,25 CLOSED y una caja CLOSED cuadrada.
 Mesa 1 conserva $27,50 sin cobrar de la presentación del 26-sep (pedido #76 en READY).
+
+## Panel del admin: Personal, Ventas, Hoy y cobro en Configuración (2026-09-28)
+
+Rama `claude/peaceful-turing-6mhpzs`. Migraciones `20260928120000_staff_management`
+y `20260928120100_sales_report` **aplicadas** a `fvzxfbzujvkkvniyphps`.
+
+### Verificado
+
+- `tsc`, `lint`, 45 tests vitest (nuevos: `validations/staff.test.ts`,
+  `validations/restaurant.test.ts`) y `next build` en verde.
+- SQL en `monky-qa`, dentro de una transacción revertida antes de aplicar
+  (claims de `request.jwt.claims` para simular a cada usuario):
+
+| Caso | Resultado |
+|---|---|
+| Dueño lista el personal (3 personas, con correo; `can_manage` false solo para sí mismo) | ✓ |
+| Dueño puede asignar ADMIN; nadie puede asignar OWNER | ✓ |
+| Dueño cambia mesero → Cocina/Inactivo y lo devuelve | ✓ |
+| Dueño intenta editarse a sí mismo → "No puedes cambiar tu propia cuenta desde aquí" | ✓ |
+| Dueño de monky-qa pide el personal de omm-siri → "No autorizado" | ✓ |
+| Mesero pide personal o ventas → "No autorizado"; no puede asignar roles | ✓ |
+| Ventas 30 días (49,00 en 10 cuentas) = suma directa de `bills` PAID/CLOSED | ✓ |
+| Ventas hoy/7/30: métodos, propinas, descuentos, cuentas abiertas, top productos | ✓ |
+| Tras la migración solo queda la política `restaurant_members_select` | ✓ |
+
+### Pendiente / no verificado en esta ronda
+
+- **UI en navegador**: esta sesión (nube) no tenía `app/.env.local`,
+  `app/.env.qa.local` ni `SUPABASE_SECRET_KEY`, así que no se abrió la app.
+  Repetir con Playwright contra `monky-qa`: crear un mesero en `/staff`, entrar con
+  él, desactivarlo y confirmar que ya no entra (la cuenta queda bloqueada); nueva
+  clave; cobro on/off en Configuración y ver `/cash` cambiar; `/sales` Hoy/7/30;
+  `/today` para dueño, y que mesero caiga en `/orders` y cocina en `/kitchen`.
+- Crear cuentas y cambiar claves requiere `SUPABASE_SECRET_KEY` en Vercel.

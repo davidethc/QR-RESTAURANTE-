@@ -287,7 +287,7 @@ Listar todos los archivos en `raw/` con:
 - **Wikilinks totales**: 60+ (red densa, bien interconectada)
 - **Nodos centrales**: 5 (Flujos, Mapa, Reglas, MVP-Alcance, Pantallas)
 - **Tasa de actualización**: Variable (depende de ingesta)
-- **Estado del código**: TBD (aún sin implementación)
+- **Estado del código**: en producción (`app/`, Next.js 16 + Supabase). Primer restaurante: Cafetería Omm Siri. Ver `README.md` y `app/TESTING.md`.
 
 ---
 

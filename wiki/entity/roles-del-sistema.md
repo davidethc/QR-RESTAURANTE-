@@ -2,7 +2,7 @@
 title: "Roles del Sistema"
 type: "entity"
 created: "2026-09-01"
-updated: "2026-09-01"
+updated: "2026-09-28"
 sources: ["Roles y flujo operativo — MVP.md", "PROYECTO_ SISTEMA DIGITAL DE ATENCIÓN Y PEDIDOS PARA RESTAURANTES.md"]
 tags: ["roles", "usuarios", "sistema"]
 ---
@@ -303,6 +303,8 @@ Superadmin → ve todo (es propietario de la plataforma).
 - [[Reglas de Negocio MVP]] — Restricciones de permisos y acciones por rol
 - [[Arquitectura Técnica MVP]] — Cómo la BD implementa roles (row-level security)
 - [[Proyecto QR - Visión General]] — Contexto de quiénes son los usuarios
+
+Qué puede hacer hoy cada rol en el panel (personal, ventas, cobro): [[Panel del Admin]].
 
 **Fuente Original**: Ver [[Fuentes Originales]] → Documentos 1 y 2
 
