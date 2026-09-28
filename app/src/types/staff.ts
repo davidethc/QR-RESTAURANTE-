@@ -5,6 +5,7 @@ import type {
   TableStatus,
   UserRole,
   MemberStatus,
+  PaymentMethod,
 } from "@/config/constants";
 
 /* Lo que devuelven los RPC del panel. Cada uno es una sola llamada
@@ -218,4 +219,25 @@ export interface StaffMember {
   is_me: boolean;
   /** Quien mira puede cambiarle rol, estado o clave. */
   can_manage: boolean;
+}
+
+/** Lo que devuelve `get_sales_report`. Montos en dólares. */
+export interface SalesReport {
+  /** "bills": cuentas cobradas en Caja. "orders": pedidos entregados (sin cobro activo). */
+  source: "bills" | "orders";
+  days: 1 | 7 | 30;
+  from: string;
+  to: string;
+  summary: {
+    total_sold: number;
+    tickets: number;
+    avg_ticket: number;
+    discounts: number;
+    tips: number;
+  };
+  by_day: { date: string; total: number }[];
+  by_method: { method: PaymentMethod; total: number }[];
+  top_products: { name: string; quantity: number; total: number }[];
+  /** Cuentas abiertas ahora mismo (solo con cobro activo). */
+  open_bills: { count: number; total: number } | null;
 }

@@ -12,6 +12,7 @@ import type {
   TableForOrder,
   TopProduct,
   StaffMember,
+  SalesReport,
 } from "@/types/staff";
 
 /**
@@ -192,4 +193,19 @@ export async function getRestaurantStaff(restaurantId: string): Promise<StaffMem
 
   if (error) throw error;
   return data ?? [];
+}
+
+/** Ventas de hoy, 7 o 30 días de negocio (solo OWNER/ADMIN; la RPC lo exige). */
+export async function getSalesReport(
+  restaurantId: string,
+  days: 1 | 7 | 30
+): Promise<SalesReport> {
+  const supabase = await createClient();
+  const { data, error } = await callUntypedRpc<SalesReport>(supabase, "get_sales_report", {
+    p_restaurant_id: restaurantId,
+    p_days: days,
+  });
+
+  if (error || !data) throw error ?? new Error("Sin datos de ventas");
+  return data;
 }
