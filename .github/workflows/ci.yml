@@ -25,6 +25,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # LayoutProps/PageProps son tipos globales que genera Next; sin este
+      # paso tsc falla con "Cannot find name 'LayoutProps'".
+      - name: Generate Next types
+        run: npx next typegen
+
       - name: Type check
         run: npx tsc --noEmit
 
