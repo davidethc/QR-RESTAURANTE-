@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, X, PencilLine, Check, ShoppingBag, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ import { notify } from "@/lib/notifications";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { useStaffCart } from "@/hooks/use-staff-cart";
+import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
+import { useOnline } from "@/hooks/use-online";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 import type { TopProduct } from "@/types/staff";
 
@@ -54,10 +56,21 @@ export function QuickSaleSheet({
   const [customerName, setCustomerName] = useState("");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set());
-  // Se genera al abrir una venta nueva y se reutiliza en cada reintento
-  // (createCounterSale, C5): si la red falla a mitad de camino, reintentar
-  // no manda un segundo pedido a cocina.
-  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
+  const online = useOnline();
+  // Se reutiliza en cada reintento de la MISMA venta (createCounterSale, C5):
+  // si la red falla a mitad de camino, reintentar no manda un segundo pedido
+  // a cocina. Si el carrito o el nombre cambian, es otra venta y otra clave.
+  const saleLines = useMemo(
+    () =>
+      cart.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        notes: item.notes || undefined,
+      })),
+    [cart.items]
+  );
+  const customerLabel = customerName.trim() || undefined;
+  const saleKey = useIdempotencyKey(JSON.stringify([saleLines, customerLabel ?? null]));
 
   const results = useMemo(() => {
     const term = normalizeText(query.trim());
@@ -79,7 +92,7 @@ export function QuickSaleSheet({
     setQuery("");
     setCustomerName("");
     setEditingNote(null);
-    idempotencyKeyRef.current = crypto.randomUUID();
+    saleKey.renew();
   }
 
   function handleTriggerClick() {
@@ -99,13 +112,9 @@ export function QuickSaleSheet({
 
   async function handleConfirm() {
     return createCounterSale({
-      items: cart.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        notes: item.notes || undefined,
-      })),
-      customerLabel: customerName.trim() || undefined,
-      idempotencyKey: idempotencyKeyRef.current,
+      items: saleLines,
+      customerLabel,
+      idempotencyKey: saleKey.get(),
     });
   }
 
@@ -319,9 +328,14 @@ export function QuickSaleSheet({
 
               <ConfirmDialog
                 trigger={
-                  <Button size="lg" className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-[15px]">
+                  <Button
+                    size="lg"
+                    disabled={!online}
+                    title={online ? undefined : "Sin conexión: espera a que vuelva la red"}
+                    className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-[15px]"
+                  >
                     <span>
-                      Cobrar · {cart.count} {cart.count === 1 ? "plato" : "platos"}
+                      {online ? "Cobrar" : "Sin conexión"} · {cart.count} {cart.count === 1 ? "plato" : "platos"}
                     </span>
                     <span className="font-display text-[20px] font-bold tabular-nums">{formatPrice(cart.total)}</span>
                   </Button>

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { notify } from "@/lib/notifications";
+import { newRequestId } from "@/lib/request-id";
 import { addCashMovement } from "@/lib/actions/cash";
 import { addCashMovementSchema, type AddCashMovementInput } from "@/lib/validations/cash";
 import { CASH_MOVEMENT_TYPE } from "@/config/constants";
@@ -44,6 +45,22 @@ export const REASON_LABEL: Record<string, string> = {
  * Entrada/salida de caja. Solo OWNER/ADMIN (add_cash_movement lo exige;
  * cash_movements ni siquiera lo puede leer un WAITER — cierre ciego).
  */
+/** Valores de un movimiento nuevo, con su propia clave de idempotencia. La
+ * clave se conserva entre reintentos del mismo envío (el formulario no se
+ * resetea si falla), pero todo `reset` arranca un movimiento distinto: sin
+ * clave nueva, el siguiente movimiento se tomaría por repetición del anterior
+ * y la base devolvería el viejo en vez de registrarlo. */
+function freshMovement(cashSessionId: string): AddCashMovementInput {
+  return {
+    cashSessionId,
+    type: CASH_MOVEMENT_TYPE.OUT,
+    reason: "OTHER",
+    amount: undefined,
+    description: "",
+    idempotencyKey: newRequestId(),
+  };
+}
+
 export function CashMovementDialog({ cashSessionId }: { cashSessionId: string }) {
   "use no memo";
   const router = useRouter();
@@ -57,14 +74,7 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
     formState: { errors, isSubmitting },
   } = useForm<AddCashMovementInput>({
     resolver: zodResolver(addCashMovementSchema),
-    defaultValues: {
-      cashSessionId,
-      type: CASH_MOVEMENT_TYPE.OUT,
-      reason: "OTHER",
-      amount: undefined,
-      description: "",
-      idempotencyKey: crypto.randomUUID(),
-    },
+    defaultValues: freshMovement(cashSessionId),
   });
 
   const reason = useWatch({ control, name: "reason" });
@@ -78,14 +88,7 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
       }
       notify.success(result.data.replayed ? "Ese movimiento ya estaba registrado" : "Movimiento registrado");
       setOpen(false);
-      reset({
-        cashSessionId,
-        type: CASH_MOVEMENT_TYPE.OUT,
-        reason: "OTHER",
-        amount: undefined,
-        description: "",
-        idempotencyKey: crypto.randomUUID(),
-      });
+      reset(freshMovement(cashSessionId));
       router.refresh();
     });
   }
@@ -95,7 +98,7 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) reset();
+        if (!next) reset(freshMovement(cashSessionId));
       }}
     >
       <DialogTrigger asChild>

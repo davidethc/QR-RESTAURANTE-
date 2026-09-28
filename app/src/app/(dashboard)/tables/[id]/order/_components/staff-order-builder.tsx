@@ -15,6 +15,7 @@ import { notify } from "@/lib/notifications";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { useStaffCart } from "@/hooks/use-staff-cart";
+import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 import type { TopProduct } from "@/types/staff";
 
@@ -38,6 +39,19 @@ export function StaffOrderBuilder({
   const [openCategories, setOpenCategories] = useState<Set<string>>(
     () => new Set()
   );
+
+  // Misma clave mientras el pedido no cambie: reintentar "Enviar" tras un
+  // corte de red no duplica la comanda en cocina.
+  const orderLines = useMemo(
+    () =>
+      cart.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        notes: item.notes || undefined,
+      })),
+    [cart.items]
+  );
+  const requestKey = useIdempotencyKey(JSON.stringify(orderLines));
 
   const results = useMemo(() => {
     const term = normalizeText(query.trim());
@@ -63,8 +77,13 @@ export function StaffOrderBuilder({
   }
 
   async function handleSend() {
-    const result = await createStaffOrder(tableId, cart.items);
+    const result = await createStaffOrder({
+      tableId,
+      items: orderLines,
+      clientRequestId: requestKey.get(),
+    });
     if (result.ok) {
+      requestKey.renew();
       cart.clear();
       // Nace directo en preparación (ver createStaffOrder): llevar al
       // mesero de vuelta a Mesas lo dejaría sin ver dónde quedó su

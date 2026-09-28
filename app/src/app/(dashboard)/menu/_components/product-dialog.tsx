@@ -39,14 +39,12 @@ const NO_PAIRED_DRINK = "__none__";
 
 export function ProductDialog({
   restaurantId,
-  slug,
   categories,
   allProducts,
   product,
   defaultCategoryId,
 }: {
   restaurantId: string;
-  slug: string;
   categories: AdminCategory[];
   allProducts: AdminProduct[];
   product?: AdminProduct;
@@ -88,14 +86,14 @@ export function ProductDialog({
       let productId: string;
 
       if (isEdit) {
-        const result = await updateProduct(product.id, slug, values);
+        const result = await updateProduct(product.id, values);
         if (!result.ok) {
           setError("root", { message: result.error });
           return;
         }
         productId = product.id;
       } else {
-        const result = await createProduct(restaurantId, slug, values);
+        const result = await createProduct(restaurantId, values);
         if (!result.ok) {
           setError("root", { message: result.error });
           return;
@@ -110,7 +108,6 @@ export function ProductDialog({
         const uploadResult = await uploadProductImage(
           restaurantId,
           productId,
-          slug,
           formData
         );
         if (!uploadResult.ok) {

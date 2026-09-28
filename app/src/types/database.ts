@@ -1442,11 +1442,21 @@ export type Database = {
         Returns: Json
       }
       create_customer_order: {
-        Args: { p_items: Json; p_notes?: string; p_session_token: string }
+        Args: {
+          p_client_request_id?: string
+          p_items: Json
+          p_notes?: string
+          p_session_token: string
+        }
         Returns: string
       }
       create_staff_order: {
-        Args: { p_items: Json; p_notes?: string; p_table_id: string }
+        Args: {
+          p_client_request_id?: string
+          p_items: Json
+          p_notes?: string
+          p_table_id: string
+        }
         Returns: string
       }
       create_waiter_call: {

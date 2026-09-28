@@ -9,12 +9,10 @@ import type { UserRole } from "@/config/constants";
 interface OpenChargeOptions {
   tableSessionId: string;
   tableLabel: string;
-  /** Tope de descuento del mesero para esta apertura. Si se omite se usa el
-   * que trae el provider (de `getRestaurantSettings` en el layout).
-   * Hoy no llega a la hoja: solo cobra OWNER/ADMIN (sin tope), así que la
-   * hoja ya no lo usa. Se mantiene en el contrato para no romper a quienes
-   * lo pasan (call-card, release-table-button, open-bills-list); limpiarlo
-   * va en un commit aparte. */
+  /** Sin efecto: solo cobra OWNER/ADMIN (sin tope), así que la hoja no lo
+   * usa. Se mantiene opcional para no romper a quienes todavía lo pasan
+   * (call-card, release-table-button, open-bills-list, quick-sale-sheet);
+   * limpiarlo va en un commit aparte. */
   maxWaiterDiscountPct?: number;
 }
 
@@ -36,16 +34,14 @@ const ChargeSheetContext = createContext<ChargeSheetContextValue | null>(null);
  */
 export function ChargeSheetProvider({
   role,
-  maxWaiterDiscountPct,
   children,
 }: {
   role: UserRole;
-  maxWaiterDiscountPct: number;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [target, setTarget] = useState<Required<OpenChargeOptions> | null>(null);
+  const [target, setTarget] = useState<{ tableSessionId: string; tableLabel: string } | null>(null);
 
   const canCharge = canHandleMoney(role);
 
@@ -55,11 +51,10 @@ export function ChargeSheetProvider({
       setTarget({
         tableSessionId: options.tableSessionId,
         tableLabel: options.tableLabel,
-        maxWaiterDiscountPct: options.maxWaiterDiscountPct ?? maxWaiterDiscountPct,
       });
       setOpen(true);
     },
-    [canCharge, maxWaiterDiscountPct]
+    [canCharge]
   );
 
   const value = useMemo<ChargeSheetContextValue>(() => ({ openCharge }), [openCharge]);

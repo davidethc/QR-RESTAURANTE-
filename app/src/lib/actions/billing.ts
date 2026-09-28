@@ -7,6 +7,7 @@ import { getTableSession } from "@/lib/session";
 import { getPublicMenu } from "@/lib/queries/menu";
 import { getMyRestaurant, getTopProducts } from "@/lib/queries/staff";
 import { canHandleMoney } from "@/lib/permissions";
+import { dbFailure } from "@/lib/db-errors";
 import {
   addItemsToBillSchema,
   type AddItemsToBillInput,
@@ -62,14 +63,8 @@ async function run<T>(
   try {
     const supabase = await createClient();
     const { data, error } = await callUntypedRpc<T>(supabase, fn, args);
-    if (error) {
-      // P0001 = RAISE EXCEPTION de la RPC: mensaje pensado para el usuario.
-      // Cualquier otro código (constraint, tipo, permisos, PostgREST) es
-      // interno y no se muestra crudo.
-      if (error.code === "P0001") return { ok: false, error: error.message };
-      console.error(`[rpc ${fn}]`, error.code, error.message);
-      return { ok: false, error: "No se pudo completar la operación. Intenta de nuevo." };
-    }
+    // Solo P0001 (RAISE EXCEPTION de la RPC) llega al usuario; ver db-errors.
+    if (error) return dbFailure(error, `rpc ${fn}`);
     if (options.revalidate) revalidateBilling();
     return { ok: true, data: data as T };
   } catch {

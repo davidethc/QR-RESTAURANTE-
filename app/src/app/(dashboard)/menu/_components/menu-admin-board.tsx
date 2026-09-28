@@ -17,12 +17,10 @@ import type { AdminCategory, AdminProduct } from "@/types/staff";
  */
 export function MenuAdminBoard({
   restaurantId,
-  slug,
   categories: initialCategories,
   products: initialProducts,
 }: {
   restaurantId: string;
-  slug: string;
   categories: AdminCategory[];
   products: AdminProduct[];
 }) {
@@ -46,7 +44,7 @@ export function MenuAdminBoard({
     next.splice(to, 0, moved);
     setCategories(next);
 
-    reorderCategories(slug, next.map((c) => c.id)).then((result) => {
+    reorderCategories(next.map((c) => c.id)).then((result) => {
       if (!result.ok) {
         notify.error(result.error);
         router.refresh();
@@ -74,7 +72,7 @@ export function MenuAdminBoard({
       .filter((p) => p.category_id === dragged.category_id)
       .map((p) => p.id);
 
-    reorderProducts(slug, categoryProductIds).then((result) => {
+    reorderProducts(categoryProductIds).then((result) => {
       if (!result.ok) {
         notify.error(result.error);
         router.refresh();
@@ -96,7 +94,7 @@ export function MenuAdminBoard({
     [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
     setCategories(next);
 
-    reorderCategories(slug, next.map((c) => c.id)).then((result) => {
+    reorderCategories(next.map((c) => c.id)).then((result) => {
       if (!result.ok) {
         notify.error(result.error);
         router.refresh();
@@ -125,7 +123,7 @@ export function MenuAdminBoard({
       .filter((p) => p.category_id === dragged.category_id)
       .map((p) => p.id);
 
-    reorderProducts(slug, categoryProductIds).then((result) => {
+    reorderProducts(categoryProductIds).then((result) => {
       if (!result.ok) {
         notify.error(result.error);
         router.refresh();
@@ -180,7 +178,7 @@ export function MenuAdminBoard({
       </div>
 
       <div className="flex justify-end">
-        <CategoryDialog restaurantId={restaurantId} slug={slug} />
+        <CategoryDialog restaurantId={restaurantId} />
       </div>
 
       {categories.map((category, index) => (
@@ -191,7 +189,6 @@ export function MenuAdminBoard({
           allCategories={categories}
           allProducts={products}
           restaurantId={restaurantId}
-          slug={slug}
           isDragging={draggedCategoryId === category.id}
           onCategoryDragStart={() => setDraggedCategoryId(category.id)}
           onCategoryDragEnd={() => setDraggedCategoryId(null)}
@@ -215,7 +212,6 @@ export function MenuAdminBoard({
           allCategories={categories}
           allProducts={products}
           restaurantId={restaurantId}
-          slug={slug}
           isDragging={false}
           draggedProductId={draggedProductId}
           onProductDragStart={setDraggedProductId}

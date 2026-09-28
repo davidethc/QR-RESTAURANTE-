@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useOnline } from "@/hooks/use-online";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import type { Bill } from "@/types/billing";
@@ -40,19 +41,37 @@ export function ChargeFooter({
   onGoToPay: () => void;
   onCloseBill: () => void;
 }) {
+  // Sin red no se cobra: el pago quedaría en el aire y el cajero no sabría si
+  // entró. El resto de la hoja se puede seguir mirando.
+  const online = useOnline();
+  const offlineTitle = online ? undefined : "Sin conexión: espera a que vuelva la red";
+
   let action: React.ReactNode = null;
   if (bill.can_close) {
     action = (
-      <Button type="button" disabled={closePending} onClick={onCloseBill} className={primaryClass}>
+      <Button
+        type="button"
+        disabled={closePending || !online}
+        title={offlineTitle}
+        onClick={onCloseBill}
+        className={primaryClass}
+      >
         {closePending && <Loader2 className="animate-spin" data-icon="inline-start" aria-hidden />}
         Cerrar cuenta
       </Button>
     );
   } else if (bill.status === "OPEN" && tab === "pay") {
     action = (
-      <Button type="submit" form={formId} disabled={paySubmitting} className={primaryClass}>
+      <Button
+        type="submit"
+        form={formId}
+        disabled={paySubmitting || !online}
+        title={offlineTitle}
+        className={primaryClass}
+      >
         {paySubmitting && <Loader2 className="animate-spin" data-icon="inline-start" aria-hidden />}
-        Cobrar <span className="font-display tabular-nums">{formatPrice(payAmount)}</span>
+        {online ? "Cobrar" : "Sin conexión"}{" "}
+        <span className="font-display tabular-nums">{formatPrice(payAmount)}</span>
       </Button>
     );
   } else if (bill.status === "OPEN") {

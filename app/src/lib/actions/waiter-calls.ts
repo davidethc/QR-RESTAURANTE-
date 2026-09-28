@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { dbFailure } from "@/lib/db-errors";
 import { getTableSession } from "@/lib/session";
 import type { CallType, CallStatus } from "@/config/constants";
 import type { ActionResult } from "@/types/actions";
@@ -25,7 +26,7 @@ export async function callWaiter(
     p_type: type,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "callWaiter");
   return { ok: true, data };
 }
 
@@ -40,7 +41,7 @@ export async function handleCall(
     p_status: status,
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return dbFailure(error, "handleCall");
   revalidatePath("/orders");
   return { ok: true, data: undefined };
 }

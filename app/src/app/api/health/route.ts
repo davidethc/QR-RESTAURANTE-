@@ -49,10 +49,13 @@ export async function GET() {
     // 503 y no 200: el código de estado es lo único que mira el
     // monitor. Devolver 200 con un cuerpo que diga "error" haría que
     // la base pudiera estar muerta con el panel en verde.
+    // El detalle va al log, no a la respuesta: la ruta es pública y el
+    // mensaje de Postgres/PostgREST puede describir la base por dentro.
+    console.error("[health]", error);
     return Response.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "unknown",
+        error: "db_unavailable",
         ms: Date.now() - startedAt,
       },
       { status: 503, headers: { "Cache-Control": "no-store" } }

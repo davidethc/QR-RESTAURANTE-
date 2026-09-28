@@ -27,7 +27,6 @@ export default async function MenuAdminPage() {
       />
       <MenuAdminBoard
         restaurantId={session.restaurant.id}
-        slug={session.restaurant.slug}
         categories={menu.categories}
         products={menu.products}
       />

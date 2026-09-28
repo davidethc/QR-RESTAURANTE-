@@ -1,6 +1,12 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getMyRestaurant } from "@/lib/queries/staff";
+import {
+  classifyMyRestaurantError,
+  type MyRestaurantFailure,
+} from "@/lib/my-restaurant-error";
+import type { MyRestaurant } from "@/types/staff";
+import { DashboardLoadError } from "./_components/dashboard-load-error";
 import { DashboardNav } from "./_components/dashboard-nav";
 import { DashboardNotifier } from "@/components/shared/dashboard-notifier";
 import { GooeyToaster } from "@/components/ui/goey-toaster";
@@ -30,12 +36,22 @@ export default async function DashboardLayout({
   // prerender.
   await connection();
 
-  let session;
+  // Solo se manda a /login cuando de verdad no hay a quién mostrarle el
+  // panel (sin sesión, o sin restaurante / desactivado). Un fallo pasajero
+  // de la base o de la red muestra un error recuperable: antes cualquier
+  // error sacaba al personal a /login a mitad de servicio.
+  let session: MyRestaurant | null = null;
+  let failure: MyRestaurantFailure | null = null;
   try {
     session = await getMyRestaurant();
-  } catch {
-    redirect("/login");
+  } catch (error) {
+    failure = classifyMyRestaurantError(error);
+    if (failure === "transient") console.error("[DashboardLayout] getMyRestaurant", error);
   }
+
+  if (failure === "unauthenticated") redirect("/login?motivo=sesion");
+  if (failure === "no-restaurant") redirect("/login?motivo=sin-restaurante");
+  if (!session) return <DashboardLoadError />;
 
   return (
     <div className="min-h-full">
@@ -44,12 +60,7 @@ export default async function DashboardLayout({
         role={session.role}
       />
       <DashboardNav session={session} />
-      {/* Tope de descuento del mesero: cada página que lo necesita ya lo trae
-          de `getRestaurantSettings` y se lo pasa a `openCharge`; traerlo acá
-          también obligaría a toda navegación del panel a esperar esa
-          consulta aunque la página no cobre nada (settings, menú, cocina).
-          0 aquí es solo el default cuando quien abre la hoja no lo pasa. */}
-      <ChargeSheetProvider role={session.role} maxWaiterDiscountPct={0}>
+      <ChargeSheetProvider role={session.role}>
         {children}
       </ChargeSheetProvider>
       {/* Solo el panel monta goey-toast (y con él framer-motion): es

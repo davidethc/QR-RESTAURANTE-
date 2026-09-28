@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { dbFailure } from "@/lib/db-errors";
 import { getTableSession } from "@/lib/session";
 import type { SessionCall } from "@/types/orders";
 import type { SessionOrderSummary } from "@/types/staff";
@@ -51,8 +52,8 @@ export async function getTableStatus(): Promise<ActionResult<TableStatus>> {
     }),
   ]);
 
-  if (orders.error) return { ok: false, error: orders.error.message };
-  if (calls.error) return { ok: false, error: calls.error.message };
+  if (orders.error) return dbFailure(orders.error, "getTableStatus");
+  if (calls.error) return dbFailure(calls.error, "getTableStatus");
 
   return {
     ok: true,

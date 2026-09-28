@@ -19,7 +19,6 @@ export function CategoryAdminSection({
   allCategories,
   allProducts,
   restaurantId,
-  slug,
   isDragging,
   onCategoryDragStart,
   onCategoryDragEnd,
@@ -39,7 +38,6 @@ export function CategoryAdminSection({
   allCategories: AdminCategory[];
   allProducts: AdminProduct[];
   restaurantId: string;
-  slug: string;
   isDragging: boolean;
   onCategoryDragStart?: () => void;
   onCategoryDragEnd?: () => void;
@@ -113,7 +111,6 @@ export function CategoryAdminSection({
           <div className="flex items-center gap-1">
             <CategoryDialog
               restaurantId={restaurantId}
-              slug={slug}
               category={category}
             />
             <ConfirmDialog
@@ -130,7 +127,7 @@ export function CategoryAdminSection({
               }
               destructive
               confirmLabel="Eliminar"
-              action={() => deleteCategory(category.id, slug)}
+              action={() => deleteCategory(category.id)}
               successMessage="Categoría eliminada"
               onSuccess={() => router.refresh()}
             />
@@ -148,7 +145,6 @@ export function CategoryAdminSection({
                 key={product.id}
                 product={product}
                 restaurantId={restaurantId}
-                slug={slug}
                 categories={allCategories}
                 allProducts={allProducts}
                 isDragging={draggedProductId === product.id}
@@ -167,7 +163,6 @@ export function CategoryAdminSection({
 
       <ProductDialog
         restaurantId={restaurantId}
-        slug={slug}
         categories={allCategories}
         allProducts={allProducts}
         defaultCategoryId={category?.id}

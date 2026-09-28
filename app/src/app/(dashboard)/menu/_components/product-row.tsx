@@ -17,7 +17,6 @@ import type { AdminCategory, AdminProduct } from "@/types/staff";
 export function ProductRow({
   product,
   restaurantId,
-  slug,
   categories,
   allProducts,
   isDragging,
@@ -31,7 +30,6 @@ export function ProductRow({
 }: {
   product: AdminProduct;
   restaurantId: string;
-  slug: string;
   categories: AdminCategory[];
   allProducts: AdminProduct[];
   isDragging: boolean;
@@ -48,7 +46,7 @@ export function ProductRow({
 
   function handleToggle(checked: boolean) {
     startTransition(async () => {
-      const result = await toggleProductAvailable(product.id, slug, checked);
+      const result = await toggleProductAvailable(product.id, checked);
       if (!result.ok) {
         notify.error(result.error);
         return;
@@ -136,7 +134,6 @@ export function ProductRow({
 
       <ProductDialog
         restaurantId={restaurantId}
-        slug={slug}
         categories={categories}
         allProducts={allProducts}
         product={product}
@@ -152,7 +149,7 @@ export function ProductRow({
         description={`"${product.name}" se eliminará de la carta. Esta acción no se puede deshacer.`}
         destructive
         confirmLabel="Eliminar"
-        action={() => deleteProduct(product.id, slug)}
+        action={() => deleteProduct(product.id)}
         successMessage="Producto eliminado"
         onSuccess={() => router.refresh()}
       />

@@ -153,6 +153,12 @@ export function PaymentForm({
   }, [amountValue, tipValue]);
 
   function onSubmit(values: RecordPaymentInput) {
+    // El botón ya se deshabilita sin red (ChargeFooter); esto cubre el Enter
+    // dentro del formulario.
+    if (!navigator.onLine) {
+      notify.error("Sin conexión: espera a que vuelva la red para cobrar.");
+      return;
+    }
     return recordPayment({
       ...values,
       billId: bill.id,
