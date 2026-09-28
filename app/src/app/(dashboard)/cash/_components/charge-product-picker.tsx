@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ChefHat, Flame, Loader2, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,9 @@ export function ChargeProductPicker({
   const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set());
   const [sendToKitchen, setSendToKitchen] = useState(false);
   const [pending, setPending] = useState(false);
+  // Un envío que falló pudo haber llegado a la base (wifi). Mientras no se
+  // resuelva, cerrar la hoja conserva carrito y clave: el reintento no duplica.
+  const unresolvedSend = useRef(false);
   const batchLines = useMemo(
     () =>
       cart.items.map((item) => ({
@@ -84,9 +87,9 @@ export function ChargeProductPicker({
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (next) {
-      batchKey.renew();
+      if (!unresolvedSend.current) batchKey.renew();
       if (!menu) loadMenu();
-    } else {
+    } else if (!unresolvedSend.current) {
       cart.clear();
       setQuery("");
       setSendToKitchen(false);
@@ -112,9 +115,11 @@ export function ChargeProductPicker({
     });
     setPending(false);
     if (!result.ok) {
+      unresolvedSend.current = true;
       notify.error(result.error);
       return;
     }
+    unresolvedSend.current = false;
     notify.success(
       result.data.replayed
         ? "Esos productos ya estaban agregados"

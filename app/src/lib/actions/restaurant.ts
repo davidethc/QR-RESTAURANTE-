@@ -76,12 +76,17 @@ export async function uploadRestaurantLogo(
     data: { publicUrl },
   } = supabase.storage.from("product-images").getPublicUrl(path);
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("restaurants")
     .update({ logo_url: publicUrl })
-    .eq("id", restaurantId);
+    .eq("id", restaurantId)
+    .select("id");
 
-  if (updateError) return dbFailure(updateError, "uploadRestaurantLogo");
+  if (updateError || !updated?.length) {
+    await supabase.storage.from("product-images").remove([path]);
+    if (updateError) return dbFailure(updateError, "uploadRestaurantLogo");
+    return { ok: false, error: "No tienes permiso para cambiar el logo de este restaurante." };
+  }
 
   revalidatePath("/settings");
   await refreshPublicMenuTag();

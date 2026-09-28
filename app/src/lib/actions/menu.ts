@@ -286,8 +286,11 @@ export async function uploadProductImage(
     .eq("id", productId)
     .select("id");
 
-  if (updateError) return dbFailure(updateError, "uploadProductImage");
-  if (!updated?.length) return notFoundOrForbidden("el producto");
+  if (updateError || !updated?.length) {
+    await supabase.storage.from("product-images").remove([path]);
+    if (updateError) return dbFailure(updateError, "uploadProductImage");
+    return notFoundOrForbidden("el producto");
+  }
 
   revalidatePath("/menu");
   await refreshPublicMenuTag();
