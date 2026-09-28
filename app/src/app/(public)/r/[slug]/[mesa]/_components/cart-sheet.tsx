@@ -16,7 +16,7 @@ import { createOrder } from "@/lib/actions/orders";
 import { buildWhatsappUrl, composeOrderMessage } from "@/lib/whatsapp";
 import type { CartItem, PublicProduct } from "@/types/menu";
 
-export function CartSheetV2({
+export function CartSheet({
   open,
   onOpenChange,
   items,

@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { restaurantSettingsSchema } from "@/lib/validations/restaurant";
+import { billingSettingsSchema, restaurantSettingsSchema } from "@/lib/validations/restaurant";
 import type { ActionResult } from "@/types/actions";
 
 export async function updateRestaurantSettings(
@@ -81,4 +81,39 @@ export async function uploadRestaurantLogo(
   revalidatePath("/settings");
   updateTag(`menu-${slug}`);
   return { ok: true, data: publicUrl };
+}
+
+/**
+ * Cobro y caja: solo el dueño. El trigger guard_restaurant_owner_settings lo
+ * hace cumplir en la base aunque alguien llame esto sin serlo.
+ */
+export async function updateBillingSettings(
+  restaurantId: string,
+  input: unknown
+): Promise<ActionResult> {
+  const parsed = billingSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("restaurants")
+    .update({
+      billing_enabled: parsed.data.billingEnabled,
+      max_waiter_discount_pct: parsed.data.maxWaiterDiscountPct,
+      business_day_cutoff: parsed.data.businessDayCutoff,
+    })
+    .eq("id", restaurantId);
+
+  if (error) {
+    if (error.code === "42501") return { ok: false, error: "Solo el dueño puede cambiar el cobro." };
+    console.error("[updateBillingSettings]", error.code, error.message);
+    return { ok: false, error: "No se pudo guardar. Intenta de nuevo." };
+  }
+  revalidatePath("/settings");
+  revalidatePath("/cash");
+  revalidatePath("/orders");
+  revalidatePath("/tables");
+  return { ok: true, data: undefined };
 }

@@ -6,6 +6,7 @@ import type {
   UserRole,
   MemberStatus,
   TableKind,
+  PaymentMethod,
 } from "@/config/constants";
 
 /* Lo que devuelven los RPC del panel. Cada uno es una sola llamada
@@ -152,16 +153,6 @@ export interface AdminMenu {
   products: AdminProduct[];
 }
 
-export interface StaffMember {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  role: UserRole;
-  status: MemberStatus;
-  created_at: string;
-}
-
 /* Lo que ve el cliente sobre su propio pedido */
 
 export interface CustomerOrder {
@@ -204,8 +195,45 @@ export interface RestaurantSettings {
   billing_enabled: boolean;
   /** Tope de descuento que puede aplicar un WAITER sin ser OWNER/ADMIN. */
   max_waiter_discount_pct: number;
+  /** Hora local ("HH:MM:SS") en que cierra el día de negocio para reportes. */
+  business_day_cutoff: string;
   /** Zona horaria IANA del restaurante (ej. "America/Guayaquil"). La usa
    *  el ticket imprimible para mostrar la fecha/hora local, no la del
    *  servidor. */
   timezone: string;
+}
+
+/** Una persona del personal, como la devuelve `get_restaurant_staff`. */
+export interface StaffMember {
+  member_id: string;
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  role: UserRole;
+  status: MemberStatus;
+  created_at: string;
+  is_me: boolean;
+  /** Quien mira puede cambiarle rol, estado o clave. */
+  can_manage: boolean;
+}
+
+/** Lo que devuelve `get_sales_report`. Montos en dólares. */
+export interface SalesReport {
+  /** "bills": cuentas cobradas en Caja. "orders": pedidos entregados (sin cobro activo). */
+  source: "bills" | "orders";
+  days: 1 | 7 | 30;
+  from: string;
+  to: string;
+  summary: {
+    total_sold: number;
+    tickets: number;
+    avg_ticket: number;
+    discounts: number;
+    tips: number;
+  };
+  by_day: { date: string; total: number }[];
+  by_method: { method: PaymentMethod; total: number }[];
+  top_products: { name: string; quantity: number; total: number }[];
+  /** Cuentas abiertas ahora mismo (solo con cobro activo). */
+  open_bills: { count: number; total: number } | null;
 }

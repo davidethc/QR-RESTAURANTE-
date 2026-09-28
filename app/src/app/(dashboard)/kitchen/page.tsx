@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { getMyRestaurant, getStaffOrders } from "@/lib/queries/staff";
-import { KitchenBoardV2 } from "./_components/kitchen-board-v2";
+import { KitchenBoard } from "./_components/kitchen-board";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -26,7 +26,7 @@ export default async function KitchenPage() {
 
   return (
     <main className="flex min-h-full flex-col">
-      <KitchenBoardV2 restaurantId={restaurantId} initialOrders={orders} />
+      <KitchenBoard restaurantId={restaurantId} initialOrders={orders} />
     </main>
   );
 }

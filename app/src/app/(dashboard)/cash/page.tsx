@@ -1,5 +1,7 @@
 import { canHandleMoney } from "@/lib/permissions";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
@@ -55,22 +57,29 @@ export default async function CashPage() {
           <EmptyState
             icon={Wallet}
             title="El cobro no está activo"
-            description="Este restaurante todavía no usa el módulo de cobro. Pide que lo activen para poder abrir caja y cobrar cuentas desde aquí."
+            description={
+              role === "OWNER"
+                ? "Actívalo en Configuración → Cobro y caja para abrir caja y cobrar cuentas desde aquí."
+                : "Pídele al dueño que lo active en Configuración → Cobro y caja."
+            }
           />
+          {role === "OWNER" && (
+            <div className="flex justify-center">
+              <Button asChild>
+                <Link href="/settings">Ir a Configuración</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </main>
     );
   }
 
-  // "Cierres anteriores": solo OWNER/ADMIN (el mesero cierra a ciegas y
-  // tampoco ve el historial). El mesero ni siquiera dispara estas consultas.
-  const isAdmin = role === "OWNER" || role === "ADMIN";
-
   const [registers, openSessionId, closedSessionRows, closedBillsToday] = await Promise.all([
     getCashRegisters(restaurantId),
     getOpenCashSessionId(restaurantId),
-    isAdmin ? getClosedCashSessions(restaurantId, 10) : Promise.resolve([]),
-    isAdmin ? getClosedBillsToday(restaurantId) : Promise.resolve([]),
+    getClosedCashSessions(restaurantId, 10),
+    getClosedBillsToday(restaurantId),
   ]);
 
   const [summaryResult, openBillsResult, closedSummaryResults, menu, topProducts] = await Promise.all([
@@ -111,13 +120,9 @@ export default async function CashPage() {
 
         <OpenBillsList bills={openBills} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
 
-        {isAdmin && (
-          <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />
-        )}
+        <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />
 
-        {isAdmin && (
-          <ClosedSessionsHistory sessions={closedSessions} timeZone={session.restaurant.timezone} />
-        )}
+        <ClosedSessionsHistory sessions={closedSessions} timeZone={session.restaurant.timezone} />
       </div>
     </main>
   );
