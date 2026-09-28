@@ -7,7 +7,9 @@
 -- migraciones. El último SELECT lista cada prueba con ok = true/false.
 --
 -- Qué demuestra:
---   T01 sesión con consumo sin cobrar y > 4 h inactiva NO vence al escanear
+--   T01 sesión con consumo sin cobrar y > 4 h inactiva NO vence al escanear:
+--       el escaneo da P0001 "cuenta pendiente", sin token y sin sesión nueva
+--   T01c con < 4 h de inactividad el escaneo reutiliza la sesión (misma mesa)
 --   T02 sesión vacía y > 4 h inactiva SÍ vence al escanear
 --   T03 el barrido de pg_cron vence solo sesiones vacías
 --   T04 la mesa con consumo sin cobrar se ve OCUPADA
@@ -23,6 +25,9 @@
 --   T14 set_bill_split rechaza al WAITER
 --   T15 cash_sessions invisible para WAITER
 --   T16 add_staff_member rechaza cuentas viejas y acepta recién creadas
+--   T17 una sesión con cuenta VOID y pedidos sigue con consumo sin cobrar
+--       (no vence y sale en "Cuentas abiertas" sin cuenta viva)
+--   T18 void_bill rechaza al WAITER antes del candado
 -- ---------------------------------------------------------------------------
 
 begin;
@@ -122,10 +127,17 @@ do $$
 declare
   v_token uuid;
 begin
-  select session_token into v_token from public.resolve_table_qr((select v from _ctx where k = 't1_qr'));
-  insert into _r (test, ok, detail) values
-    ('T01 consumo sin cobrar no vence al escanear', v_token = (select v from _ctx where k = 's1_token'),
-     'token devuelto = token de S1');
+  begin
+    select session_token into v_token from public.resolve_table_qr((select v from _ctx where k = 't1_qr'));
+    insert into _r (test, ok, detail) values
+      ('T01 consumo sin cobrar > 4 h: escanear da error, sin token', false,
+       'devolvió token ' || coalesce(v_token::text, 'null'));
+  exception when others then
+    insert into _r (test, ok, detail) values
+      ('T01 consumo sin cobrar > 4 h: escanear da error, sin token',
+       sqlstate = 'P0001' and sqlerrm = 'Esta mesa tiene una cuenta pendiente. Pide ayuda al personal.',
+       sqlstate || ' ' || sqlerrm);
+  end;
 
   select session_token into v_token from public.resolve_table_qr((select v from _ctx where k = 't2_qr'));
   insert into _r (test, ok, detail) values
@@ -136,8 +148,30 @@ end $$;
 reset role;
 
 insert into _r (test, ok, detail)
-select 'T01b S1 sigue ACTIVE', status = 'ACTIVE', status::text
-from public.table_sessions where id = (select v from _ctx where k = 's1');
+select 'T01b S1 sigue ACTIVE y no se abrió otra sesión en la mesa 1',
+       count(*) = 1 and bool_and(id = (select v from _ctx where k = 's1')),
+       'sesiones ACTIVE en mesa 1: ' || count(*)
+from public.table_sessions
+where table_id = (select v from _ctx where k = 't1') and status = 'ACTIVE';
+
+-- T01c · con actividad reciente (< 4 h) el escaneo reutiliza la sesión.
+update public.table_sessions set last_activity_at = now() - interval '1 hour'
+where id = (select v from _ctx where k = 's1');
+
+select set_config('role', 'anon', true),
+       set_config('request.jwt.claims', '{"role":"anon"}', true);
+
+do $$
+declare
+  v_token uuid;
+begin
+  select session_token into v_token from public.resolve_table_qr((select v from _ctx where k = 't1_qr'));
+  insert into _r (test, ok, detail) values
+    ('T01c consumo sin cobrar < 4 h: el escaneo reutiliza S1', v_token = (select v from _ctx where k = 's1_token'),
+     'token devuelto = token de S1');
+end $$;
+
+reset role;
 
 insert into _r (test, ok, detail)
 select 'T02b S2 quedó EXPIRED', status = 'EXPIRED', status::text
@@ -350,6 +384,90 @@ begin
 
   select count(*) into v_n from public.cash_sessions where restaurant_id = (select v from _ctx where k = 'restaurant');
   insert into _r (test, ok, detail) values ('T15 WAITER no ve cash_sessions', v_n = 0, 'filas visibles: ' || v_n);
+end $$;
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- T17 / T18 · cuenta VOID no salda el consumo; void_bill rechaza al WAITER
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_r uuid := (select v from _ctx where k = 'restaurant');
+  v_p public.products%rowtype;
+  v_s4 uuid; v_o uuid;
+begin
+  select * into v_p from public.products where id = (select v from _ctx where k = 'product');
+
+  -- Mesa 3: S3 quedó EXPIRED en T03.
+  insert into public.table_sessions (restaurant_id, table_id, started_at, last_activity_at)
+  values (v_r, (select v from _ctx where k = 't3'), now() - interval '6 hours', now() - interval '5 hours')
+  returning id into v_s4;
+
+  insert into public.orders (restaurant_id, table_id, table_session_id, status, subtotal, total,
+                             accepted_at, delivered_at, created_at, updated_at)
+  values (v_r, (select v from _ctx where k = 't3'), v_s4, 'DELIVERED', v_p.price, v_p.price,
+          now() - interval '6 hours', now() - interval '5 hours', now() - interval '6 hours', now() - interval '5 hours')
+  returning id into v_o;
+
+  insert into public.order_items (order_id, product_id, product_name, quantity, unit_price, subtotal)
+  values (v_o, v_p.id, v_p.name, 1, v_p.price, v_p.price);
+
+  insert into _ctx values ('s4', v_s4);
+end $$;
+
+select set_config('role', 'authenticated', true),
+       set_config('request.jwt.claims',
+                  json_build_object('sub', (select v from _ctx where k = 'owner'), 'role', 'authenticated')::text, true);
+
+do $$
+declare
+  v_bill jsonb;
+  v_bills jsonb;
+begin
+  v_bill := public.open_bill((select v from _ctx where k = 's4'));
+  perform public.void_bill((v_bill ->> 'id')::uuid, 'prueba QA robustez');
+
+  v_bills := public.list_open_bills((select v from _ctx where k = 'restaurant'));
+  insert into _r (test, ok, detail)
+  select 'T17b sesión con cuenta VOID sale en Cuentas abiertas sin cuenta viva',
+         exists (select 1 from jsonb_array_elements(v_bills) e
+                 where e ->> 'table_session_id' = (select v from _ctx where k = 's4')::text
+                   and (e ->> 'has_bill')::boolean = false),
+         'filas: ' || jsonb_array_length(v_bills);
+exception when others then
+  insert into _r (test, ok, detail) values ('T17 bloque OWNER (open_bill + void_bill)', false, sqlstate || ' ' || sqlerrm);
+end $$;
+
+reset role;
+
+insert into _r (test, ok, detail)
+select 'T17a cuenta VOID + pedidos = consumo sin cobrar',
+       public.table_session_has_unpaid_consumption((select v from _ctx where k = 's4')),
+       (select string_agg(status::text, ',') from public.bills where table_session_id = (select v from _ctx where k = 's4'));
+
+do $$
+declare
+  v_n integer;
+begin
+  v_n := public.expire_idle_empty_table_sessions((select v from _ctx where k = 'restaurant'));
+  insert into _r (test, ok, detail)
+  select 'T17c el barrido no vence la sesión con cuenta VOID',
+         (select status from public.table_sessions where id = (select v from _ctx where k = 's4')) = 'ACTIVE',
+         'vencidas en el barrido: ' || v_n;
+end $$;
+
+select set_config('role', 'authenticated', true),
+       set_config('request.jwt.claims',
+                  json_build_object('sub', (select v from _ctx where k = 'waiter'), 'role', 'authenticated')::text, true);
+
+do $$
+begin
+  perform public.void_bill((select v from _ctx where k = 'bill1'), 'intento del mesero');
+  insert into _r (test, ok, detail) values ('T18 void_bill rechaza WAITER', false, 'lo permitió');
+exception when others then
+  insert into _r (test, ok, detail) values ('T18 void_bill rechaza WAITER',
+    sqlerrm = 'Solo el dueño o un administrador anulan cuentas', sqlstate || ' ' || sqlerrm);
 end $$;
 
 reset role;

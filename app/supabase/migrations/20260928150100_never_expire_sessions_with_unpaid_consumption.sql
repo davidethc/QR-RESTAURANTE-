@@ -8,8 +8,14 @@
 --
 -- Cambios:
 --   1. Si table_session_has_unpaid_consumption(sesión) es true, la sesión
---      NO se vence: se reutiliza. El cliente que escanea entra a esa sesión
---      y la cuenta queda para que el admin la cobre.
+--      NO se vence nunca.
+--      · resolve_table_qr (cliente): con menos de 4 h de inactividad se
+--        reutiliza como siempre (comensales de la misma mesa). Con más de
+--        4 h NO se entrega su session_token: sería otro cliente viendo los
+--        pedidos ajenos y sumando a esa cuenta. Error P0001 "Esta mesa tiene
+--        una cuenta pendiente. Pide ayuda al personal." La sesión queda
+--        ACTIVE, visible en /cash, para que el admin la cobre o la cierre.
+--      · find_or_create_active_table_session (mesero): la reutiliza.
 --   2. La inactividad se mide con table_session_last_activity (incluye
 --      pedidos y llamadas), la misma que usa table_effective_status. Antes se
 --      usaba solo last_activity_at, que el mesero no renueva al mover
@@ -69,10 +75,18 @@ begin
   limit 1
   for update;
 
-  -- Solo vence por inactividad una sesión SIN consumo por cobrar.
+  -- Más de 4 h sin actividad:
+  --   · con consumo sin cobrar: NO se entrega su token (sería otro cliente
+  --     viendo y sumando a la cuenta ajena). Error para el cliente; la
+  --     sesión queda ACTIVE y visible en /cash para que el admin la cobre.
+  --   · sin consumo: vence y se abre una sesión nueva, como siempre.
   if found
-     and public.table_session_last_activity(v_session.id) < now() - interval '4 hours'
-     and not public.table_session_has_unpaid_consumption(v_session.id) then
+     and public.table_session_last_activity(v_session.id) < now() - interval '4 hours' then
+    if public.table_session_has_unpaid_consumption(v_session.id) then
+      raise exception 'Esta mesa tiene una cuenta pendiente. Pide ayuda al personal.'
+        using errcode = 'P0001';
+    end if;
+
     update public.table_sessions
     set status = 'EXPIRED'
     where id = v_session.id;

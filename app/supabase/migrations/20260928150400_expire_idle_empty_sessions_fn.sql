@@ -49,6 +49,15 @@ begin
       continue;
     end if;
 
+    perform 1
+    from public.table_sessions
+    where id = v_candidate.id
+    for update skip locked;
+
+    if not found then
+      continue;
+    end if;
+
     update public.table_sessions ts
     set status = 'EXPIRED'
     where ts.id = v_candidate.id

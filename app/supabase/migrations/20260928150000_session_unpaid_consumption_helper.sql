@@ -9,9 +9,11 @@
 --
 -- Regla (solo si restaurants.billing_enabled):
 --   consumo sin cobrar = la sesión tiene al menos un pedido que no está
---   REJECTED ni CANCELLED, y
---     · tiene una cuenta OPEN (saldo por cobrar), o
---     · no tiene ninguna cuenta PAID / CLOSED / VOID que la salde.
+--   REJECTED ni CANCELLED, y no tiene ninguna cuenta PAID / CLOSED que lo
+--   salde. Una cuenta VOID NO salda nada (anular la cuenta no cobra el
+--   consumo): coherente con list_open_bills, que busca cuenta viva con
+--   status <> 'VOID'. Una cuenta OPEN tampoco salda. Por el índice
+--   bills_one_live_per_session hay a lo sumo una cuenta no-VOID por sesión.
 --   Una cuenta PAID pasa a OPEN sola si llega un pedido nuevo
 --   (recompute_bill), así que la regla sigue siendo correcta después.
 --
@@ -32,17 +34,10 @@ as $$
          where o.table_session_id = ts.id
            and o.status not in ('REJECTED', 'CANCELLED')
        )
-       and (
-         exists (
-           select 1 from public.bills b
-           where b.table_session_id = ts.id
-             and b.status = 'OPEN'
-         )
-         or not exists (
-           select 1 from public.bills b
-           where b.table_session_id = ts.id
-             and b.status in ('PAID', 'CLOSED', 'VOID')
-         )
+       and not exists (
+         select 1 from public.bills b
+         where b.table_session_id = ts.id
+           and b.status in ('PAID', 'CLOSED')
        )
     from public.table_sessions ts
     join public.restaurants r on r.id = ts.restaurant_id
