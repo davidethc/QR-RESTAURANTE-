@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/utils";
 import type { UserRole } from "@/config/constants";
 import type { TableStatusRow } from "@/types/staff";
 
-interface TablesBoardV2Props {
+interface TablesBoardProps {
   tables: TableStatusRow[];
   canManage: boolean;
   canServeTable: boolean;
@@ -147,7 +147,7 @@ function TableCard({
   );
 }
 
-export function TablesBoardV2({
+export function TablesBoard({
   tables,
   canManage,
   canServeTable,
@@ -155,7 +155,7 @@ export function TablesBoardV2({
   billingEnabled,
   maxWaiterDiscountPct,
   tableSessionMap,
-}: TablesBoardV2Props) {
+}: TablesBoardProps) {
   const availableCount = tables.filter((t) => t.status === "AVAILABLE").length;
   const billRequested = tables.filter((t) => t.status === "BILL_REQUESTED").length;
   const totalTables = tables.length;

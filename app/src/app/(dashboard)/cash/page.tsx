@@ -59,15 +59,11 @@ export default async function CashPage() {
     );
   }
 
-  // "Cierres anteriores": solo OWNER/ADMIN (el mesero cierra a ciegas y
-  // tampoco ve el historial). El mesero ni siquiera dispara estas consultas.
-  const isAdmin = role === "OWNER" || role === "ADMIN";
-
   const [registers, openSessionId, closedSessionRows, closedBillsToday] = await Promise.all([
     getCashRegisters(restaurantId),
     getOpenCashSessionId(restaurantId),
-    isAdmin ? getClosedCashSessions(restaurantId, 10) : Promise.resolve([]),
-    isAdmin ? getClosedBillsToday(restaurantId) : Promise.resolve([]),
+    getClosedCashSessions(restaurantId, 10),
+    getClosedBillsToday(restaurantId),
   ]);
 
   const [summaryResult, openBillsResult, closedSummaryResults] = await Promise.all([
@@ -104,13 +100,9 @@ export default async function CashPage() {
           <OpenBillsList bills={openBills} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
         </div>
 
-        {isAdmin && (
-          <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />
-        )}
+        <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />
 
-        {isAdmin && (
-          <ClosedSessionsHistory sessions={closedSessions} timeZone={session.restaurant.timezone} />
-        )}
+        <ClosedSessionsHistory sessions={closedSessions} timeZone={session.restaurant.timezone} />
       </div>
     </main>
   );
