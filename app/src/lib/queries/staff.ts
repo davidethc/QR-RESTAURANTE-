@@ -102,7 +102,7 @@ export async function getRestaurantSettings(
     // local. No hace falta RPC nueva — restaurants_select_members ya deja
     // leer cualquier columna de su restaurante a todo miembro.
     .select(
-      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, timezone"
+      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, business_day_cutoff, timezone"
     )
     .eq("id", restaurantId)
     .single();

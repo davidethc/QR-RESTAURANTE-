@@ -1,5 +1,7 @@
 import { canHandleMoney } from "@/lib/permissions";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
@@ -52,8 +54,19 @@ export default async function CashPage() {
           <EmptyState
             icon={Wallet}
             title="El cobro no está activo"
-            description="Este restaurante todavía no usa el módulo de cobro. Pide que lo activen para poder abrir caja y cobrar cuentas desde aquí."
+            description={
+              role === "OWNER"
+                ? "Actívalo en Configuración → Cobro y caja para abrir caja y cobrar cuentas desde aquí."
+                : "Pídele al dueño que lo active en Configuración → Cobro y caja."
+            }
           />
+          {role === "OWNER" && (
+            <div className="flex justify-center">
+              <Button asChild>
+                <Link href="/settings">Ir a Configuración</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </main>
     );
