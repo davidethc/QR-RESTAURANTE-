@@ -117,7 +117,8 @@ export async function getSessionOrders(): Promise<
  * transacción de Postgres — si algo falla, no queda a medias (nunca
  * un pedido "aceptado pero no marcado preparando" por un error de red
  * entre dos llamadas separadas). `accept_order` y `start_order_preparing`
- * siguen existiendo para el caso raro de recuperación manual.
+ * (y `startPreparing` abajo) quedan sin pantalla que las use: son
+ * inofensivas y se conservan por compatibilidad con PWAs en caché.
  */
 export async function acceptOrder(orderId: string): Promise<ActionResult> {
   const supabase = await createClient();
@@ -159,6 +160,11 @@ export async function startPreparing(orderId: string): Promise<ActionResult> {
   return { ok: true, data: undefined };
 }
 
+/**
+ * "Listo" de la cocina. Acepta ACCEPTED o PREPARING. Si el restaurante
+ * tiene `kitchen_ready_step = false`, la base solo se lo permite a
+ * OWNER/ADMIN (la cocina está en modo "solo mirar").
+ */
 export async function markReady(orderId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_order_ready", {
@@ -171,6 +177,13 @@ export async function markReady(orderId: string): Promise<ActionResult> {
   return { ok: true, data: undefined };
 }
 
+/**
+ * "Entregado" del mesero. Acepta ACCEPTED, PREPARING o READY: no hace
+ * falta que la cocina lo haya marcado listo (en modo "solo mirar" nunca
+ * lo hace). Desde PREPARING no rellena `ready_at`, para no inventar
+ * tiempos de cocina. En el panel se llama diferido, con "Deshacer"
+ * (`useDeferredDelivery`).
+ */
 export async function markDelivered(orderId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_order_delivered", {
@@ -179,5 +192,6 @@ export async function markDelivered(orderId: string): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/orders");
+  revalidatePath("/kitchen");
   return { ok: true, data: undefined };
 }

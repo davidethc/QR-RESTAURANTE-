@@ -14,12 +14,20 @@ import type { SessionBill } from "@/types/billing";
 
 const MAX_FAILURES = 3;
 
-const STEPS: { status: OrderStatus; label: string }[] = [
-  { status: "PENDING", label: "Pedido recibido" },
-  { status: "ACCEPTED", label: "Aceptado" },
-  { status: "PREPARING", label: "Preparando" },
-  { status: "READY", label: "Listo" },
-  { status: "DELIVERED", label: "Entregado" },
+/**
+ * Tres pasos. "Aceptado" ya no es un paso propio: el mesero acepta y el
+ * pedido entra a cocina en la misma acción. READY no es un paso sino un
+ * aviso dentro de "En preparación" — hay restaurantes cuya cocina no
+ * marca "Listo", y ahí el pedido salta de preparación a entregado.
+ */
+const STEPS: { key: string; label: string; statuses: OrderStatus[] }[] = [
+  { key: "received", label: "Pedido recibido", statuses: ["PENDING"] },
+  {
+    key: "cooking",
+    label: "En preparación",
+    statuses: ["ACCEPTED", "PREPARING", "READY"],
+  },
+  { key: "delivered", label: "Entregado", statuses: ["DELIVERED"] },
 ];
 
 const TERMINAL: OrderStatus[] = ["DELIVERED", "REJECTED", "CANCELLED"];
@@ -107,7 +115,10 @@ export function OrderTracker({
 
   useSessionUpdates({ channelName, onUpdate: refresh });
 
-  const stepIndex = STEPS.findIndex((s) => s.status === order.status);
+  const stepIndex = STEPS.findIndex((s) => s.statuses.includes(order.status));
+  const isReady = order.status === "READY";
+  const readyLabel =
+    order.table_kind === "COUNTER" ? "Pasa a recoger" : "¡Listo! Ya sale";
   const isRejectedOrCancelled =
     order.status === "REJECTED" || order.status === "CANCELLED";
 
@@ -174,7 +185,7 @@ export function OrderTracker({
             const current = index === stepIndex && order.status !== "DELIVERED";
             return (
               <li
-                key={step.status}
+                key={step.key}
                 aria-current={current ? "step" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-lg",
@@ -206,6 +217,11 @@ export function OrderTracker({
                     <span className="sr-only"> (paso actual)</span>
                   )}
                 </span>
+                {current && isReady && (
+                  <span className="ml-auto rounded-full bg-success px-2.5 py-0.5 text-xs font-semibold text-success-foreground">
+                    {readyLabel}
+                  </span>
+                )}
               </li>
             );
           })}

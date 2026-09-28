@@ -40,10 +40,13 @@ export function ElapsedTimer({
   since,
   warnAfterMinutes,
   className,
+  prefix = "Hace",
 }: {
   since: string;
   warnAfterMinutes?: number;
   className?: string;
+  /** Texto antes del cronómetro ("Enviado hace" en la cocina). */
+  prefix?: string;
 }) {
   const elapsed = useSyncExternalStore(
     subscribeToTick,
@@ -65,7 +68,7 @@ export function ElapsedTimer({
         className
       )}
     >
-      {elapsed === null ? "—" : `Hace ${elapsed}`}
+      {elapsed === null ? "—" : `${prefix} ${elapsed}`}
     </span>
   );
 }

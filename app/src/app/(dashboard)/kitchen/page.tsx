@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { getMyRestaurant, getStaffOrders } from "@/lib/queries/staff";
+import {
+  getMyRestaurant,
+  getRestaurantSettings,
+  getStaffOrders,
+} from "@/lib/queries/staff";
 import { KitchenBoard } from "./_components/kitchen-board";
+import { kitchenStatuses } from "./_components/kitchen-statuses";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -18,15 +23,17 @@ export default async function KitchenPage() {
   const session = await getMyRestaurant();
   const restaurantId = session.restaurant.id;
 
-  const orders = await getStaffOrders(restaurantId, [
-    "ACCEPTED",
-    "PREPARING",
-    "READY",
-  ]);
+  const settings = await getRestaurantSettings(restaurantId);
+  const readyStep = settings.kitchen_ready_step;
+  const orders = await getStaffOrders(restaurantId, kitchenStatuses(readyStep));
 
   return (
     <main className="flex min-h-full flex-col">
-      <KitchenBoard restaurantId={restaurantId} initialOrders={orders} />
+      <KitchenBoard
+        restaurantId={restaurantId}
+        initialOrders={orders}
+        readyStep={readyStep}
+      />
     </main>
   );
 }

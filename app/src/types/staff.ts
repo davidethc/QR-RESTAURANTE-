@@ -169,6 +169,9 @@ export interface CustomerOrder {
   ready_at: string | null;
   delivered_at: string | null;
   table_number: number;
+  /** Hoy `get_customer_order` no lo devuelve (los pedidos QR siempre son de
+   *  mesa); si algún día lo hace, el seguimiento dice "Pasa a recoger". */
+  table_kind?: TableKind;
   items: StaffOrderItem[];
 }
 
@@ -201,6 +204,10 @@ export interface RestaurantSettings {
    *  el ticket imprimible para mostrar la fecha/hora local, no la del
    *  servidor. */
   timezone: string;
+  /** true = la cocina marca "Listo" (columna "Para recoger", pestaña
+   *  "Listos" del mesero). false = la cocina solo mira: nunca hay pedidos
+   *  en READY y `mark_order_ready` queda reservada a OWNER/ADMIN. */
+  kitchen_ready_step: boolean;
 }
 
 /** Una persona del personal, como la devuelve `get_restaurant_staff`. */

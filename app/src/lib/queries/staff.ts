@@ -102,8 +102,10 @@ export async function getRestaurantSettings(
     // cobro (M5). timezone: la usa el ticket imprimible para la fecha/hora
     // local. No hace falta RPC nueva — restaurants_select_members ya deja
     // leer cualquier columna de su restaurante a todo miembro.
+    // kitchen_ready_step: si la cocina marca "Listo" o solo mira (cocina,
+    // pedidos del mesero).
     .select(
-      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, business_day_cutoff, timezone"
+      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, business_day_cutoff, timezone, kitchen_ready_step"
     )
     .eq("id", restaurantId)
     .single();
