@@ -53,6 +53,7 @@ const ADMIN_LINKS = [
   { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: MANAGERS },
   { href: "/reports", label: "Reportes", icon: BarChart3, roles: MANAGERS },
   { href: "/staff", label: "Personal", icon: Users, roles: MANAGERS },
+  { href: "/reports", label: "Reportes", icon: BarChart3, roles: MANAGERS },
   { href: "/settings", label: "Configuración", icon: Settings, roles: MANAGERS },
 ];
 

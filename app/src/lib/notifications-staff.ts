@@ -76,4 +76,26 @@ export const notifyStaff = {
         : undefined,
     });
   },
+  /**
+   * "Pedido entregado" con "Deshacer". El toast es solo la cara visible:
+   * quien decide cuándo se llama de verdad a `mark_order_delivered` es el
+   * temporizador de `useDeferredDelivery`, no el cierre del toast.
+   * Devuelve el id para poder cerrarlo si se deshace o se sale de la
+   * pantalla (con `sonnerToast.dismiss(id)`, ver la nota de `waiterCalled`).
+   */
+  deliveryUndoable(title: string, durationMs: number, onUndo: () => void) {
+    return gooeyToast.success(title, {
+      description: "Se confirma en unos segundos.",
+      duration: durationMs,
+      showProgress: true,
+      action: {
+        label: "Deshacer",
+        onClick: onUndo,
+        successLabel: "Deshecho",
+      },
+    });
+  },
+  dismiss(id: string | number) {
+    sonnerToast.dismiss(id);
+  },
 };

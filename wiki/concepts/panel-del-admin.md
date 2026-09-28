@@ -33,7 +33,11 @@ Tarjetas que llevan a cada pantalla: por atender (pedidos + llamadas), en cocina
 
 Hoy / 7 días / 30 días de negocio (zona horaria y corte del día del restaurante). Con cobro activo: cuentas cobradas, ticket promedio, propinas, descuentos, métodos de pago y cuentas abiertas. Sin cobro: suma de pedidos entregados. RPC `get_sales_report`.
 
-> Existe en paralelo la rama `feat/venta-rapida-y-reportes` con un módulo `/reports` más completo (horas pico, por categoría, por personal, exportar). Pendiente decidir si "Ventas" queda como resumen rápido que enlaza a Reportes o se reemplaza.
+Ventas es el resumen rápido de todos los días; el botón "Reporte completo" lleva a **Reportes** (`/reports`: horas pico, por categoría, por personal, exportar), que está en el menú del avatar.
+
+## Agregar producto al cobrar
+
+En la hoja de cobro (pestaña Cuenta), "Agregar producto" suma una tanda a la cuenta abierta con la RPC `add_items_to_bill`. Por defecto nace entregada (se lo llevó de la barra); con "Mandar a cocina" entra a cocina. Idempotente: tocar dos veces no cobra doble.
 
 ## Cobro en Configuración
 

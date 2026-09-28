@@ -2121,3 +2121,29 @@ y `20260928120100_sales_report` **aplicadas** a `fvzxfbzujvkkvniyphps`.
   clave; cobro on/off en Configuración y ver `/cash` cambiar; `/sales` Hoy/7/30;
   `/today` para dueño, y que mesero caiga en `/orders` y cocina en `/kitchen`.
 - Crear cuentas y cambiar claves requiere `SUPABASE_SECRET_KEY` en Vercel.
+
+## Integración final y "Agregar producto" en la hoja de cobro (2026-09-28)
+
+Rama `claude/peaceful-turing-6mhpzs` = panel del admin + `feat/venta-rapida-y-reportes`
++ `feat/cobro-agregar-productos` (rediseño de la hoja de cobro, cocina simplificada con
+`kitchen_ready_step`, entrega diferida del mesero). Nuevo: `charge-product-picker.tsx`
+(botón "Agregar producto" en la pestaña Cuenta de la hoja de cobro) +
+`addItemsToBill`/`getChargeMenu` en `lib/actions/billing.ts`.
+
+Migraciones aplicadas hoy a `fvzxfbzujvkkvniyphps`: `orders_client_request_id`,
+`audit_add_bill_items`, `add_items_to_bill_rpc`. Se quitaron del repo dos duplicados
+(`20260928100000_kitchen_flow_simplification`, `20260928130100_audit_add_bill_items`);
+queda `20260928100342_kitchen_flow_simplification`, que es la versión aplicada.
+
+| Caso (SQL, monky-qa, transacción revertida) | Resultado |
+|---|---|
+| Dueño agrega 2 × $1,25 sin cocina → pedido DELIVERED, saldo $2,50 | ✓ |
+| Mismo envío con la misma clave → `replayed: true`, saldo sigue $2,50 | ✓ |
+| "Mandar a cocina" → pedido PREPARING, saldo $3,75 | ✓ |
+| Cantidad 0 → "La cantidad debe estar entre 1 y 99" | ✓ |
+| Mesero → "No autorizado para cobrar" | ✓ |
+| 2 filas de auditoría `ADD_BILL_ITEMS` | ✓ |
+
+`tsc`, `lint`, 53 tests y `next build` limpio en verde. **Sin QA en navegador** (sin
+credenciales en la sesión): probar en Omm Siri que la cocina ya no ve "Listo" y que el
+mesero entrega desde "En cocina"; y en Caja → Cobrar → Cuenta → "Agregar producto".

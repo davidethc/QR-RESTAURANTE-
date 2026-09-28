@@ -1,73 +1,75 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  ChefHat,
-  Flame,
-  PackageCheck,
-  Clock,
-} from "lucide-react";
+import { ChefHat, PackageCheck, Clock } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { KitchenOrderCard } from "./kitchen-order-card";
+import { kitchenStatuses, sentToKitchenAt } from "./kitchen-statuses";
 import { ConnectionStatus } from "@/components/shared/connection-status";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { fetchStaffOrders } from "@/lib/actions/staff";
-import type { OrderStatus } from "@/config/constants";
+import { cn } from "@/lib/utils";
 import type { StaffOrder } from "@/types/staff";
 
-const KITCHEN_STATUSES: OrderStatus[] = ["ACCEPTED", "PREPARING", "READY"];
+type ColumnTone = "cooking" | "ready";
 
-type ColumnType = "new" | "preparing" | "ready";
+const TONE: Record<ColumnTone, { panel: string; badge: string }> = {
+  cooking: {
+    panel: "border-primary/20 bg-primary-soft/40",
+    badge: "bg-primary-soft text-primary",
+  },
+  ready: {
+    panel: "border-success/25 bg-success/5",
+    badge: "bg-success/15 text-success",
+  },
+};
 
-interface ColumnProps {
-  type: ColumnType;
+function Column({
+  tone,
+  title,
+  icon: Icon,
+  orders,
+  emptyTitle,
+  emptyDescription,
+  readyStep,
+  onDone,
+  className,
+  listClassName,
+}: {
+  tone: ColumnTone;
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: typeof ChefHat;
   orders: StaffOrder[];
-  emptyText: string;
+  emptyTitle: string;
+  emptyDescription?: string;
+  readyStep: boolean;
   onDone?: () => void;
-}
-
-function Column({ type, title, icon: Icon, orders, emptyText, onDone }: ColumnProps) {
-  const getColor = (columnType: ColumnType) => {
-    switch (columnType) {
-      case "new":
-        return {
-          bg: "bg-orange-50 dark:bg-orange-950/20",
-          icon: "text-orange-600 dark:text-orange-400",
-          border: "border-orange-200 dark:border-orange-900/50",
-          badge: "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-200",
-        };
-      case "preparing":
-        return {
-          bg: "bg-blue-50 dark:bg-blue-950/20",
-          icon: "text-blue-600 dark:text-blue-400",
-          border: "border-blue-200 dark:border-blue-900/50",
-          badge: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200",
-        };
-      case "ready":
-        return {
-          bg: "bg-green-50 dark:bg-green-950/20",
-          icon: "text-green-600 dark:text-green-400",
-          border: "border-green-200 dark:border-green-900/50",
-          badge: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200",
-        };
-    }
-  };
-
-  const colors = getColor(type);
+  className?: string;
+  listClassName?: string;
+}) {
+  const colors = TONE[tone];
 
   return (
-    <motion.div
+    <motion.section
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className={`flex min-w-0 flex-1 flex-col gap-4 rounded-3xl border-2 ${colors.border} ${colors.bg} p-5 lg:p-6`}
+      aria-label={title}
+      className={cn(
+        "flex min-w-0 flex-col gap-4 rounded-3xl border-2 p-5 lg:p-6",
+        colors.panel,
+        className
+      )}
     >
       <div className="flex items-center gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${colors.badge}`}>
-          <Icon className={`h-5 w-5 ${colors.icon}`} />
+        <div
+          className={cn(
+            "flex size-10 items-center justify-center rounded-xl",
+            colors.badge
+          )}
+        >
+          <Icon aria-hidden className="size-5" />
         </div>
         <div>
           <h2 className="font-display text-lg font-bold text-foreground">
@@ -79,64 +81,90 @@ function Column({ type, title, icon: Icon, orders, emptyText, onDone }: ColumnPr
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3">
-        {orders.length === 0 ? (
-          <EmptyState
-            title={emptyText}
-            description="✓ Excelente trabajo"
-          />
-        ) : (
-          <div className="space-y-3">
-            {orders.map((order) => (
-              <KitchenOrderCard
-                key={order.id}
-                order={order}
-                onDone={onDone}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </motion.div>
+      {orders.length === 0 ? (
+        <EmptyState
+          icon={Icon}
+          title={emptyTitle}
+          description={emptyDescription}
+        />
+      ) : (
+        <div className={cn("grid gap-3", listClassName)}>
+          {orders.map((order) => (
+            <KitchenOrderCard
+              key={order.id}
+              order={order}
+              readyStep={readyStep}
+              onDone={onDone}
+            />
+          ))}
+        </div>
+      )}
+    </motion.section>
   );
 }
 
+function byTime(getTime: (o: StaffOrder) => string) {
+  return (a: StaffOrder, b: StaffOrder) =>
+    new Date(getTime(a)).getTime() - new Date(getTime(b)).getTime();
+}
+
+/**
+ * Tablero de cocina.
+ *
+ * `readyStep` (ajuste `kitchen_ready_step` del restaurante):
+ * - true: "En cocina" (ACCEPTED + PREPARING) con botón "Listo" por
+ *   tarjeta, y "Para recoger" (READY).
+ * - false: la cocina solo mira. Una sola columna "En cocina", sin
+ *   botones; el pedido sale cuando el mesero lo entrega.
+ *
+ * Ya no hay columna "Nuevos": el mesero acepta y el pedido entra directo
+ * en preparación (`accept_and_prepare_order`), así que ACCEPTED casi no
+ * se ve; si aparece, cuenta como "En cocina".
+ */
 export function KitchenBoard({
   restaurantId,
   initialOrders,
+  readyStep,
 }: {
   restaurantId: string;
   initialOrders: StaffOrder[];
+  readyStep: boolean;
 }) {
   const [orders, setOrders] = useState(initialOrders);
 
-  async function refetch() {
+  const refetch = useCallback(async () => {
     try {
-      const newOrders = await fetchStaffOrders(restaurantId, KITCHEN_STATUSES);
+      const newOrders = await fetchStaffOrders(
+        restaurantId,
+        kitchenStatuses(readyStep)
+      );
       setOrders(newOrders);
     } catch {
       // Silencioso: Realtime reintentará con el próximo cambio.
     }
-  }
+  }, [restaurantId, readyStep]);
 
   const { connected, refresh } = useStaffRealtime(restaurantId, refetch, {
     tables: ["orders"],
   });
 
-  const { accepted, preparing, ready } = useMemo(
+  // Más viejo primero: lo que lleva más rato esperando va arriba.
+  const { cooking, ready } = useMemo(
     () => ({
-      accepted: orders.filter((o) => o.status === "ACCEPTED"),
-      preparing: orders.filter((o) => o.status === "PREPARING"),
-      ready: orders.filter((o) => o.status === "READY"),
+      cooking: orders
+        .filter((o) => o.status === "ACCEPTED" || o.status === "PREPARING")
+        .sort(byTime(sentToKitchenAt)),
+      ready: readyStep
+        ? orders
+            .filter((o) => o.status === "READY")
+            .sort(byTime((o) => o.ready_at ?? sentToKitchenAt(o)))
+        : [],
     }),
-    [orders]
+    [orders, readyStep]
   );
-
-  const totalActive = accepted.length + preparing.length + ready.length;
 
   return (
     <>
-      {/* Header */}
       <div className="border-b bg-gradient-to-b from-background to-muted/30 px-4 py-6 lg:px-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
@@ -144,58 +172,43 @@ export function KitchenBoard({
               Cocina
             </h1>
             <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {totalActive} {totalActive === 1 ? "pedido activo" : "pedidos activos"}
+              <Clock aria-hidden className="size-4" />
+              {cooking.length} en cocina
+              {readyStep && ` · ${ready.length} para recoger`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <ConnectionStatus connected={connected} />
-          </div>
+          <ConnectionStatus connected={connected} />
         </div>
       </div>
 
-      {/* Columns */}
-      <div className="flex flex-1 flex-col gap-4 overflow-x-auto px-4 py-4 lg:flex-row lg:px-6">
+      <div className="flex flex-1 flex-col gap-4 px-4 py-4 lg:flex-row lg:items-start lg:px-6">
         <Column
-          type="new"
-          title="Nuevos"
-          icon={Flame}
-          orders={accepted}
-          emptyText="No hay pedidos nuevos"
-          onDone={refresh}
-        />
-        <Column
-          type="preparing"
-          title="En preparación"
+          tone="cooking"
+          title="En cocina"
           icon={ChefHat}
-          orders={preparing}
-          emptyText="Nada en preparación"
+          orders={cooking}
+          emptyTitle="Nada en cocina"
+          emptyDescription="Los pedidos aparecen aquí apenas el mesero los envía."
+          readyStep={readyStep}
           onDone={refresh}
+          className="lg:flex-[2]"
+          listClassName={
+            readyStep ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"
+          }
         />
-        <Column
-          type="ready"
-          title="Listos para servir"
-          icon={PackageCheck}
-          orders={ready}
-          emptyText="No hay pedidos listos"
-          onDone={refresh}
-        />
+        {readyStep && (
+          <Column
+            tone="ready"
+            title="Para recoger"
+            icon={PackageCheck}
+            orders={ready}
+            emptyTitle="Nada para recoger"
+            readyStep={readyStep}
+            onDone={refresh}
+            className="lg:flex-1"
+          />
+        )}
       </div>
-
-      {/* Stats footer */}
-      {totalActive > 0 && (
-        <div className="border-t bg-muted/30 px-4 py-3 lg:px-6">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {accepted.length > 0 && `${accepted.length} por aceptar`}
-              {accepted.length > 0 && preparing.length > 0 && " • "}
-              {preparing.length > 0 && `${preparing.length} en cocina`}
-              {(accepted.length > 0 || preparing.length > 0) && ready.length > 0 && " • "}
-              {ready.length > 0 && `${ready.length} listos`}
-            </span>
-          </div>
-        </div>
-      )}
     </>
   );
 }

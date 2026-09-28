@@ -1,17 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { PackageCheck } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { OrderStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
 import { ActionButton } from "@/components/shared/action-button";
 import { RejectDialog } from "./reject-dialog";
-import {
-  acceptOrder,
-  markDelivered,
-  startPreparing,
-  markReady,
-} from "@/lib/actions/orders";
+import { acceptOrder } from "@/lib/actions/orders";
 import type { StaffOrder } from "@/types/staff";
 
 /**
@@ -22,16 +20,33 @@ import type { StaffOrder } from "@/types/staff";
  * luego qué lleva, y al final el precio en granate. El volumen (clay)
  * queda reservado al botón que hace avanzar el pedido — uno solo por
  * tarjeta — para que sea obvio dónde tocar sin leer.
+ *
+ * El mesero solo acepta/rechaza (PENDING) y entrega (ACCEPTED, PREPARING
+ * o READY). "Preparar" y "Marcar listo" son de la cocina.
  */
 export function OrderCard({
   order,
   onDone,
+  onDeliver,
+  confirmNotReady = false,
 }: {
   order: StaffOrder;
   /** Se llama al completar una acción con éxito. El tablero lo usa
    *  para recargar sin depender de que llegue el evento propio. */
   onDone?: () => void;
+  /** "Entregado": el tablero lo difiere unos segundos con "Deshacer". */
+  onDeliver?: () => void;
+  /** La cocina de este restaurante marca "Listo" y este pedido todavía
+   *  no lo está: se pregunta antes de entregar. */
+  confirmNotReady?: boolean;
 }) {
+  const canDeliver =
+    order.status === "ACCEPTED" ||
+    order.status === "PREPARING" ||
+    order.status === "READY";
+  const deliverClassName =
+    "clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold";
+
   return (
     <motion.div
       layout
@@ -99,37 +114,30 @@ export function OrderCard({
         </div>
       )}
 
-      {order.status === "ACCEPTED" && (
-        <ActionButton
-            onSuccess={onDone}
-          action={() => startPreparing(order.id)}
-          successMessage="En preparación"
-          className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
-        >
-          Preparar
-        </ActionButton>
-      )}
-
-      {order.status === "PREPARING" && (
-        <ActionButton
-            onSuccess={onDone}
-          action={() => markReady(order.id)}
-          className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
-        >
-          Marcar listo
-        </ActionButton>
-      )}
-
-      {order.status === "READY" && (
-        <ActionButton
-            onSuccess={onDone}
-          action={() => markDelivered(order.id)}
-          successMessage="Pedido entregado"
-          className="clay clay-primary mt-3 h-12 w-full rounded-full text-[15px] font-semibold"
-        >
-          Marcar entregado
-        </ActionButton>
-      )}
+      {canDeliver && onDeliver &&
+        (confirmNotReady && order.status !== "READY" ? (
+          <ConfirmDialog
+            trigger={
+              <Button className={deliverClassName}>
+                <PackageCheck data-icon="inline-start" aria-hidden />
+                Entregado
+              </Button>
+            }
+            title="Cocina aún no lo marcó listo"
+            description="¿Ya lo llevaste a la mesa? Se quitará de la pantalla de cocina."
+            confirmLabel="Sí, ya lo entregué"
+            cancelLabel="Todavía no"
+            action={async () => {
+              onDeliver();
+              return { ok: true, data: undefined };
+            }}
+          />
+        ) : (
+          <Button className={deliverClassName} onClick={onDeliver}>
+            <PackageCheck data-icon="inline-start" aria-hidden />
+            Entregado
+          </Button>
+        ))}
     </motion.div>
   );
 }

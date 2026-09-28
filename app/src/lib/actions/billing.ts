@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import { getTableSession } from "@/lib/session";
+import { getPublicMenu } from "@/lib/queries/menu";
+import { getMyRestaurant, getTopProducts } from "@/lib/queries/staff";
+import { canHandleMoney } from "@/lib/permissions";
 import {
+  addItemsToBillSchema,
+  type AddItemsToBillInput,
   applyDiscountSchema,
   billIdSchema,
   forceCloseTableSchema,
@@ -24,6 +29,8 @@ import {
   type VoidPaymentInput,
 } from "@/lib/validations/billing";
 import type { ActionResult } from "@/types/actions";
+import type { PublicCategory } from "@/types/menu";
+import type { TopProduct } from "@/types/staff";
 import type {
   Bill,
   OpenBillSummary,
@@ -198,6 +205,52 @@ export async function forceCloseTableSession(input: ForceCloseTableInput): Promi
     { revalidate: true }
   );
   return result.ok ? { ok: true, data: undefined } : result;
+}
+
+/**
+ * Agrega productos a una cuenta abierta desde la caja (OWNER/ADMIN). Con
+ * `sendToKitchen` el pedido entra a cocina; si no, nace entregado ("se lo
+ * llevó de la barra"). Idempotente: la clave la genera el selector al abrirse.
+ */
+export async function addItemsToBill(
+  input: AddItemsToBillInput
+): Promise<ActionResult<Bill & { replayed: boolean; added_order_id: string }>> {
+  const parsed = addItemsToBillSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const v = parsed.data;
+  const result = await run<Bill & { replayed: boolean; added_order_id: string }>(
+    "add_items_to_bill",
+    {
+      p_bill_id: v.billId,
+      p_items: v.items.map((item) => ({
+        product_id: item.productId,
+        quantity: item.quantity,
+        notes: item.notes ?? null,
+      })),
+      p_idempotency_key: v.idempotencyKey,
+      p_send_to_kitchen: v.sendToKitchen,
+    },
+    { revalidate: true }
+  );
+  if (result.ok && v.sendToKitchen) revalidatePath("/kitchen");
+  return result;
+}
+
+/** Carta y más pedidos para el selector de la hoja de cobro. */
+export async function getChargeMenu(): Promise<
+  ActionResult<{ categories: PublicCategory[]; topProducts: TopProduct[] }>
+> {
+  try {
+    const session = await getMyRestaurant();
+    if (!canHandleMoney(session.role)) return { ok: false, error: "No autorizado para cobrar." };
+    const [menu, topProducts] = await Promise.all([
+      getPublicMenu(session.restaurant.slug),
+      getTopProducts(session.restaurant.id),
+    ]);
+    return { ok: true, data: { categories: menu.categories, topProducts } };
+  } catch {
+    return { ok: false, error: "No se pudo cargar la carta. Intenta de nuevo." };
+  }
 }
 
 /** Vista del cliente: estado de su cuenta con el token de su sesión (cookie). */

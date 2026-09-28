@@ -45,8 +45,10 @@ export default async function OrdersPage({
     getWaiterCalls(restaurantId, ["PENDING", "ACCEPTED"]),
     canServeTable ? getTablesStatus(restaurantId) : Promise.resolve([]),
     // Módulo de cobro (M5): billing_enabled y el tope de descuento del
-    // mesero, para el botón "Cobrar" de las llamadas de cuenta.
-    canServeTable ? getRestaurantSettings(restaurantId) : Promise.resolve(null),
+    // mesero, para el botón "Cobrar" de las llamadas de cuenta (solo si
+    // atiende mesas). kitchen_ready_step: pestaña "Listos" y confirmación
+    // al entregar, para cualquier rol.
+    getRestaurantSettings(restaurantId),
     canServeTable ? getActiveTableSessionsMap(restaurantId) : Promise.resolve({}),
   ]);
 
@@ -69,8 +71,9 @@ export default async function OrdersPage({
           view === "calls" ? "calls" : view === "progress" ? "progress" : null
         }
         role={session.role}
-        billingEnabled={settings?.billing_enabled ?? false}
-        maxWaiterDiscountPct={settings?.max_waiter_discount_pct ?? 0}
+        billingEnabled={canServeTable && settings.billing_enabled}
+        maxWaiterDiscountPct={canServeTable ? settings.max_waiter_discount_pct : 0}
+        readyStep={settings.kitchen_ready_step}
         tableSessionMap={tableSessionMap}
       />
       {canServeTable && <QuickTakeOrder tables={tables} />}

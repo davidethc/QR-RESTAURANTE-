@@ -11,6 +11,7 @@ import { OrderCard } from "./order-card";
 import { CallCard } from "./call-card";
 import { ConnectionStatus } from "@/components/shared/connection-status";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
+import { useDeferredDelivery } from "@/hooks/use-deferred-delivery";
 import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
 import type { OrderStatus, UserRole } from "@/config/constants";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ export function OrdersBoard({
   billingEnabled = false,
   maxWaiterDiscountPct = 0,
   tableSessionMap = {},
+  readyStep = true,
 }: {
   restaurantId: string;
   initialOrders: StaffOrder[];
@@ -45,6 +47,9 @@ export function OrdersBoard({
   maxWaiterDiscountPct?: number;
   /** mesa -> sesión viva, para abrir la hoja de cobro desde la tarjeta de solicitud. */
   tableSessionMap?: Record<string, string>;
+  /** Ajuste `kitchen_ready_step`. Con false la cocina nunca marca "Listo":
+   *  no hay pestaña "Listos" y entregar no pide confirmación. */
+  readyStep?: boolean;
 }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
@@ -77,7 +82,8 @@ export function OrdersBoard({
       )
     )
       return "progress";
-    if (ordersForTable.some((o) => o.status === "READY")) return "ready";
+    if (ordersForTable.some((o) => o.status === "READY"))
+      return readyStep ? "ready" : "progress";
     return "pending";
   });
 
@@ -100,17 +106,28 @@ export function OrdersBoard({
 
   const { connected, refresh } = useStaffRealtime(restaurantId, refetch);
 
+  const { pendingIds, scheduleDelivery } = useDeferredDelivery(
+    async (orderId) => {
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      await refresh();
+    }
+  );
+
   const clearTableFilter = useCallback(() => {
     setTableFilter(null);
     router.replace("/orders");
   }, [router]);
 
+  // Los que esperan su "Deshacer" ya no se muestran: para el mesero
+  // están entregados.
   const visibleOrders = useMemo(
     () =>
-      tableFilter === null
-        ? orders
-        : orders.filter((o) => o.table_number === tableFilter),
-    [orders, tableFilter]
+      orders.filter(
+        (o) =>
+          !pendingIds.has(o.id) &&
+          (tableFilter === null || o.table_number === tableFilter)
+      ),
+    [orders, tableFilter, pendingIds]
   );
   const visibleCalls = useMemo(
     () =>
@@ -123,12 +140,33 @@ export function OrdersBoard({
   const { pending, inProgress, ready } = useMemo(
     () => ({
       pending: visibleOrders.filter((o) => o.status === "PENDING"),
+      // Sin paso "Listo" no debería haber READY; si queda alguno (lo marcó
+      // un dueño a mano), se entrega desde "En cocina" en vez de perderse
+      // en una pestaña oculta.
       inProgress: visibleOrders.filter(
-        (o) => o.status === "ACCEPTED" || o.status === "PREPARING"
+        (o) =>
+          o.status === "ACCEPTED" ||
+          o.status === "PREPARING" ||
+          (!readyStep && o.status === "READY")
       ),
-      ready: visibleOrders.filter((o) => o.status === "READY"),
+      ready: readyStep ? visibleOrders.filter((o) => o.status === "READY") : [],
     }),
-    [visibleOrders]
+    [visibleOrders, readyStep]
+  );
+
+  const renderOrder = (order: StaffOrder) => (
+    <OrderCard
+      key={order.id}
+      order={order}
+      onDone={refresh}
+      onDeliver={() =>
+        scheduleDelivery(
+          order.id,
+          `Pedido #${order.order_number} entregado`
+        )
+      }
+      confirmNotReady={readyStep}
+    />
   );
 
   return (
@@ -155,14 +193,16 @@ export function OrdersBoard({
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 py-4">
         {/* Píldoras deslizables en vez de una rejilla de 4: con
-            "Preparando (12)" la rejilla parte las etiquetas en dos
+            "En cocina (12)" la rejilla parte las etiquetas en dos
             líneas en un celular. La activa es la única con volumen
             (clay) — el resto queda plano para que no compita. */}
         <TabsList className="no-scrollbar h-auto w-full justify-start gap-1.5 overflow-x-auto rounded-full bg-secondary/70 p-1">
           {[
             { value: "pending", label: "Nuevos", count: pending.length },
-            { value: "progress", label: "Preparando", count: inProgress.length },
-            { value: "ready", label: "Listos", count: ready.length },
+            { value: "progress", label: "En cocina", count: inProgress.length },
+            ...(readyStep
+              ? [{ value: "ready", label: "Listos", count: ready.length }]
+              : []),
             { value: "calls", label: "Solicitudes", count: visibleCalls.length },
           ].map((tab) => (
             <TabsTrigger
@@ -195,36 +235,32 @@ export function OrdersBoard({
             <EmptyState icon={Inbox} title="No hay pedidos nuevos" description="Cuando llegue un pedido aparecerá aquí." />
           ) : (
             <AnimatePresence mode="popLayout">
-              {pending.map((order) => (
-                <OrderCard key={order.id} order={order} onDone={refresh} />
-              ))}
+              {pending.map(renderOrder)}
             </AnimatePresence>
           )}
         </TabsContent>
 
         <TabsContent value="progress" className="flex flex-col gap-3 pt-4">
           {inProgress.length === 0 ? (
-            <EmptyState icon={ChefHat} title="No hay pedidos en preparación" description="Todo está al día ✓" />
+            <EmptyState icon={ChefHat} title="Nada en cocina" description="Todo está al día ✓" />
           ) : (
             <AnimatePresence mode="popLayout">
-              {inProgress.map((order) => (
-                <OrderCard key={order.id} order={order} onDone={refresh} />
-              ))}
+              {inProgress.map(renderOrder)}
             </AnimatePresence>
           )}
         </TabsContent>
 
-        <TabsContent value="ready" className="flex flex-col gap-3 pt-4">
-          {ready.length === 0 ? (
-            <EmptyState icon={PackageCheck} title="No hay pedidos listos" description="Cocina avisará cuando termine uno." />
-          ) : (
-            <AnimatePresence mode="popLayout">
-              {ready.map((order) => (
-                <OrderCard key={order.id} order={order} onDone={refresh} />
-              ))}
-            </AnimatePresence>
-          )}
-        </TabsContent>
+        {readyStep && (
+          <TabsContent value="ready" className="flex flex-col gap-3 pt-4">
+            {ready.length === 0 ? (
+              <EmptyState icon={PackageCheck} title="No hay pedidos listos" description="Cocina avisará cuando termine uno." />
+            ) : (
+              <AnimatePresence mode="popLayout">
+                {ready.map(renderOrder)}
+              </AnimatePresence>
+            )}
+          </TabsContent>
+        )}
 
         <TabsContent value="calls" className="flex flex-col gap-3 pt-4">
           {visibleCalls.length === 0 ? (

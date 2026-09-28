@@ -322,6 +322,16 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 
 ---
 
+## [2026-09-28] code | Integración final: reportes, cocina simplificada y "Agregar producto" en la caja
+
+- **Resumen**: Se unieron en una sola rama el panel del admin, la venta rápida con reportes y el trabajo de la sesión de consola (hoja de cobro rediseñada, cocina en modo solo lectura para Omm Siri con `kitchen_ready_step`, entrega diferida del mesero). Se construyó el botón "Agregar producto" de la hoja de cobro sobre la RPC `add_items_to_bill`. Se recuperó al repo la migración `kitchen_flow_simplification`, aplicada a producción sin quedar versionada.
+- **Páginas actualizadas**: [[Panel del Admin]]
+- **Nuevas páginas**: ninguna
+- **Contradiciones detectadas**: ninguna
+- **Duración**: 60min
+
+---
+
 ## Próximos pasos
 
 1. **Loop automático**: ✅ Configurado. Chequea `raw/assets/` cada 10 min, ingesta automática de archivos nuevos
