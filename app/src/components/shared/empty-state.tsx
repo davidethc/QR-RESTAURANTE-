@@ -20,11 +20,11 @@ export function EmptyState({
       <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
         <Icon className="h-7 w-7" strokeWidth={1.75} />
       </span>
-      <p className="font-display text-[17px] font-semibold leading-tight text-foreground">
+      <p className="font-display text-lead font-semibold leading-tight text-foreground">
         {title}
       </p>
       {description && (
-        <p className="max-w-xs text-[13px] leading-relaxed text-muted-foreground">
+        <p className="max-w-xs text-meta leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}

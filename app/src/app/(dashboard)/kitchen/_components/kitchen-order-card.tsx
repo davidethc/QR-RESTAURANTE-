@@ -30,7 +30,7 @@ export function KitchenOrderCard({
   return (
     <div className="shadow-card flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <p className="font-display text-[26px] font-semibold leading-tight text-foreground">
+        <p className="font-display text-display font-semibold leading-tight text-foreground">
           {order.place_label ?? order.table_name ?? `Mesa ${order.table_number}`}
         </p>
         <ElapsedTimer

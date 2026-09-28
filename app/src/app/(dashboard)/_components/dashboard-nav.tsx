@@ -68,10 +68,10 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
     <header className="glass sticky top-0 z-20 border-b border-border/50 print:hidden">
       <div className="flex items-center justify-between gap-3 px-4 py-2.5">
         <div className="min-w-0">
-          <p className="font-display truncate text-[15px] font-semibold leading-tight text-foreground">
+          <p className="font-display truncate text-body font-semibold leading-tight text-foreground">
             {session.restaurant.name}
           </p>
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-tiny font-medium uppercase tracking-wide text-muted-foreground">
             {ROLE_LABEL[session.role]}
           </p>
         </div>
@@ -88,7 +88,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
                     // Píldoras: alto de 40px para que sean tocables con
                     // el dedo y con prisa. Solo la activa lleva clay —
                     // es la única "acción" con volumen de la barra.
-                    "flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold transition-colors duration-200",
+                    "flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-meta font-semibold transition-colors duration-200",
                     active
                       ? "clay clay-primary bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-secondary active:bg-secondary"
@@ -106,14 +106,14 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
           <DropdownMenuTrigger asChild>
             <button type="button" className="shrink-0 rounded-full">
               <Avatar className="h-10 w-10 border border-border/60">
-                <AvatarFallback className="font-display bg-secondary text-[15px] font-semibold text-foreground">
+                <AvatarFallback className="font-display bg-secondary text-body font-semibold text-foreground">
                   {initials}
                 </AvatarFallback>
               </Avatar>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="font-display text-[15px]">
+            <DropdownMenuLabel className="font-display text-body">
               {session.user.full_name ?? "Usuario"}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

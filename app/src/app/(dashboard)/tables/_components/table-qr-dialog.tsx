@@ -58,7 +58,7 @@ export function TableQrDialog({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 w-full rounded-full border-border/70 text-[13px] font-semibold"
+            className="h-9 w-full rounded-full border-border/70 text-meta font-semibold"
           >
             <QrCode className="h-4 w-4" /> Ver QR
           </Button>
@@ -83,7 +83,7 @@ export function TableQrDialog({
                 tiene pide a cocina como si estuviera sentado. Solo debe
                 llegar al cliente impreso en la mesa. Para compartir
                 está "Link de carta" (solo WhatsApp). */}
-            <p className="text-center text-[13px] text-muted-foreground">
+            <p className="text-center text-meta text-muted-foreground">
               Imprímelo y pégalo en {tableLabel}. Quien lo escanea puede
               pedir a cocina por 1 h 30 min. No lo mandes por chat ni
               redes: para eso usa &quot;Link de carta&quot;.
@@ -91,7 +91,7 @@ export function TableQrDialog({
             {/* Un QR impreso con el dominio equivocado es papel tirado:
                 el aviso tiene que salir ANTES de imprimir. */}
             {warning && (
-              <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-[13px] text-honey-soft-foreground">
+              <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-meta text-honey-soft-foreground">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 {warning}
               </p>

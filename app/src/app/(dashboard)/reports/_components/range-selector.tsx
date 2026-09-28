@@ -60,11 +60,11 @@ export function RangeSelector({
         className="flex-wrap justify-start"
       >
         {PRESETS.map((key) => (
-          <ToggleGroupItem key={key} value={key} className="text-[13px]">
+          <ToggleGroupItem key={key} value={key} className="text-meta">
             {RANGE_PRESET_LABEL[key]}
           </ToggleGroupItem>
         ))}
-        <ToggleGroupItem value="custom" className="text-[13px]">
+        <ToggleGroupItem value="custom" className="text-meta">
           <CalendarRange className="h-4 w-4" />
           {RANGE_PRESET_LABEL.custom}
         </ToggleGroupItem>
@@ -77,7 +77,7 @@ export function RangeSelector({
             value={customFrom}
             max={customTo}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="h-9 w-[150px] text-[13px]"
+            className="h-9 w-[150px] text-meta"
             aria-label="Desde"
           />
           <span className="text-muted-foreground">–</span>
@@ -86,7 +86,7 @@ export function RangeSelector({
             value={customTo}
             min={customFrom}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="h-9 w-[150px] text-[13px]"
+            className="h-9 w-[150px] text-meta"
             aria-label="Hasta"
           />
           <Button

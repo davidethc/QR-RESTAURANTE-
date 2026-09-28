@@ -107,7 +107,7 @@ export function CloseCashDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" className="h-11 w-full rounded-full text-[14px] font-semibold">
+        <Button variant="outline" className="h-11 w-full rounded-full text-body-sm font-semibold">
           <Lock className="h-4 w-4" /> Cerrar caja
         </Button>
       </DialogTrigger>
@@ -144,7 +144,7 @@ export function CloseCashDialog({
                     min="0"
                     inputMode="decimal"
                     aria-invalid={fieldError ? true : undefined}
-                    className="h-12 font-display text-[17px] tabular-nums"
+                    className="h-12 font-display text-lead tabular-nums"
                     {...register(`counts.${method}` as const, {
                       setValueAs: (v: string) => (v === "" ? undefined : Number(v)),
                     })}

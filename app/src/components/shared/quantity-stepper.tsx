@@ -55,7 +55,7 @@ export function QuantityStepper({
         aria-live="polite"
         className={cn(
           "text-center font-semibold tabular-nums",
-          compact ? "w-6 text-[14px]" : "w-7 text-[15px]"
+          compact ? "w-6 text-body-sm" : "w-7 text-body"
         )}
       >
         {value}

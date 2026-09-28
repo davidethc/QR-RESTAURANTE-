@@ -45,7 +45,7 @@ export default async function TicketPage({
   if (!billResult.ok) {
     return (
       <main className="flex min-h-[50vh] items-center justify-center p-6">
-        <p role="alert" className="text-[14px] text-destructive">
+        <p role="alert" className="text-body-sm text-destructive">
           {billResult.error}
         </p>
       </main>
@@ -87,9 +87,9 @@ export default async function TicketPage({
             esto sale de una impresora térmica, no se lee en un monitor.
             72mm de ancho útil dentro del rollo de 80mm (print:mx-auto lo
             centra, dejando ~4mm de aire a cada lado). */}
-        <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-white p-4 font-mono text-[12px] leading-snug text-black shadow-card print:mx-auto print:w-[72mm] print:rounded-none print:border-0 print:p-0 print:shadow-none">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-white p-4 font-mono text-caption leading-snug text-black shadow-card print:mx-auto print:w-[72mm] print:rounded-none print:border-0 print:p-0 print:shadow-none">
           <div className="flex flex-col items-center gap-0.5 text-center">
-            <p className="text-[14px] font-bold uppercase">{settings.name}</p>
+            <p className="text-body-sm font-bold uppercase">{settings.name}</p>
             {settings.address && <p>{settings.address}</p>}
             {settings.phone && <p>Tel. {settings.phone}</p>}
           </div>
@@ -97,7 +97,7 @@ export default async function TicketPage({
           <Dashed />
 
           <div className="flex flex-col gap-0.5">
-            <p className="text-center text-[13px] font-bold">
+            <p className="text-center text-meta font-bold">
               {isPreAccount ? "PRE-CUENTA" : "TICKET"}
             </p>
             <p>Cuenta #{bill.bill_number}</p>
@@ -117,7 +117,7 @@ export default async function TicketPage({
                   </span>
                   <span className="shrink-0 tabular-nums">{formatPrice(item.subtotal)}</span>
                 </div>
-                {item.notes && <p className="pl-3 text-[11px]">* {item.notes}</p>}
+                {item.notes && <p className="pl-3 text-tiny">* {item.notes}</p>}
               </div>
             ))}
           </div>
@@ -135,7 +135,7 @@ export default async function TicketPage({
           <Dashed />
 
           <div className="flex flex-col gap-0.5">
-            <p className="text-[11px]">IVA incluido</p>
+            <p className="text-tiny">IVA incluido</p>
             <Line label="Base imponible" value={formatPrice(fromCents(baseCents))} />
             <Line label={`IVA ${IVA_RATE_PCT}%`} value={formatPrice(fromCents(taxCents))} />
           </div>
@@ -144,7 +144,7 @@ export default async function TicketPage({
             <>
               <Dashed />
               <div className="flex flex-col gap-1.5">
-                <p className="text-[11px] font-bold uppercase">Pagos</p>
+                <p className="text-tiny font-bold uppercase">Pagos</p>
                 {completedPayments.map((p) => (
                   <PaymentLines key={p.id} payment={p} />
                 ))}
@@ -166,7 +166,7 @@ export default async function TicketPage({
 
           <div className="flex flex-col items-center gap-1 pt-1 text-center">
             <p>¡Gracias por su visita!</p>
-            <p className="text-[10px]">Comprobante interno — no válido como factura</p>
+            <p className="text-micro">Comprobante interno — no válido como factura</p>
           </div>
         </div>
       </div>
@@ -191,7 +191,7 @@ function Line({
 }) {
   return (
     <div
-      className={`flex justify-between gap-2 ${bold ? "font-bold" : ""} ${big ? "text-[14px]" : ""}`}
+      className={`flex justify-between gap-2 ${bold ? "font-bold" : ""} ${big ? "text-body-sm" : ""}`}
     >
       <span>{label}</span>
       <span className="shrink-0 tabular-nums">{value}</span>

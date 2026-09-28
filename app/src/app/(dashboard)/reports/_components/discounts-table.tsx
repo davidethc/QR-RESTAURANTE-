@@ -17,7 +17,7 @@ export function DiscountsTable({ rows }: { rows: DiscountRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[15px]">Descuentos aplicados</CardTitle>
+        <CardTitle className="text-body">Descuentos aplicados</CardTitle>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (

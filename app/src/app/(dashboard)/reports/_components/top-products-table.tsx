@@ -18,7 +18,7 @@ export function TopProductsTable({ rows }: { rows: SalesByProductRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[15px]">Top productos</CardTitle>
+        <CardTitle className="text-body">Top productos</CardTitle>
       </CardHeader>
       <CardContent>
         {top.length === 0 ? (
@@ -54,7 +54,7 @@ export function TopProductsTable({ rows }: { rows: SalesByProductRow[] }) {
           </div>
         )}
         {rows.length > top.length && (
-          <p className="mt-2 text-[12px] text-muted-foreground">
+          <p className="mt-2 text-caption text-muted-foreground">
             Mostrando los primeros {top.length} de {rows.length}. Exporta a Excel para ver todos.
           </p>
         )}

@@ -136,7 +136,7 @@ export function ChargeProductPicker({
       <Button
         type="button"
         variant="outline"
-        className="h-11 w-full rounded-full text-[14px] font-semibold"
+        className="h-11 w-full rounded-full text-body-sm font-semibold"
         onClick={() => handleOpenChange(true)}
       >
         <Plus className="h-4 w-4" /> Agregar producto
@@ -145,7 +145,7 @@ export function ChargeProductPicker({
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent side="bottom" className="h-[88vh] gap-0 rounded-t-3xl p-0 sm:mx-auto sm:max-w-lg sm:border-x">
           <SheetHeader className="border-b border-border/60 px-4 pb-3">
-            <SheetTitle className="font-display text-[18px]">Agregar a la cuenta</SheetTitle>
+            <SheetTitle className="font-display text-title-sm">Agregar a la cuenta</SheetTitle>
             <SheetDescription>Se suma al saldo de esta cuenta.</SheetDescription>
           </SheetHeader>
 
@@ -161,7 +161,7 @@ export function ChargeProductPicker({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar plato…"
                   aria-label="Buscar plato"
-                  className="h-11 rounded-full pl-9 pr-9 text-[15px]"
+                  className="h-11 rounded-full pl-9 pr-9 text-body"
                 />
                 {query && (
                   <button
@@ -184,7 +184,7 @@ export function ChargeProductPicker({
 
             {menuError && (
               <div className="p-4">
-                <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-[14px] text-destructive">
+                <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-body-sm text-destructive">
                   {menuError}
                 </p>
                 <Button variant="outline" className="mt-3 h-11 w-full rounded-full" onClick={loadMenu}>
@@ -195,7 +195,7 @@ export function ChargeProductPicker({
 
             {menu && !results && menu.topProducts.length > 0 && (
               <section className="px-4 pt-4">
-                <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="mb-2 flex items-center gap-1.5 text-tiny font-bold uppercase tracking-[0.14em] text-muted-foreground">
                   <Flame aria-hidden className="size-3.5" /> Los más pedidos
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -204,7 +204,7 @@ export function ChargeProductPicker({
                       key={product.id}
                       type="button"
                       onClick={() => cart.addItem(product)}
-                      className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-[14px] font-semibold active:scale-[0.97]"
+                      className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-body-sm font-semibold active:scale-[0.97]"
                     >
                       {product.name}
                       <span className="tabular-nums text-wine">{formatPrice(product.price)}</span>
@@ -237,13 +237,13 @@ export function ChargeProductPicker({
                           aria-expanded={isOpen}
                           className="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left active:bg-muted"
                         >
-                          <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-[20px] leading-none">
+                          <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-title leading-none">
                             {getCategoryIcon(category.name)}
                           </span>
-                          <span className="font-display min-w-0 flex-1 truncate text-[17px] font-bold text-foreground">
+                          <span className="font-display min-w-0 flex-1 truncate text-lead font-bold text-foreground">
                             {category.name}
                           </span>
-                          <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
+                          <span className="shrink-0 text-meta tabular-nums text-muted-foreground">
                             {available.length}
                           </span>
                         </button>
@@ -259,7 +259,7 @@ export function ChargeProductPicker({
 
           {cart.items.length > 0 && (
             <div
-              className="absolute inset-x-0 bottom-0 border-t border-border bg-card px-4 pt-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0_/_0.15)]"
+              className="absolute inset-x-0 bottom-0 border-t border-border bg-card px-4 pt-3 shadow-sheet"
               style={{ paddingBottom: "calc(0.875rem + env(safe-area-inset-bottom, 0px))" }}
             >
               <ul className="mb-3 max-h-32 space-y-1.5 overflow-y-auto">
@@ -272,15 +272,15 @@ export function ChargeProductPicker({
                       value={item.quantity}
                       onChange={(q) => cart.setQuantity(item.id, q)}
                     />
-                    <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{item.name}</span>
-                    <span className="w-16 shrink-0 text-right text-[14px] font-semibold tabular-nums text-wine">
+                    <span className="min-w-0 flex-1 truncate text-body-sm font-medium">{item.name}</span>
+                    <span className="w-16 shrink-0 text-right text-body-sm font-semibold tabular-nums text-wine">
                       {formatPrice(item.price * item.quantity)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              <label className="mb-3 flex min-h-11 items-center gap-3 rounded-xl bg-secondary/60 px-3 text-[14px]">
+              <label className="mb-3 flex min-h-11 items-center gap-3 rounded-xl bg-secondary/60 px-3 text-body-sm">
                 <ChefHat aria-hidden className="size-4 text-muted-foreground" />
                 <span className="flex-1">Mandar a cocina</span>
                 <Switch checked={sendToKitchen} onCheckedChange={setSendToKitchen} aria-label="Mandar a cocina" />
@@ -290,13 +290,13 @@ export function ChargeProductPicker({
                 size="lg"
                 disabled={pending}
                 onClick={handleConfirm}
-                className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-[15px]"
+                className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-body"
               >
                 <span className="flex items-center gap-2">
                   {pending && <Loader2 className="animate-spin" />}
                   Agregar · {cart.count} {cart.count === 1 ? "plato" : "platos"}
                 </span>
-                <span className="font-display text-[20px] font-bold tabular-nums">{formatPrice(cart.total)}</span>
+                <span className="font-display text-title font-bold tabular-nums">{formatPrice(cart.total)}</span>
               </Button>
             </div>
           )}
@@ -326,13 +326,13 @@ function ProductList({
               onClick={() => onAdd(product)}
               className={cn("flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left active:bg-secondary")}
             >
-              <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{product.name}</span>
+              <span className="min-w-0 flex-1 truncate text-body font-semibold">{product.name}</span>
               {inCart > 0 && (
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-[12px] font-bold tabular-nums text-primary-foreground">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-bold tabular-nums text-primary-foreground">
                   {inCart}
                 </span>
               )}
-              <span className="shrink-0 text-[15px] font-semibold tabular-nums text-wine">
+              <span className="shrink-0 text-body font-semibold tabular-nums text-wine">
                 {formatPrice(product.price)}
               </span>
             </button>

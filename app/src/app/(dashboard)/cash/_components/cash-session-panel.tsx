@@ -44,16 +44,16 @@ export function CashSessionPanel({
       <div className="rounded-2xl border border-border/60 bg-card p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-display text-[16px] font-semibold text-foreground">
+            <p className="font-display text-body-lg font-semibold text-foreground">
               {summary.register_name ?? "Caja"} · abierta
             </p>
             {openedAt && (
-              <p className="text-[13px] text-muted-foreground">Desde las {openedAt}</p>
+              <p className="text-meta text-muted-foreground">Desde las {openedAt}</p>
             )}
           </div>
           {summary.opening_float !== undefined && (
             <div className="text-right">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Fondo</p>
+              <p className="text-tiny uppercase tracking-wide text-muted-foreground">Fondo</p>
               <p className="font-display tabular-nums text-foreground">
                 {formatPrice(summary.opening_float)}
               </p>
@@ -68,7 +68,7 @@ export function CashSessionPanel({
               {summary.by_method
                 .filter((m) => m.payments_total > 0 || m.tips_total > 0 || m.method === "CASH")
                 .map((m) => (
-                  <div key={m.method} className="flex justify-between text-[14px]">
+                  <div key={m.method} className="flex justify-between text-body-sm">
                     <span className="text-muted-foreground">{METHOD_LABEL[m.method]}</span>
                     <span className="tabular-nums text-foreground">
                       {formatPrice(m.payments_total)}
@@ -86,7 +86,7 @@ export function CashSessionPanel({
         )}
 
         {!isAdmin && (
-          <p className="mt-3 text-[13px] text-muted-foreground">
+          <p className="mt-3 text-meta text-muted-foreground">
             Cobros de hoy por método. El cierre se hace a ciegas: cuenta el efectivo real, sin
             mirar el sistema.
           </p>
@@ -96,17 +96,17 @@ export function CashSessionPanel({
       {isAdmin && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
               Movimientos de caja
             </p>
             <CashMovementDialog cashSessionId={summary.id} />
           </div>
           {!summary.movements || summary.movements.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground">Sin movimientos todavía.</p>
+            <p className="text-meta text-muted-foreground">Sin movimientos todavía.</p>
           ) : (
             <div className="flex flex-col gap-1.5">
               {summary.movements.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2 text-[13px]">
+                <div key={m.id} className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2 text-meta">
                   <span className="flex items-center gap-2 text-foreground">
                     {m.type === "IN" ? (
                       <ArrowDownCircle className="h-4 w-4 text-success" />
@@ -133,7 +133,7 @@ export function CashSessionPanel({
         byMethod={summary.by_method}
         onClosed={onClosed}
       />
-      <p className="flex items-center gap-1.5 text-center text-[12px] text-muted-foreground">
+      <p className="flex items-center gap-1.5 text-center text-caption text-muted-foreground">
         <Lock className="h-3.5 w-3.5 shrink-0" />
         Cerrar caja pide contar cada método antes de terminar el turno.
       </p>

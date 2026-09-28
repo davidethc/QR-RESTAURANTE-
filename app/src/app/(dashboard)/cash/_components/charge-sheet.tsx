@@ -25,7 +25,7 @@ import { ChargeProductPicker } from "./charge-product-picker";
 /** Una sola hoja en todo el panel (ver charge-sheet-host.tsx): el id es fijo. */
 const PAYMENT_FORM_ID = "charge-payment-form";
 
-const tabTriggerClass = "h-full rounded-lg text-[14px] font-semibold";
+const tabTriggerClass = "h-full rounded-lg text-body-sm font-semibold";
 
 interface ChargeSheetProps {
   /** Sesión de mesa viva (ACTIVE o EXPIRED). openBill la crea o la reutiliza. */
@@ -208,7 +208,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
             </SheetDescription>
           </div>
           {bill && !settled && (
-            <Button asChild variant="outline" className="h-11 min-w-11 shrink-0 rounded-full px-3 text-[14px] font-semibold sm:px-4">
+            <Button asChild variant="outline" className="h-11 min-w-11 shrink-0 rounded-full px-3 text-body-sm font-semibold sm:px-4">
               <Link
                 href={`/cash/ticket/${bill.id}?print=1`}
                 target="_blank"
@@ -230,7 +230,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
 
         {loadError && (
           <div className="flex flex-col gap-3 p-4">
-            <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-[14px] text-destructive">
+            <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-body-sm text-destructive">
               {loadError}
             </p>
             <Button variant="outline" className="h-12 w-full rounded-full" onClick={load}>
@@ -244,15 +244,15 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
             <span className="flex size-16 items-center justify-center rounded-full bg-success/15 text-success">
               <CheckCircle2 className="size-9" aria-hidden />
             </span>
-            <p className="font-display text-[20px] font-semibold text-foreground">Mesa cobrada ✓</p>
-            <p className="text-[14px] text-muted-foreground">{tableLabel} quedó libre para el próximo cliente.</p>
-            <Button asChild variant="outline" className="mt-4 h-12 w-full rounded-full text-[15px] font-semibold">
+            <p className="font-display text-title font-semibold text-foreground">Mesa cobrada ✓</p>
+            <p className="text-body-sm text-muted-foreground">{tableLabel} quedó libre para el próximo cliente.</p>
+            <Button asChild variant="outline" className="mt-4 h-12 w-full rounded-full text-body font-semibold">
               <Link href={`/cash/ticket/${bill.id}?print=1`} target="_blank" rel="noopener noreferrer">
                 <Printer aria-hidden data-icon="inline-start" /> Imprimir ticket
               </Link>
             </Button>
             <Button
-              className="clay clay-primary h-12 w-full rounded-full text-[15px] font-semibold"
+              className="clay clay-primary h-12 w-full rounded-full text-body font-semibold"
               onClick={() => onSettled?.()}
             >
               Listo
@@ -290,12 +290,12 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                 {bill.status === "OPEN" ? (
                   <div className="flex flex-col gap-4">
                     {bill.split_mode === SPLIT_MODE.ITEMS && !paymentItems && (
-                      <p className="rounded-xl bg-honey-soft px-3 py-2.5 text-[14px] text-honey-soft-foreground">
+                      <p className="rounded-xl bg-honey-soft px-3 py-2.5 text-body-sm text-honey-soft-foreground">
                         Marca en el ticket{isDesktop ? "" : " (pestaña Cuenta)"} qué ítems paga esta persona.
                       </p>
                     )}
                     {currentPartLabel && (
-                      <p className="text-[14px] font-medium text-muted-foreground">{currentPartLabel}</p>
+                      <p className="text-body-sm font-medium text-muted-foreground">{currentPartLabel}</p>
                     )}
                     <PaymentForm
                       formId={PAYMENT_FORM_ID}
@@ -309,7 +309,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                     />
                   </div>
                 ) : (
-                  <p className="rounded-xl bg-honey-soft px-3 py-2.5 text-[14px] text-honey-soft-foreground">
+                  <p className="rounded-xl bg-honey-soft px-3 py-2.5 text-body-sm text-honey-soft-foreground">
                     {bill.can_close
                       ? "La cuenta está pagada. Ciérrala para liberar la mesa."
                       : "Ya está pagada. Falta que salgan los pedidos en curso para poder cerrar la mesa."}
@@ -338,9 +338,9 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
               )}
             >
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6">
-                <h3 className="mb-3 hidden font-display text-[16px] font-semibold text-foreground lg:block">Consumo</h3>
+                <h3 className="mb-3 hidden font-display text-body-lg font-semibold text-foreground lg:block">Consumo</h3>
                 {bill.status === "PAID" && !bill.can_close && (
-                  <p className="mb-3 rounded-xl bg-honey-soft px-3 py-2 text-[13px] text-honey-soft-foreground lg:hidden">
+                  <p className="mb-3 rounded-xl bg-honey-soft px-3 py-2 text-meta text-honey-soft-foreground lg:hidden">
                     Ya está pagada. Falta que salgan los pedidos en curso para poder cerrar la mesa.
                   </p>
                 )}

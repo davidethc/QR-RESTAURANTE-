@@ -39,7 +39,7 @@ export function ChargeTicket({
 
   if (orders.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-[14px] text-muted-foreground">
+      <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-body-sm text-muted-foreground">
         Esta cuenta todavía no tiene pedidos.
       </p>
     );
@@ -52,7 +52,7 @@ export function ChargeTicket({
         return (
           <li key={order.id} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2 border-b border-dashed border-border/80 pb-1.5">
-              <span className="text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
+              <span className="text-caption font-semibold tracking-wide text-muted-foreground uppercase">
                 Pedido #{order.order_number}
               </span>
               {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
@@ -63,18 +63,18 @@ export function ChargeTicket({
                 const paid = remaining <= 0;
                 const showCheckbox = selectable && !paid;
                 const line = (
-                  <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3 text-[15px] leading-snug">
+                  <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3 text-body leading-snug">
                     <span className={cn("min-w-0 text-foreground", paid && "text-muted-foreground line-through decoration-1")}>
                       <span className="font-semibold tabular-nums">{item.quantity}×</span> {item.product_name}
                       {remaining > 0 && remaining < item.quantity && (
-                        <span className="text-[13px] text-muted-foreground"> · quedan {remaining}</span>
+                        <span className="text-meta text-muted-foreground"> · quedan {remaining}</span>
                       )}
                       {item.notes && (
-                        <span className="block text-[12px] text-muted-foreground">{item.notes}</span>
+                        <span className="block text-caption text-muted-foreground">{item.notes}</span>
                       )}
                     </span>
                     <span className="flex shrink-0 items-baseline gap-2">
-                      {paid && <span className="text-[12px] font-semibold text-success">Pagado</span>}
+                      {paid && <span className="text-caption font-semibold text-success">Pagado</span>}
                       <span className="tabular-nums text-foreground">{formatPrice(item.subtotal)}</span>
                     </span>
                   </span>

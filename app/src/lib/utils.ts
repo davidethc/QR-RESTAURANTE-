@@ -1,5 +1,21 @@
 import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { extendTailwindMerge } from "tailwind-merge"
+
+// Los tokens de styles/tokens.css tienen nombres propios; sin
+// registrarlos, twMerge toma `text-meta` por un color y lo descarta al
+// juntarlo con `text-muted-foreground`.
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: [
+        "micro", "tiny", "caption", "meta", "body-sm", "body", "body-lg",
+        "lead", "title-sm", "title", "title-lg", "display",
+      ],
+      radius: ["control", "button", "card", "badge"],
+      shadow: ["sheet"],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

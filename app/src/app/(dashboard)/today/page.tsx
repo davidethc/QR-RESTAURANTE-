@@ -43,14 +43,14 @@ function Tile({
         alert ? "border-primary" : "border-border"
       )}
     >
-      <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <span className="flex items-center gap-2 text-caption font-semibold uppercase tracking-wide text-muted-foreground">
         <Icon className="h-4 w-4" aria-hidden="true" />
         {label}
       </span>
-      <span className="font-display text-[26px] font-semibold leading-none tabular-nums text-foreground">
+      <span className="font-display text-display font-semibold leading-none tabular-nums text-foreground">
         {value}
       </span>
-      {detail && <span className="text-[13px] text-muted-foreground">{detail}</span>}
+      {detail && <span className="text-meta text-muted-foreground">{detail}</span>}
     </Link>
   );
 }
@@ -128,12 +128,12 @@ export default async function TodayPage() {
 
         {sales.top_products.length > 0 && (
           <section className="flex flex-col gap-2">
-            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
               Lo más pedido hoy
             </h2>
             <ol className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-card">
               {sales.top_products.slice(0, 5).map((p) => (
-                <li key={p.name} className="flex justify-between px-4 py-2 text-[14px]">
+                <li key={p.name} className="flex justify-between px-4 py-2 text-body-sm">
                   <span className="text-foreground">{p.name}</span>
                   <span className="tabular-nums text-muted-foreground">×{p.quantity}</span>
                 </li>

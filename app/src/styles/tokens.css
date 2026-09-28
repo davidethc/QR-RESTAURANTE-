@@ -1,0 +1,158 @@
+/*
+  TOKENS DE DISEÑO — única fuente de verdad visual de Monky.
+
+  Dos capas:
+  1. CONTROLES (:root): los valores que se eligen a mano. Cambiar uno
+     aquí cambia toda la app. Un tema (ver styles/themes/) solo
+     sobreescribe controles, nunca componentes.
+  2. DERIVADOS (:root, [data-theme]): tokens que salen de un control.
+     Van en un bloque aparte que también se declara en cada
+     [data-theme] para que, dentro de un tema, se recalculen con los
+     controles de ese tema (una variable CSS se resuelve donde se
+     declara, no donde se usa).
+
+  Nombres semánticos (qué es, no qué color es). Equivalencias con los
+  nombres de shadcn que ya consumen los componentes, para no duplicar:
+
+    primary ............ --primary          (bg-primary, text-primary)
+    primary-hover ...... --primary-hover
+    primary-soft ....... --primary-soft
+    background ......... --background
+    surface ............ --card             (bg-card)
+    surface-secondary .. --muted            (bg-muted)
+    text-primary ....... --foreground       (text-foreground)
+    text-secondary ..... --muted-foreground (text-muted-foreground)
+    border ............. --border
+    success/warning/danger/info + sus -soft y -border
+*/
+
+:root {
+    /* ── Color: marca ───────────────────────────────────────────── */
+    --primary: oklch(0.471 0.120 141);
+    --primary-focus: oklch(0.471 0.155 141);
+    --primary-foreground: oklch(1 0 0);
+    /* Cabecera. Antes iba escrito a mano dentro del componente. */
+    --primary-dark: oklch(0.379 0.097 140);
+    --primary-dark-foreground: oklch(1 0 0);
+    /* El relleno verde claro que faltaba. Sin él, "seleccionado" y
+       "fondo" se pintaban del mismo crema y nada se leía como estado. */
+    --primary-soft: oklch(0.946 0.018 135);
+
+    /* ── Color: superficies y texto ─────────────────────────────── */
+    --background: oklch(0.973 0.008 91);
+    --foreground: oklch(0.232 0.022 139);
+    --card: oklch(1 0 0);
+    /* Neutro cálido entre el fondo y el borde: controles que NO son
+       estado (buscador, selector de cantidad, azulejo del emoji). */
+    --secondary: oklch(0.946 0.014 88);
+    --muted: oklch(0.955 0.012 86);
+    --muted-foreground: oklch(0.530 0.022 72);
+    --border: oklch(0.908 0.016 83);
+
+    /* ── Color: acentos de marca ────────────────────────────────── */
+    /* Ámbar: solo rellenos escasos (chapa de MESA, etiqueta COMBOS). */
+    --honey: oklch(0.817 0.140 80);
+    --honey-foreground: oklch(0.320 0.075 65);
+    /* Ámbar de relleno para "en curso". El ámbar puro a L 0,817 no
+       admite texto con AA; a 0,955 sí. Sin este token, ACCEPTED,
+       PREPARING y PENDING colapsan en el mismo color. */
+    --honey-soft: oklch(0.955 0.032 85);
+    --honey-soft-foreground: oklch(0.430 0.100 70);
+    /* Precios. */
+    --wine: oklch(0.522 0.121 61);
+    --wine-foreground: oklch(1 0 0);
+
+    /* ── Color: estados ─────────────────────────────────────────── */
+    /* Entre el verde y el rojo no había nada. Lo usa el botón de
+       servicio cuando una solicitud lleva 5 min sin atender. */
+    --warning: oklch(0.558 0.129 62);
+    --warning-foreground: oklch(1 0 0);
+    --destructive: oklch(0.55 0.2 27);
+    --destructive-foreground: oklch(1 0 0);
+    /* Opaco a propósito: bg-destructive/10 cambia de color según esté
+       sobre la tarjeta blanca o sobre el fondo crema. */
+    --destructive-soft: oklch(0.955 0.020 25);
+    /* Rellenos de estado del panel (mesas, disponibilidad). Hoy
+       conservan exactamente los tonos que iban escritos a mano. */
+    --success-soft: oklch(0.979 0.021 166.113);
+    --success-soft-foreground: oklch(0.596 0.145 163.225);
+    --success-border: oklch(0.905 0.093 164.15);
+    --warning-soft: oklch(0.987 0.022 95.277);
+    --warning-soft-foreground: oklch(0.666 0.179 58.318);
+    --warning-border: oklch(0.924 0.12 95.746);
+    /* Marca lateral de disponibilidad en la lista del menú. */
+    --success-indicator: oklch(0.696 0.17 162.48);
+    --warning-indicator: oklch(0.769 0.188 70.08);
+    --info-soft: oklch(0.97 0.014 254.604);
+    --info-soft-foreground: oklch(0.546 0.245 262.881);
+    --info-border: oklch(0.882 0.059 254.128);
+
+    /* ── Forma ──────────────────────────────────────────────────── */
+    /* Base de todos los radios: los roles (control, botón, tarjeta,
+       etiqueta) se derivan de este valor en globals.css. */
+    --radius: 0.5rem;
+
+    /* ── Sombras ────────────────────────────────────────────────── */
+    --shadow-sm: 0 1px 2px oklch(0.25 0.03 142 / 0.06);
+    --shadow-md: 0 2px 4px oklch(0.4 0.03 50 / 0.06), 0 12px 28px -8px oklch(0.4 0.03 50 / 0.14);
+    --shadow-lg: 0 6px 16px -4px oklch(0.3 0.03 142 / 0.24);
+    /* Barra de acciones fija abajo en hojas y constructores. */
+    --shadow-sheet: 0 -8px 24px -12px rgb(0 0 0 / 0.15);
+
+    /* ── Tipografía ─────────────────────────────────────────────── */
+    /* La familia llega de next/font como --font-sans y --font-display
+       (app/layout.tsx); un tema puede sobreescribirlas aquí. */
+    --font-size-micro: 0.625rem;   /* 10px */
+    --font-size-tiny: 0.6875rem;   /* 11px */
+    --font-size-caption: 0.75rem;  /* 12px */
+    --font-size-meta: 0.8125rem;   /* 13px */
+    --font-size-body-sm: 0.875rem; /* 14px */
+    --font-size-body: 0.9375rem;   /* 15px */
+    --font-size-body-lg: 1rem;     /* 16px */
+    --font-size-lead: 1.0625rem;   /* 17px */
+    --font-size-title-sm: 1.125rem;/* 18px */
+    --font-size-title: 1.25rem;    /* 20px */
+    --font-size-title-lg: 1.375rem;/* 22px */
+    --font-size-display: 1.625rem; /* 26px */
+
+    /* ── Espaciado ──────────────────────────────────────────────── */
+    /* Unidad de toda la escala de Tailwind (p-4 = 4 × --spacing).
+       Subirla o bajarla cambia la densidad de la interfaz entera. */
+    --spacing: 0.25rem;
+}
+
+/* Derivados: se recalculan dentro de cada tema. */
+:root,
+[data-theme],
+body:has([data-theme]) {
+    --primary-hover: oklch(from var(--primary) l c h / 0.8);
+    --primary-soft-foreground: var(--primary-dark);
+    --card-foreground: var(--foreground);
+    --popover: var(--card);
+    --popover-foreground: var(--foreground);
+    --secondary-foreground: var(--foreground);
+    /* En shadcn `accent` es la superficie de hover, no un color de
+       marca: por eso apunta al verde suave y no al ámbar. */
+    --accent: var(--primary-soft);
+    --accent-foreground: var(--primary-dark);
+    /* Reutiliza el verde de marca en vez de meter un verde ajeno. */
+    --success: var(--primary);
+    --success-foreground: var(--primary-foreground);
+    --input: var(--border);
+    --ring: var(--primary);
+    --chart-1: var(--primary);
+    --chart-2: var(--wine);
+    --chart-3: var(--honey);
+    --chart-4: var(--primary-dark);
+    --chart-5: var(--muted-foreground);
+    --glass-bg: oklch(from var(--background) l c h / 0.72);
+    --glass-border: oklch(1 0 0 / 0.15);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--primary-soft);
+    --sidebar-accent-foreground: var(--primary-dark);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+}

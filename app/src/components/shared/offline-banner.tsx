@@ -24,7 +24,7 @@ export function OfflineBanner({
     <div
       role="alert"
       className={cn(
-        "flex items-start gap-2.5 rounded-2xl bg-honey-soft px-4 py-3 text-[14px] text-honey-soft-foreground",
+        "flex items-start gap-2.5 rounded-2xl bg-honey-soft px-4 py-3 text-body-sm text-honey-soft-foreground",
         className
       )}
     >

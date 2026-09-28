@@ -34,10 +34,10 @@ export function RecoverableError({
       <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
         <AlertTriangle className="h-7 w-7" strokeWidth={1.75} aria-hidden />
       </span>
-      <p className="font-display text-[17px] font-semibold leading-tight text-foreground">
+      <p className="font-display text-lead font-semibold leading-tight text-foreground">
         {title}
       </p>
-      <p className="max-w-xs text-[13px] leading-relaxed text-muted-foreground">
+      <p className="max-w-xs text-meta leading-relaxed text-muted-foreground">
         {description}
       </p>
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
@@ -45,7 +45,7 @@ export function RecoverableError({
           type="button"
           onClick={onRetry}
           disabled={retrying}
-          className="clay clay-primary h-11 rounded-full px-6 text-[14px] font-semibold"
+          className="clay clay-primary h-11 rounded-full px-6 text-body-sm font-semibold"
         >
           {retrying ? (
             <Loader2 className="animate-spin" aria-hidden />
@@ -57,7 +57,7 @@ export function RecoverableError({
         {children}
       </div>
       {digest && (
-        <p className="mt-2 text-[11px] text-muted-foreground/60">Ref. {digest}</p>
+        <p className="mt-2 text-tiny text-muted-foreground/60">Ref. {digest}</p>
       )}
     </div>
   );

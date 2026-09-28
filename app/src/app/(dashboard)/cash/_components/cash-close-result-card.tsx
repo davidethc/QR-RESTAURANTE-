@@ -35,12 +35,12 @@ export function CashCloseResultCard({
 
       <div className="flex items-center gap-2 pr-12">
         <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
-        <p className="font-display text-[16px] font-semibold text-foreground">
+        <p className="font-display text-body-lg font-semibold text-foreground">
           Caja cerrada · {result.register_name ?? "Caja"}
         </p>
       </div>
       {result.opening_float !== undefined && (
-        <p className="mt-1 text-[13px] text-muted-foreground">
+        <p className="mt-1 text-meta text-muted-foreground">
           Fondo inicial {formatPrice(result.opening_float)}
         </p>
       )}

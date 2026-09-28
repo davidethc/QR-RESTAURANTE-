@@ -6,7 +6,7 @@ import { CopyLinkField } from "@/components/shared/copy-link-field";
 export function CredentialsCard({ email, password }: { email: string; password: string }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border bg-muted/30 p-3">
-      <p className="text-[13px] text-muted-foreground">
+      <p className="text-meta text-muted-foreground">
         Pásale estos datos. Solo se muestran ahora; si se pierden, genera una
         clave nueva.
       </p>

@@ -22,7 +22,7 @@ export function CopyLinkField({ url, label }: { url: string; label: string }) {
   return (
     <div className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/40 py-1 pl-3 pr-1">
       <span
-        className="min-w-0 flex-1 truncate text-[13px] text-foreground select-all"
+        className="min-w-0 flex-1 truncate text-meta text-foreground select-all"
         title={url}
       >
         {url}

@@ -60,8 +60,8 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
           <Wallet className="h-5 w-5" />
         </span>
         <div>
-          <p className="font-display text-[16px] font-semibold text-foreground">Abrir caja</p>
-          <p className="text-[13px] text-muted-foreground">Hace falta antes de poder cobrar.</p>
+          <p className="font-display text-body-lg font-semibold text-foreground">Abrir caja</p>
+          <p className="text-meta text-muted-foreground">Hace falta antes de poder cobrar.</p>
         </div>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-3">
@@ -99,7 +99,7 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
               step="0.01"
               min="0"
               inputMode="decimal"
-              className="h-12 font-display text-[17px] tabular-nums"
+              className="h-12 font-display text-lead tabular-nums"
               {...register("openingFloat", {
                 setValueAs: (v: string) => (v === "" ? 0 : Number(v)),
               })}
@@ -114,13 +114,13 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
         <Button
           type="submit"
           disabled={isSubmitting || registers.length === 0}
-          className="clay clay-primary h-12 w-full rounded-full text-[15px] font-semibold"
+          className="clay clay-primary h-12 w-full rounded-full text-body font-semibold"
         >
           {isSubmitting && <Loader2 className="animate-spin" />}
           Abrir caja
         </Button>
         {registers.length === 0 && (
-          <p className="text-[13px] text-destructive">
+          <p className="text-meta text-destructive">
             No hay ninguna caja configurada para este restaurante.
           </p>
         )}
