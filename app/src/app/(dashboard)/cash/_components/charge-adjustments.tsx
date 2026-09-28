@@ -72,8 +72,8 @@ export function ChargeAdjustments({
               >
                 <Minus aria-hidden />
               </Button>
-              <p className="text-center text-[13px] leading-tight text-muted-foreground" aria-live="polite">
-                <span className="block font-display text-[20px] font-semibold text-foreground">
+              <p className="text-center text-meta leading-tight text-muted-foreground" aria-live="polite">
+                <span className="block font-display text-title font-semibold text-foreground">
                   {bill.split_parts} partes
                 </span>
                 {partLabel}
@@ -93,7 +93,7 @@ export function ChargeAdjustments({
           )}
 
           {bill.split_mode === SPLIT_MODE.ITEMS && (
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-meta text-muted-foreground">
               Marca en el ticket qué ítems paga cada persona y cobra en la pestaña Cobrar.
             </p>
           )}
@@ -103,14 +103,14 @@ export function ChargeAdjustments({
       <section aria-labelledby="adj-discounts" className="flex flex-col gap-2.5">
         <SectionTitle id="adj-discounts">Descuentos</SectionTitle>
         {bill.discounts.length === 0 && (
-          <p className="text-[13px] text-muted-foreground">Sin descuentos aplicados.</p>
+          <p className="text-meta text-muted-foreground">Sin descuentos aplicados.</p>
         )}
         {bill.discounts.length > 0 && (
           <ul className="flex flex-col gap-1.5">
             {bill.discounts.map((d) => (
               <li
                 key={d.id}
-                className="flex min-h-12 items-center justify-between gap-2 rounded-xl bg-secondary/60 py-1 pr-1 pl-3 text-[14px]"
+                className="flex min-h-12 items-center justify-between gap-2 rounded-xl bg-secondary/60 py-1 pr-1 pl-3 text-body-sm"
               >
                 <span className="min-w-0 text-foreground">
                   {d.kind === "PERCENT" ? `${d.value}%` : formatPrice(d.value)}
@@ -141,7 +141,7 @@ export function ChargeAdjustments({
             billId={bill.id}
             onApplied={onDiscountApplied}
             trigger={
-              <Button variant="outline" className="h-12 w-full rounded-full text-[14px] font-semibold">
+              <Button variant="outline" className="h-12 w-full rounded-full text-body-sm font-semibold">
                 <Tag data-icon="inline-start" aria-hidden /> Aplicar descuento
               </Button>
             }
@@ -152,11 +152,11 @@ export function ChargeAdjustments({
       <section aria-labelledby="adj-payments" className="flex flex-col gap-2.5">
         <SectionTitle id="adj-payments">Pagos registrados</SectionTitle>
         {payments.length === 0 ? (
-          <p className="text-[13px] text-muted-foreground">Todavía no se registró ningún pago.</p>
+          <p className="text-meta text-muted-foreground">Todavía no se registró ningún pago.</p>
         ) : (
           <ul className="flex flex-col gap-1.5">
             {payments.map((p) => (
-              <li key={p.id} className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-secondary/40 px-3 text-[14px]">
+              <li key={p.id} className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-secondary/40 px-3 text-body-sm">
                 <span className="text-foreground">
                   {PAYMENT_METHOD_LABEL[p.method]}
                   {p.tip_amount > 0 && (
@@ -174,11 +174,11 @@ export function ChargeAdjustments({
 }
 
 const toggleClass =
-  "h-12 min-w-0 rounded-xl px-1 text-[13px] font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary";
+  "h-12 min-w-0 rounded-xl px-1 text-meta font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary";
 
 function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <h3 id={id} className="text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
+    <h3 id={id} className="text-caption font-semibold tracking-wide text-muted-foreground uppercase">
       {children}
     </h3>
   );

@@ -38,7 +38,7 @@ export function PaymentMethodsChart({ rows }: { rows: PaymentsByMethodRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[15px]">Formas de pago</CardTitle>
+        <CardTitle className="text-body">Formas de pago</CardTitle>
       </CardHeader>
       <CardContent>
         {!hasData ? (

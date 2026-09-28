@@ -68,7 +68,7 @@ export function CancelCounterSaleDialog({ billId, placeLabel }: { billId: string
         <Button
           variant="ghost"
           size="sm"
-          className="h-11 rounded-full text-[13px] font-semibold text-muted-foreground"
+          className="h-11 rounded-full text-meta font-semibold text-muted-foreground"
         >
           <Ban className="h-4 w-4" /> Cancelar venta
         </Button>

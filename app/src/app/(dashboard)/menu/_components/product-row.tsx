@@ -64,7 +64,7 @@ export function ProductRow({
       transition={{ duration: 0.15 }}
       className={cn(
         "flex items-center gap-3 rounded-xl border-l-4 border bg-card p-3",
-        product.available ? "border-l-emerald-500" : "border-l-amber-500",
+        product.available ? "border-l-success-indicator" : "border-l-warning-indicator",
         isDragging && "opacity-40"
       )}
       onDragOver={(e) => e.preventDefault()}

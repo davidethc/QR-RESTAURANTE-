@@ -177,14 +177,14 @@ export function OrdersBoard({
 
       {tableFilter !== null && (
         <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-2xl bg-primary-soft py-1.5 pl-4 pr-1.5">
-          <span className="font-display text-[15px] font-semibold text-foreground">
+          <span className="font-display text-body font-semibold text-foreground">
             Viendo solo Mesa {tableFilter}
           </span>
           <Button
             variant="ghost"
             size="sm"
             onClick={clearTableFilter}
-            className="h-9 rounded-full px-3 text-[13px] font-semibold text-primary hover:bg-primary/10"
+            className="h-9 rounded-full px-3 text-meta font-semibold text-primary hover:bg-primary/10"
           >
             <X aria-hidden className="h-4 w-4" /> Ver todas
           </Button>
@@ -209,7 +209,7 @@ export function OrdersBoard({
               key={tab.value}
               value={tab.value}
               className={cn(
-                "h-10 shrink-0 flex-none gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13px] font-semibold",
+                "h-10 shrink-0 flex-none gap-1.5 whitespace-nowrap rounded-full px-3.5 text-meta font-semibold",
                 activeTab === tab.value
                   ? "clay clay-primary data-active:bg-primary data-active:text-primary-foreground dark:data-active:bg-primary dark:data-active:text-primary-foreground"
                   : "text-muted-foreground"
@@ -218,7 +218,7 @@ export function OrdersBoard({
               {tab.label}
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[11px] leading-tight tabular-nums",
+                  "rounded-full px-1.5 py-0.5 text-tiny leading-tight tabular-nums",
                   activeTab === tab.value
                     ? "bg-primary-foreground/20"
                     : "bg-foreground/10"

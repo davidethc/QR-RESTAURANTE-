@@ -59,11 +59,11 @@ function StaffRow({
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-semibold text-foreground">
+        <p className="truncate text-body font-semibold text-foreground">
           {name}
           {member.is_me && <span className="font-normal text-muted-foreground"> (tú)</span>}
         </p>
-        <p className="truncate text-[13px] text-muted-foreground">{member.email}</p>
+        <p className="truncate text-meta text-muted-foreground">{member.email}</p>
       </div>
 
       {member.can_manage && member.role !== "OWNER" ? (
@@ -85,7 +85,7 @@ function StaffRow({
               ))}
             </SelectContent>
           </Select>
-          <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+          <label className="flex items-center gap-2 text-meta text-muted-foreground">
             <Switch
               checked={active}
               onCheckedChange={(checked) =>

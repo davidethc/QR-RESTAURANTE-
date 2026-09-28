@@ -35,7 +35,7 @@ export function DailyBars({
 
   return (
     <figure className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
-      <figcaption className="text-[13px] font-semibold text-foreground">Venta por día</figcaption>
+      <figcaption className="text-meta font-semibold text-foreground">Venta por día</figcaption>
       <div className="flex h-40 items-end gap-[2px]" role="list">
         {days.map((d) => {
           const pct = max > 0 ? (d.total / max) * 100 : 0;
@@ -49,7 +49,7 @@ export function DailyBars({
               className="group relative flex h-full flex-1 flex-col justify-end"
             >
               {d === best && d.total > 0 && (
-                <span className="mb-1 self-center whitespace-nowrap text-[11px] font-semibold tabular-nums text-foreground">
+                <span className="mb-1 self-center whitespace-nowrap text-tiny font-semibold tabular-nums text-foreground">
                   {formatPrice(d.total)}
                 </span>
               )}
@@ -63,7 +63,7 @@ export function DailyBars({
       </div>
       <div className="flex gap-[2px] border-t border-border pt-1">
         {days.map((d, i) => (
-          <span key={d.key} className="flex-1 text-center text-[10px] text-muted-foreground">
+          <span key={d.key} className="flex-1 text-center text-micro text-muted-foreground">
             {i % showEvery === 0 ? (days.length > 10 ? DAY_MONTH.format(d.date) : WEEKDAY.format(d.date)) : ""}
           </span>
         ))}

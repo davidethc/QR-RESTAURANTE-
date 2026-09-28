@@ -25,13 +25,13 @@ function getStatusColors(status: TableStatusRow["status"]) {
   switch (status) {
     case "AVAILABLE":
       return {
-        bg: "bg-emerald-50 dark:bg-emerald-950/20",
-        border: "border-emerald-200 dark:border-emerald-900/50",
+        bg: "bg-success-soft",
+        border: "border-success-border",
       };
     case "BILL_REQUESTED":
       return {
-        bg: "bg-amber-50 dark:bg-amber-950/20",
-        border: "border-amber-200 dark:border-amber-900/50",
+        bg: "bg-warning-soft",
+        border: "border-warning-border",
       };
     case "ATTENTION":
       return {
@@ -46,8 +46,8 @@ function getStatusColors(status: TableStatusRow["status"]) {
     case "OCCUPIED":
     default:
       return {
-        bg: "bg-blue-50 dark:bg-blue-950/20",
-        border: "border-blue-200 dark:border-blue-900/50",
+        bg: "bg-info-soft",
+        border: "border-info-border",
       };
   }
 }
@@ -90,7 +90,7 @@ function TableCard({
         <TableStatusBadge status={table.status} className="self-start" />
 
         {(table.active_orders > 0 || table.pending_calls > 0) && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-snug text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta leading-snug text-muted-foreground">
             {table.active_orders > 0 && (
               <span className="flex items-center gap-1">
                 <ClipboardList className="size-3.5" />
@@ -165,27 +165,27 @@ export function TablesBoard({
     <div className="flex min-h-full flex-col">
       <div className="px-4 pb-3 lg:px-6">
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-blue-50 px-2.5 py-2 dark:bg-blue-950/20 sm:px-3 sm:py-2.5">
-            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-info-soft px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <p className="truncate text-tiny font-medium uppercase tracking-wide text-muted-foreground">
               Ocupadas
             </p>
-            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-[20px]">
+            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
               {occupiedCount}/{totalTables}
             </p>
           </div>
-          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-amber-50 px-2.5 py-2 dark:bg-amber-950/20 sm:px-3 sm:py-2.5">
-            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-warning-soft px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <p className="truncate text-tiny font-medium uppercase tracking-wide text-muted-foreground">
               Por cobrar
             </p>
-            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-[20px]">
+            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
               {billRequested}
             </p>
           </div>
-          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-emerald-50 px-2.5 py-2 dark:bg-emerald-950/20 sm:px-3 sm:py-2.5">
-            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-success-soft px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <p className="truncate text-tiny font-medium uppercase tracking-wide text-muted-foreground">
               Libres
             </p>
-            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-[20px]">
+            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
               {availableCount}
             </p>
           </div>

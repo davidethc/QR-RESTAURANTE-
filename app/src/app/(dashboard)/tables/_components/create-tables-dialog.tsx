@@ -148,7 +148,7 @@ export function CreateTablesDialog({
               </Field>
             )}
 
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-meta text-muted-foreground">
               {isSingle
                 ? "Se creará 1 mesa con su código QR."
                 : Number.isFinite(from) && Number.isFinite(to) && to > from

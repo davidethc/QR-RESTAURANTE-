@@ -10,7 +10,7 @@ import type { Bill } from "@/types/billing";
  */
 export function ChargeTotals({ bill, partLabel }: { bill: Bill; partLabel: string | null }) {
   return (
-    <div className="flex flex-col gap-1.5 text-[14px]">
+    <div className="flex flex-col gap-1.5 text-body-sm">
       <dl className="flex flex-col gap-1.5">
         <Row label="Subtotal" value={formatPrice(bill.subtotal)} />
         {bill.discount_total > 0 && (
@@ -26,16 +26,16 @@ export function ChargeTotals({ bill, partLabel }: { bill: Bill; partLabel: strin
       {/* En móvil el saldo ya está en la barra inferior, justo debajo. */}
       <Separator className="my-1.5 max-lg:hidden" />
       <dl className="max-lg:hidden flex items-baseline justify-between gap-3">
-        <dt className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">Saldo</dt>
+        <dt className="text-meta font-semibold tracking-wide text-muted-foreground uppercase">Saldo</dt>
         <dd className="font-display text-[34px] leading-none font-semibold tabular-nums text-wine">
           {formatPrice(bill.balance)}
         </dd>
       </dl>
       {partLabel && (
-        <p className="text-right text-[13px] font-medium text-muted-foreground">{partLabel}</p>
+        <p className="text-right text-meta font-medium text-muted-foreground">{partLabel}</p>
       )}
       {bill.tip_total > 0 && (
-        <p className="text-right text-[13px] text-muted-foreground">
+        <p className="text-right text-meta text-muted-foreground">
           Propinas aparte: {formatPrice(bill.tip_total)}
         </p>
       )}

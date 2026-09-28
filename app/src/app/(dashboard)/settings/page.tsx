@@ -33,7 +33,7 @@ export default async function SettingsPage() {
         <SettingsForm restaurant={restaurant} />
         {session.role === "OWNER" && (
           <section className="flex flex-col gap-3 border-t border-border pt-6">
-            <h2 className="font-display text-[18px] font-semibold text-foreground">
+            <h2 className="font-display text-title-sm font-semibold text-foreground">
               Cobro y caja
             </h2>
             <BillingSettingsForm restaurant={restaurant} />

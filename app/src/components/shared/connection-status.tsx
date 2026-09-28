@@ -29,7 +29,7 @@ export function ConnectionStatus({
     return (
       <span
         className={cn(
-          "flex shrink-0 items-center gap-1.5 text-[11px] font-semibold text-muted-foreground",
+          "flex shrink-0 items-center gap-1.5 text-tiny font-semibold text-muted-foreground",
           className
         )}
       >
@@ -46,7 +46,7 @@ export function ConnectionStatus({
     <span
       role="status"
       className={cn(
-        "flex shrink-0 items-center gap-1.5 rounded-full bg-honey-soft px-2.5 py-1 text-[11px] font-semibold text-honey-soft-foreground",
+        "flex shrink-0 items-center gap-1.5 rounded-full bg-honey-soft px-2.5 py-1 text-tiny font-semibold text-honey-soft-foreground",
         className
       )}
     >

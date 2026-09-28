@@ -104,7 +104,7 @@ export function StaffOrderBuilder({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar plato…"
-            className="h-11 rounded-full pl-9 pr-9 text-[15px]"
+            className="h-11 rounded-full pl-9 pr-9 text-body"
           />
           {query && (
             <button
@@ -121,7 +121,7 @@ export function StaffOrderBuilder({
 
       {!results && topProducts.length > 0 && (
         <section className="px-4 pt-4">
-          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="mb-2 flex items-center gap-1.5 text-tiny font-bold uppercase tracking-[0.14em] text-muted-foreground">
             <Flame aria-hidden className="size-3.5" /> Los más pedidos
           </p>
           <div className="flex flex-wrap gap-2">
@@ -130,7 +130,7 @@ export function StaffOrderBuilder({
                 key={product.id}
                 type="button"
                 onClick={() => cart.addItem(product)}
-                className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-[14px] font-semibold active:scale-[0.97]"
+                className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-body-sm font-semibold active:scale-[0.97]"
               >
                 {product.name}
                 <span className="tabular-nums text-wine">
@@ -178,7 +178,7 @@ export function StaffOrderBuilder({
                   <span
                     aria-hidden
                     className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-[20px] leading-none transition-transform duration-200",
+                      "flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-title leading-none transition-transform duration-200",
                       isOpen && "scale-105",
                     )}
                   >
@@ -187,15 +187,15 @@ export function StaffOrderBuilder({
 
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="font-display truncate text-[17px] font-bold leading-tight text-foreground">
+                      <span className="font-display truncate text-lead font-bold leading-tight text-foreground">
                         {category.name}
                       </span>
-                      <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
+                      <span className="shrink-0 text-meta tabular-nums text-muted-foreground">
                         {available.length} {available.length === 1 ? "plato" : "platos"}
                       </span>
                     </span>
                     {!isOpen && (
-                      <span className="truncate text-[13px] leading-snug text-muted-foreground">
+                      <span className="truncate text-meta leading-snug text-muted-foreground">
                         {previewNames.join(" · ")}
                         {remaining > 0 && (
                           <span className="text-muted-foreground/60"> +{remaining}</span>
@@ -225,7 +225,7 @@ export function StaffOrderBuilder({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card px-4 pt-3 shadow-[0_-8px_24px_-12px_rgb(0_0_0_/_0.15)]"
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card px-4 pt-3 shadow-sheet"
           style={{
             paddingBottom: "calc(0.875rem + env(safe-area-inset-bottom, 0px))",
           }}
@@ -242,7 +242,7 @@ export function StaffOrderBuilder({
                       value={item.quantity}
                       onChange={(q) => cart.setQuantity(item.id, q)}
                     />
-                    <span className="min-w-0 flex-1 truncate text-[14px] font-medium">
+                    <span className="min-w-0 flex-1 truncate text-body-sm font-medium">
                       {item.name}
                     </span>
                     <button
@@ -260,7 +260,7 @@ export function StaffOrderBuilder({
                     >
                       <PencilLine className="size-4" />
                     </button>
-                    <span className="w-16 shrink-0 text-right text-[14px] font-semibold tabular-nums text-wine">
+                    <span className="w-16 shrink-0 text-right text-body-sm font-semibold tabular-nums text-wine">
                       {formatPrice(item.price * item.quantity)}
                     </span>
                   </div>
@@ -273,7 +273,7 @@ export function StaffOrderBuilder({
                         placeholder="Ej: sin cebolla, término medio…"
                         rows={2}
                         autoFocus
-                        className="rounded-xl text-[14px]"
+                        className="rounded-xl text-body-sm"
                       />
                       <Button
                         type="button"
@@ -295,13 +295,13 @@ export function StaffOrderBuilder({
               trigger={
                 <Button
                   size="lg"
-                  className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-[15px]"
+                  className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-body"
                 >
                   <span>
                     Enviar pedido · {cart.count}{" "}
                     {cart.count === 1 ? "plato" : "platos"}
                   </span>
-                  <span className="font-display text-[20px] font-bold tabular-nums">
+                  <span className="font-display text-title font-bold tabular-nums">
                     {formatPrice(cart.total)}
                   </span>
                 </Button>
@@ -343,15 +343,15 @@ function ProductList({
               onClick={() => onAdd(product)}
               className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left active:bg-secondary"
             >
-              <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
+              <span className="min-w-0 flex-1 truncate text-body font-semibold">
                 {product.name}
               </span>
               {inCart > 0 && (
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-[12px] font-bold tabular-nums text-primary-foreground">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-bold tabular-nums text-primary-foreground">
                   {inCart}
                 </span>
               )}
-              <span className="shrink-0 text-[15px] font-semibold tabular-nums text-wine">
+              <span className="shrink-0 text-body font-semibold tabular-nums text-wine">
                 {formatPrice(product.price)}
               </span>
             </button>

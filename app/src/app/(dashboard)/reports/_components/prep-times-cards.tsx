@@ -21,7 +21,7 @@ export function PrepTimesCards({ rows }: { rows: PrepTimesRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[15px]">Tiempos de cocina</CardTitle>
+        <CardTitle className="text-body">Tiempos de cocina</CardTitle>
       </CardHeader>
       <CardContent>
         {!hasData ? (
@@ -30,16 +30,16 @@ export function PrepTimesCards({ rows }: { rows: PrepTimesRow[] }) {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {rows.map((row) => (
               <div key={row.stage} className="rounded-lg border border-border/60 p-3">
-                <p className="text-[12px] font-medium text-muted-foreground">
+                <p className="text-caption font-medium text-muted-foreground">
                   {STAGE_LABEL[row.stage]}
                 </p>
-                <p className="font-display mt-1 text-[20px] font-semibold text-foreground">
+                <p className="font-display mt-1 text-title font-semibold text-foreground">
                   {minutes(row.p50_minutes)}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-tiny text-muted-foreground">
                   p50 · p90 {minutes(row.p90_minutes)} · prom. {minutes(row.avg_minutes)}
                 </p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-tiny text-muted-foreground">
                   {row.orders_count} pedido(s)
                   {row.discarded_count > 0 && `, ${row.discarded_count} descartado(s)`}
                 </p>

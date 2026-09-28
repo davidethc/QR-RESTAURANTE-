@@ -102,7 +102,7 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" className="h-11 rounded-full text-[14px] font-semibold">
+        <Button variant="outline" className="h-11 rounded-full text-body-sm font-semibold">
           Registrar movimiento
         </Button>
       </DialogTrigger>
@@ -125,10 +125,10 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
                     onValueChange={(v) => v && field.onChange(v)}
                     className="grid w-full grid-cols-2 gap-2"
                   >
-                    <ToggleGroupItem value={CASH_MOVEMENT_TYPE.IN} className="h-11 rounded-xl text-[14px] font-semibold">
+                    <ToggleGroupItem value={CASH_MOVEMENT_TYPE.IN} className="h-11 rounded-xl text-body-sm font-semibold">
                       <ArrowDownCircle className="h-4 w-4" /> Entrada
                     </ToggleGroupItem>
-                    <ToggleGroupItem value={CASH_MOVEMENT_TYPE.OUT} className="h-11 rounded-xl text-[14px] font-semibold">
+                    <ToggleGroupItem value={CASH_MOVEMENT_TYPE.OUT} className="h-11 rounded-xl text-body-sm font-semibold">
                       <ArrowUpCircle className="h-4 w-4" /> Salida
                     </ToggleGroupItem>
                   </ToggleGroup>
@@ -167,7 +167,7 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
                 step="0.01"
                 min="0"
                 inputMode="decimal"
-                className="h-12 font-display text-[17px] tabular-nums"
+                className="h-12 font-display text-lead tabular-nums"
                 {...register("amount", { setValueAs: (v: string) => (v === "" ? undefined : Number(v)) })}
               />
               <FieldError errors={[errors.amount]} />

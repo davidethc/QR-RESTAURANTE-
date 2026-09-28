@@ -54,7 +54,7 @@ export default async function DashboardLayout({
   if (!session) return <DashboardLoadError />;
 
   return (
-    <div className="min-h-full">
+    <div data-theme="admin" className="min-h-full">
       <DashboardNotifier
         restaurantId={session.restaurant.id}
         role={session.role}

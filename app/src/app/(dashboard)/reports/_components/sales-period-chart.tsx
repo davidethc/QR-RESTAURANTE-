@@ -65,7 +65,7 @@ export function SalesPeriodChart({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-[15px]">Ventas por periodo</CardTitle>
+        <CardTitle className="text-body">Ventas por periodo</CardTitle>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -75,7 +75,7 @@ export function SalesPeriodChart({
           onValueChange={(v) => v && onGranularityChange(v as ReportGranularity)}
         >
           {(["day", "week", "month"] as ReportGranularity[]).map((g) => (
-            <ToggleGroupItem key={g} value={g} className="text-[12px]">
+            <ToggleGroupItem key={g} value={g} className="text-caption">
               {GRANULARITY_LABEL[g]}
             </ToggleGroupItem>
           ))}

@@ -18,7 +18,7 @@ export function RangeTabs({ active }: { active: SalesRange }) {
           href={r.value === "hoy" ? "/sales" : `/sales?range=${r.value}`}
           aria-current={r.value === active ? "page" : undefined}
           className={cn(
-            "flex h-9 items-center rounded-full px-4 text-[13px] font-semibold transition-colors",
+            "flex h-9 items-center rounded-full px-4 text-meta font-semibold transition-colors",
             r.value === active
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"

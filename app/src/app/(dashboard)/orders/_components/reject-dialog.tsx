@@ -59,7 +59,7 @@ export function RejectDialog({
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          className="h-12 flex-1 rounded-full border-border/70 text-[15px] font-semibold"
+          className="h-12 flex-1 rounded-full border-border/70 text-body font-semibold"
         >
           Rechazar
         </Button>

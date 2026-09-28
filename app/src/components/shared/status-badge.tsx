@@ -13,7 +13,7 @@ import type { OrderStatus, CallStatus, TableStatus } from "@/config/constants";
  * un brazo de distancia, en una tablet y con luz de local.
  */
 const BADGE_BASE =
-  "h-6 rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-wide";
+  "h-6 rounded-full px-2.5 text-tiny font-semibold uppercase tracking-wide";
 
 const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING: "Pendiente",

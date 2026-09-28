@@ -1,0 +1,35 @@
+/*
+  TEMA DEL PANEL (admin) — se aplica con data-theme="admin" en el
+  layout de (dashboard). Solo sobreescribe CONTROLES de tokens.css;
+  los derivados (ring, accent, sidebar, success…) se recalculan solos.
+
+  Vacío a propósito: el panel hereda hoy la identidad de marca. Para
+  cambiar su aspecto entero, descomenta y ajusta aquí. Ejemplos:
+
+  Tema A — verde + blanco cálido
+    --primary: oklch(0.47 0.12 141);
+    --background: oklch(0.975 0.006 95);
+    --card: oklch(1 0 0);
+
+  Tema B — azul + blanco
+    --primary: oklch(0.52 0.17 255);
+    --primary-dark: oklch(0.42 0.15 255);
+    --primary-soft: oklch(0.96 0.02 255);
+    --background: oklch(0.985 0 0);
+
+  Tema C — negro + blanco
+    --primary: oklch(0.2 0 0);
+    --primary-dark: oklch(0.1 0 0);
+    --primary-soft: oklch(0.95 0 0);
+    --background: oklch(0.99 0 0);
+
+  Forma, letra y densidad también:
+    --radius: 0.625rem;
+    --font-sans: "Inter", sans-serif;
+    --spacing: 0.25rem;
+*/
+/* body:has(...) cubre también los portales (Sheet, Dialog, menús),
+   que se montan en <body>, fuera del contenedor del layout. */
+[data-theme="admin"],
+body:has([data-theme="admin"]) {
+}

@@ -15,7 +15,7 @@ export function SalesSummary({ report }: { report: SalesReport }) {
   return (
     <div className="flex flex-col gap-6">
       {byOrders && (
-        <p className="rounded-xl border border-dashed border-border bg-muted/40 p-3 text-[13px] text-muted-foreground">
+        <p className="rounded-xl border border-dashed border-border bg-muted/40 p-3 text-meta text-muted-foreground">
           Sin cobro activo, esto suma los pedidos entregados. Para ver métodos de
           pago, propinas y descuentos, activa el cobro en{" "}
           <Link href="/settings" className="font-semibold text-foreground underline">
@@ -39,7 +39,7 @@ export function SalesSummary({ report }: { report: SalesReport }) {
       </div>
 
       {report.open_bills && report.open_bills.count > 0 && (
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-meta text-muted-foreground">
           Ahora mismo hay {report.open_bills.count}{" "}
           {report.open_bills.count === 1 ? "cuenta abierta" : "cuentas abiertas"} por{" "}
           <span className="font-semibold text-foreground">{formatPrice(Number(report.open_bills.total))}</span>{" "}
@@ -52,18 +52,18 @@ export function SalesSummary({ report }: { report: SalesReport }) {
       <div className="grid gap-6 lg:grid-cols-2">
         {!byOrders && (
           <section className="flex flex-col gap-2">
-            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
               Cómo te pagaron
             </h2>
             {report.by_method.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">Sin pagos en este periodo.</p>
+              <p className="text-meta text-muted-foreground">Sin pagos en este periodo.</p>
             ) : (
               <ul className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
                 {report.by_method.map((m) => {
                   const pct = methodTotal > 0 ? (Number(m.total) / methodTotal) * 100 : 0;
                   return (
                     <li key={m.method} className="flex flex-col gap-1">
-                      <div className="flex justify-between text-[14px]">
+                      <div className="flex justify-between text-body-sm">
                         <span className="text-foreground">{PAYMENT_METHOD_LABEL[m.method]}</span>
                         <span className="tabular-nums text-foreground">
                           {formatPrice(Number(m.total))}{" "}
@@ -82,15 +82,15 @@ export function SalesSummary({ report }: { report: SalesReport }) {
         )}
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
             Lo más pedido
           </h2>
           {report.top_products.length === 0 ? (
             <EmptyState icon={Receipt} title="Sin ventas en este periodo" />
           ) : (
-            <table className="w-full overflow-hidden rounded-2xl border border-border bg-card text-[14px]">
+            <table className="w-full overflow-hidden rounded-2xl border border-border bg-card text-body-sm">
               <thead>
-                <tr className="text-left text-[12px] text-muted-foreground">
+                <tr className="text-left text-caption text-muted-foreground">
                   <th className="px-4 py-2 font-medium">Plato</th>
                   <th className="px-2 py-2 text-right font-medium">Cant.</th>
                   <th className="px-4 py-2 text-right font-medium">Total</th>

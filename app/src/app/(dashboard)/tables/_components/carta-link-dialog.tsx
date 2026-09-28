@@ -79,14 +79,14 @@ export function CartaLinkDialog({
           )}
           <CopyLinkField url={url} label="link de la carta" />
           {!hasWhatsapp && (
-            <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-[13px] text-honey-soft-foreground">
+            <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-meta text-honey-soft-foreground">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               Falta el número de WhatsApp en Configuración. Sin él, quien
               abra este link puede ver la carta pero no pedir.
             </p>
           )}
           {warning && (
-            <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-[13px] text-honey-soft-foreground">
+            <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-meta text-honey-soft-foreground">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               {warning}
             </p>

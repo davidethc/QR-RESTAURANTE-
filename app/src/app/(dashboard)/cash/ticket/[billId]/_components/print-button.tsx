@@ -28,7 +28,7 @@ export function PrintButton({ autoPrint }: { autoPrint: boolean }) {
     <Button
       type="button"
       onClick={() => window.print()}
-      className="clay clay-primary h-12 w-full rounded-full text-[15px] font-semibold print:hidden"
+      className="clay clay-primary h-12 w-full rounded-full text-body font-semibold print:hidden"
     >
       <Printer aria-hidden data-icon="inline-start" /> Imprimir
     </Button>

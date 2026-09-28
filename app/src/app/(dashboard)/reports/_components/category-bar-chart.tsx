@@ -41,7 +41,7 @@ export function CategoryBarChart({ rows }: { rows: SalesByCategoryRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[15px]">Ventas por categoría</CardTitle>
+        <CardTitle className="text-body">Ventas por categoría</CardTitle>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (

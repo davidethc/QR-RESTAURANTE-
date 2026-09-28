@@ -34,7 +34,7 @@ export function ClosedSessionsHistory({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
         Cierres anteriores
       </p>
       <Accordion type="single" collapsible className="rounded-2xl border border-border/60 bg-card px-4">
@@ -46,19 +46,19 @@ export function ClosedSessionsHistory({
               <AccordionTrigger className="min-h-11 py-3">
                 <div className="flex w-full flex-wrap items-center justify-between gap-2 pr-2">
                   <div className="text-left">
-                    <p className="font-display text-[14px] font-medium text-foreground">
+                    <p className="font-display text-body-sm font-medium text-foreground">
                       {session.register_name ?? "Caja"}
                       {session.closed_at && ` · ${dateFormatter.format(new Date(session.closed_at))}`}
                     </p>
                     {session.opening_float !== undefined && (
-                      <p className="text-[12px] text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         Fondo {formatPrice(session.opening_float)}
                       </p>
                     )}
                   </div>
                   <Badge
                     variant={cuadra ? "secondary" : "destructive"}
-                    className="font-display text-[12px] tabular-nums"
+                    className="font-display text-caption tabular-nums"
                   >
                     {cuadra ? "Cuadró" : `${diff > 0 ? "+" : ""}${formatPrice(diff)}`}
                   </Badge>

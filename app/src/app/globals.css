@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/tokens.css";
+@import "../styles/themes/admin.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -67,13 +69,39 @@
     --shadow-sm: var(--shadow-sm);
     --shadow-md: var(--shadow-md);
     --shadow-lg: var(--shadow-lg);
-    /* Escala de tipografía (base, xs, sm, md, lg, xl, 2xl) */
-    --font-size-xs: 0.75rem;
-    --font-size-sm: 0.875rem;
-    --font-size-md: 1rem;
-    --font-size-lg: 1.125rem;
-    --font-size-xl: 1.25rem;
-    --font-size-2xl: 1.5rem;
+    --color-success-soft: var(--success-soft);
+    --color-success-soft-foreground: var(--success-soft-foreground);
+    --color-success-border: var(--success-border);
+    --color-warning-soft: var(--warning-soft);
+    --color-warning-soft-foreground: var(--warning-soft-foreground);
+    --color-warning-border: var(--warning-border);
+    --color-success-indicator: var(--success-indicator);
+    --color-warning-indicator: var(--warning-indicator);
+    --color-info-soft: var(--info-soft);
+    --color-info-soft-foreground: var(--info-soft-foreground);
+    --color-info-border: var(--info-border);
+    --color-primary-hover: var(--primary-hover);
+    --shadow-sheet: var(--shadow-sheet);
+    /* Radios por rol: todos salen de --radius (tokens.css). */
+    --radius-control: var(--radius);
+    --radius-button: calc(var(--radius) * 1.25);
+    --radius-card: calc(var(--radius) * 1.4);
+    --radius-badge: calc(var(--radius) * 2.6);
+    /* Escala tipográfica semántica. Sin line-height propio a
+       propósito: hereda el del contenedor, igual que los text-[Npx]
+       que reemplaza. */
+    --text-micro: var(--font-size-micro);
+    --text-tiny: var(--font-size-tiny);
+    --text-caption: var(--font-size-caption);
+    --text-meta: var(--font-size-meta);
+    --text-body-sm: var(--font-size-body-sm);
+    --text-body: var(--font-size-body);
+    --text-body-lg: var(--font-size-body-lg);
+    --text-lead: var(--font-size-lead);
+    --text-title-sm: var(--font-size-title-sm);
+    --text-title: var(--font-size-title);
+    --text-title-lg: var(--font-size-title-lg);
+    --text-display: var(--font-size-display);
 }
 
 /*
@@ -97,81 +125,7 @@
   1,081:1 en vez de 1,019:1. Por eso las tarjetas no llevan borde — se
   separan por tono, que es un solo tratamiento.
 */
-:root {
-    --background: oklch(0.973 0.008 91);
-    --foreground: oklch(0.232 0.022 139);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.232 0.022 139);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.232 0.022 139);
-    --primary: oklch(0.471 0.120 141);
-    --primary-focus: oklch(0.471 0.155 141);
-    --primary-foreground: oklch(1 0 0);
-    /* Cabecera. Antes iba escrito a mano dentro del componente. */
-    --primary-dark: oklch(0.379 0.097 140);
-    --primary-dark-foreground: oklch(1 0 0);
-    /* El relleno verde claro que faltaba. Sin él, "seleccionado" y
-       "fondo" se pintaban del mismo crema y nada se leía como estado. */
-    --primary-soft: oklch(0.946 0.018 135);
-    --primary-soft-foreground: oklch(0.379 0.097 140);
-    /* Neutro cálido entre el fondo y el borde: controles que NO son
-       estado (buscador, selector de cantidad, azulejo del emoji). */
-    --secondary: oklch(0.946 0.014 88);
-    --secondary-foreground: oklch(0.232 0.022 139);
-    --muted: oklch(0.955 0.012 86);
-    --muted-foreground: oklch(0.530 0.022 72);
-    /* En shadcn `accent` es la superficie de hover, no un color de
-       marca: por eso apunta al verde suave y no al ámbar. */
-    --accent: oklch(0.946 0.018 135);
-    --accent-foreground: oklch(0.379 0.097 140);
-    /* Ámbar: solo rellenos escasos (chapa de MESA, etiqueta COMBOS). */
-    --honey: oklch(0.817 0.140 80);
-    --honey-foreground: oklch(0.320 0.075 65);
-    /* Ámbar de relleno para "en curso". El ámbar puro a L 0,817 no
-       admite texto con AA; a 0,955 sí. Sin este token, ACCEPTED,
-       PREPARING y PENDING colapsan en el mismo color. */
-    --honey-soft: oklch(0.955 0.032 85);
-    --honey-soft-foreground: oklch(0.430 0.100 70);
-    /* Precios. */
-    --wine: oklch(0.522 0.121 61);
-    --wine-foreground: oklch(1 0 0);
-    /* Reutiliza el verde de marca en vez de meter un verde ajeno. */
-    --success: oklch(0.471 0.120 141);
-    --success-foreground: oklch(1 0 0);
-    /* Entre el verde y el rojo no había nada. Lo usa el botón de
-       servicio cuando una solicitud lleva 5 min sin atender. */
-    --warning: oklch(0.558 0.129 62);
-    --warning-foreground: oklch(1 0 0);
-    --destructive: oklch(0.55 0.2 27);
-    --destructive-foreground: oklch(1 0 0);
-    /* Opaco a propósito: bg-destructive/10 cambia de color según esté
-       sobre la tarjeta blanca o sobre el fondo crema. */
-    --destructive-soft: oklch(0.955 0.020 25);
-    --border: oklch(0.908 0.016 83);
-    --input: oklch(0.908 0.016 83);
-    --ring: oklch(0.471 0.120 141);
-    --chart-1: oklch(0.471 0.120 141);
-    --chart-2: oklch(0.522 0.121 61);
-    --chart-3: oklch(0.817 0.140 80);
-    --chart-4: oklch(0.379 0.097 140);
-    --chart-5: oklch(0.530 0.022 72);
-    --radius: 0.5rem;
-    /* Glassmorphism tokens */
-    --glass-bg: oklch(from var(--background) l c h / 0.72);
-    --glass-border: oklch(1 0 0 / 0.15);
-    /* Shadow scale */
-    --shadow-sm: 0 1px 2px oklch(0.25 0.03 142 / 0.06);
-    --shadow-md: 0 2px 4px oklch(0.4 0.03 50 / 0.06), 0 12px 28px -8px oklch(0.4 0.03 50 / 0.14);
-    --shadow-lg: 0 6px 16px -4px oklch(0.3 0.03 142 / 0.24);
-    --sidebar: oklch(1 0 0);
-    --sidebar-foreground: oklch(0.232 0.022 139);
-    --sidebar-primary: oklch(0.471 0.120 141);
-    --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.946 0.018 135);
-    --sidebar-accent-foreground: oklch(0.379 0.097 140);
-    --sidebar-border: oklch(0.908 0.016 83);
-    --sidebar-ring: oklch(0.471 0.120 141);
-}
+/* Los valores de :root viven en ../styles/tokens.css. */
 
 .dark {
     --background: oklch(0.17 0.012 200);
@@ -257,12 +211,10 @@
      apoya la pieza sobre el papel en vez de hacerla flotar. Va SIN
      borde: la tarjeta ya se separa por tono. */
   .shadow-card {
-    box-shadow: 0 1px 2px oklch(0.25 0.03 142 / 0.06);
+    box-shadow: var(--shadow-sm);
     }
   .shadow-card-lifted {
-    box-shadow:
-      0 2px 4px oklch(0.4 0.03 50 / 0.06),
-      0 12px 28px -8px oklch(0.4 0.03 50 / 0.14);
+    box-shadow: var(--shadow-md);
     }
 
   /*

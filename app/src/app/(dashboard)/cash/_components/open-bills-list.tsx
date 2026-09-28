@@ -31,7 +31,7 @@ export function OpenBillsList({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Cuentas abiertas</p>
+        <p className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">Cuentas abiertas</p>
         {tableBills.length === 0 ? (
           <div className="rounded-2xl border border-border/60 bg-card p-2">
             <EmptyState title="No hay cuentas abiertas" description="Todas las mesas están al día." />
@@ -47,7 +47,7 @@ export function OpenBillsList({
 
       {counterBills.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
             Ventas de mostrador abiertas
           </p>
           <div className="flex flex-col gap-2">
@@ -92,11 +92,11 @@ function BillRow({
     <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-card p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display truncate text-[15px] font-semibold text-foreground">{bill.place_label}</p>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-muted-foreground">
+          <p className="font-display truncate text-body font-semibold text-foreground">{bill.place_label}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-muted-foreground">
             <Badge
               className={cn(
-                "h-5 rounded-full px-2 text-[10px] font-semibold uppercase tracking-wide",
+                "h-5 rounded-full px-2 text-micro font-semibold uppercase tracking-wide",
                 bill.status === "PAID" ? "bg-success text-success-foreground" : "bg-wine text-wine-foreground"
               )}
             >
@@ -107,7 +107,7 @@ function BillRow({
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <div className="text-right">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saldo</p>
+            <p className="text-tiny uppercase tracking-wide text-muted-foreground">Saldo</p>
             <p className="font-display tabular-nums text-wine">{formatPrice(bill.balance)}</p>
           </div>
           <Button

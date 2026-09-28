@@ -81,7 +81,7 @@ export function ConfirmDialog<T>({
         <AlertDialogFooter>
           <AlertDialogCancel
             disabled={isPending}
-            className="min-h-11 rounded-xl text-[15px]"
+            className="min-h-11 rounded-xl text-body"
           >
             {cancelLabel}
           </AlertDialogCancel>
@@ -90,7 +90,7 @@ export function ConfirmDialog<T>({
             disabled={isPending}
             onClick={handleConfirm}
             className={cn(
-              "clay min-h-11 rounded-xl text-[15px]",
+              "clay min-h-11 rounded-xl text-body",
               destructive ? "clay-wine" : "clay-primary"
             )}
           >

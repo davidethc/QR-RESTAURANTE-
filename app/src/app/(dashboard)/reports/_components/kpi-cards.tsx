@@ -26,16 +26,16 @@ export function KpiCards({ summary }: { summary: SalesSummary }) {
       {tiles.map((tile) => (
         <Card key={tile.label} className="gap-1.5 py-4">
           <CardHeader className="px-4 pb-0">
-            <CardTitle className="text-[12px] font-medium text-muted-foreground">
+            <CardTitle className="text-caption font-medium text-muted-foreground">
               {tile.label}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4">
-            <p className="font-display text-[22px] font-semibold leading-tight text-foreground">
+            <p className="font-display text-title-lg font-semibold leading-tight text-foreground">
               {tile.value}
             </p>
             {tile.hint && (
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{tile.hint}</p>
+              <p className="mt-0.5 text-tiny text-muted-foreground">{tile.hint}</p>
             )}
           </CardContent>
         </Card>

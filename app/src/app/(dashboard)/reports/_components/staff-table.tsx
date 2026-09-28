@@ -23,7 +23,7 @@ export function StaffTable({ rows }: { rows: SalesByStaffRow[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[15px]">Ventas por mesero</CardTitle>
+        <CardTitle className="text-body">Ventas por mesero</CardTitle>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (

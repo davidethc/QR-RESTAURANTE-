@@ -22,7 +22,7 @@ export function TakeOrderButton({ tableId }: { tableId: string }) {
     <div onClick={(e) => e.preventDefault()}>
       <Button
         onClick={() => router.push(`/tables/${tableId}/order`)}
-        className="clay clay-primary h-11 w-full rounded-full text-[14px] font-semibold"
+        className="clay clay-primary h-11 w-full rounded-full text-body-sm font-semibold"
       >
         <ClipboardList className="h-4 w-4" /> Tomar pedido
       </Button>

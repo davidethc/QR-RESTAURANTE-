@@ -148,8 +148,8 @@ export function MenuAdminBoard({
   return (
     <div className="flex flex-col gap-6 px-4 py-4">
       <div className="grid grid-cols-3 gap-3">
-        <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-950/20">
-          <UtensilsCrossed className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+        <div className="flex items-center gap-2 rounded-lg bg-info-soft px-3 py-2">
+          <UtensilsCrossed className="h-4 w-4 shrink-0 text-info-soft-foreground" aria-hidden="true" />
           <div>
             <p className="text-xs text-muted-foreground">Categorías</p>
             <p className="font-display text-lg font-bold text-foreground">
@@ -157,8 +157,8 @@ export function MenuAdminBoard({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 dark:bg-emerald-950/20">
-          <CircleCheck className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+        <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2">
+          <CircleCheck className="h-4 w-4 shrink-0 text-success-soft-foreground" aria-hidden="true" />
           <div>
             <p className="text-xs text-muted-foreground">Disponibles</p>
             <p className="font-display text-lg font-bold text-foreground">
@@ -166,8 +166,8 @@ export function MenuAdminBoard({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-950/20">
-          <CircleSlash className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+        <div className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2">
+          <CircleSlash className="h-4 w-4 shrink-0 text-warning-soft-foreground" aria-hidden="true" />
           <div>
             <p className="text-xs text-muted-foreground">No disponibles</p>
             <p className="font-display text-lg font-bold text-foreground">

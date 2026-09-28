@@ -26,7 +26,7 @@ export function ClosedBillsToday({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
         Cobradas hoy
       </p>
       {bills.length === 0 ? (
@@ -44,10 +44,10 @@ export function ClosedBillsToday({
               className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-3"
             >
               <div className="min-w-0">
-                <p className="font-display truncate text-[15px] font-semibold text-foreground">
+                <p className="font-display truncate text-body font-semibold text-foreground">
                   Cuenta #{bill.bill_number} · {bill.place_label}
                 </p>
-                <p className="mt-0.5 text-[12px] text-muted-foreground">
+                <p className="mt-0.5 text-caption text-muted-foreground">
                   {timeFormatter.format(new Date(bill.closed_at))}
                 </p>
               </div>

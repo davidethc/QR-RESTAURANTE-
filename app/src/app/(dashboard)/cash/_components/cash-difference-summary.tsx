@@ -28,8 +28,8 @@ export function CashDifferenceSummary({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-[13px] font-medium text-muted-foreground">Diferencia total</span>
-        <Badge variant={cuadra ? "secondary" : "destructive"} className="font-display text-[13px] tabular-nums">
+        <span className="text-meta font-medium text-muted-foreground">Diferencia total</span>
+        <Badge variant={cuadra ? "secondary" : "destructive"} className="font-display text-meta tabular-nums">
           {cuadra ? "Cuadró exacto" : `${diff > 0 ? "+" : ""}${formatPrice(diff)}`}
         </Badge>
       </div>
@@ -40,7 +40,7 @@ export function CashDifferenceSummary({
             const methodDiff = m.difference ?? null;
             const methodMismatch = methodDiff !== null && methodDiff !== 0;
             return (
-              <div key={m.method} className="flex items-center justify-between text-[13px]">
+              <div key={m.method} className="flex items-center justify-between text-meta">
                 <span className="text-foreground">{METHOD_LABEL[m.method] ?? m.method}</span>
                 <span className="flex items-center gap-2 tabular-nums">
                   <span className="text-muted-foreground">
