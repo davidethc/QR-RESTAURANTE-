@@ -334,18 +334,46 @@ R: Periódicamente (ej. cada 10-15 pages nuevas, o cuando el usuario lo pide).
 ## 🔧 Flujo de trabajo del código
 
 ```
-Rama feature → CI (lint, test, build) → PR → code review + security-reviewer
+Rama por entrega (desde origin/main) → CI (ci + Vercel) → PR → revisión del jefe general
               ↓
-            Merge a main → Deploy automático a Vercel (producción)
+            Merge a main (solo el jefe general) → Deploy automático a Vercel (producción)
 ```
 
-**Migraciones**:
-- `db-architect`: Escribe migraciones SQL versionadas en `app/supabase/migrations/`
-- `security-reviewer`: Audita RLS, grants, transacciones antes de merge
-- Se aplican en `fvzxfbzujvkkvniyphps` antes de mergear el código que las usa
-- Regenerar tipos con `npx supabase gen types typescript --project-id fvzxfbzujvkkvniyphps > app/src/types/database.ts`
+### Sesiones y carpetas (git worktrees)
 
-**Testing**: Ver `app/TESTING.md` (QA en `monky-qa`, nunca en `omm-siri`)
+Varias sesiones de Claude trabajan a la vez. Cada una tiene su carpeta y nunca edita la de otra:
+
+| Sesión | Carpeta | Qué hace |
+|---|---|---|
+| `[jefe general]` | `QR-RESTAURANTE-` (principal, siempre en `main`) | Orquesta, revisa y fusiona PRs, aplica migraciones, vigila producción |
+| `{jefe diseno}` | `QR-RESTAURANTE--diseno` | UI/UX y estilos (tokens, componentes visuales) |
+| `[jefe funcionalidades]` | `QR-RESTAURANTE--funcionalidades` | Funcionalidades nuevas (lógica, acciones, migraciones con OK) |
+
+- Para crear una carpeta nueva: `git worktree add -b <rama> ../QR-RESTAURANTE--<nombre> origin/main`, copiar `app/.env.local` y `app/.env.qa.local`, y correr `npm ci` en `app/`. Turbopack no acepta `node_modules` como enlace simbólico.
+- Los subagentes de un jefe usan `Agent` con `isolation: "worktree"` (rama y carpeta propias en `.claude/worktrees/`, que git ignora). El jefe revisa y fusiona su trabajo en su rama con `git merge --no-ff`.
+- **Una rama por entrega**, creada desde `origin/main`. GitHub borra la rama al fusionar el PR.
+- Para ponerse al día: `git fetch && git merge origin/main`. No se hace rebase de ramas ya publicadas.
+
+### Reglas de `main` (protegida en GitHub)
+
+- Nadie hace push directo, ni siquiera un admin. Todo entra por PR.
+- Checks obligatorios: `ci` (typegen, tsc, lint, vitest, build) y `Vercel`.
+- Solo el `[jefe general]` fusiona, con `gh pr merge <n> --merge`. El historial conserva los commits de merge.
+- Antes de abrir el PR: `tsc`, `lint`, `test` y `build` en verde, y en la descripción qué cambia, cómo se probó y el orden de despliegue si hay migraciones.
+- Después de cada merge: esperar el deploy de producción y comprobar `/api/health`, `/login` y `/r/omm-siri`.
+- **Rollback:** `gh pr revert <n>` abre un PR que deshace el merge, y se fusiona igual que cualquier otro. En una emergencia, Instant Rollback en el panel de Vercel.
+
+### Migraciones (expand → deploy → contract)
+
+1. **Expand:** SQL compatible con la app que está hoy en producción (parámetros nuevos con `default`, columnas nuevas opcionales).
+2. `db-architect` las escribe, `security-reviewer` las aprueba y el `[jefe general]` da el OK y las aplica en `fvzxfbzujvkkvniyphps`.
+3. Probar la app **actual** contra la base migrada en `monky-qa`.
+4. **Deploy:** fusionar el código que usa lo nuevo.
+5. **Contract:** borrar lo viejo en un PR aparte, cuando nada lo use.
+- `apply_migration` registra otra versión (la hora de aplicación). Después de aplicar, renombrar el archivo con la versión real: `select version, name from supabase_migrations.schema_migrations`.
+- Regenerar tipos con `npx supabase gen types typescript --project-id fvzxfbzujvkkvniyphps > app/src/types/database.ts`.
+
+**Testing**: Ver `app/TESTING.md` (QA en `monky-qa`, nunca en `omm-siri`). Los previews de Vercel usan la base de **producción**.
 
 ---
 
