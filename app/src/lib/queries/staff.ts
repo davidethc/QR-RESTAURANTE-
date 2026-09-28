@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import type { OrderStatus, CallStatus } from "@/config/constants";
 import type {
   MyRestaurant,
@@ -10,6 +11,8 @@ import type {
   RestaurantSettings,
   TableForOrder,
   TopProduct,
+  StaffMember,
+  SalesReport,
 } from "@/types/staff";
 
 /**
@@ -99,8 +102,10 @@ export async function getRestaurantSettings(
     // cobro (M5). timezone: la usa el ticket imprimible para la fecha/hora
     // local. No hace falta RPC nueva — restaurants_select_members ya deja
     // leer cualquier columna de su restaurante a todo miembro.
+    // kitchen_ready_step: si la cocina marca "Listo" o solo mira (cocina,
+    // pedidos del mesero).
     .select(
-      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, timezone"
+      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, business_day_cutoff, timezone, kitchen_ready_step"
     )
     .eq("id", restaurantId)
     .single();
@@ -179,4 +184,30 @@ export async function getTopProducts(
 
   if (error) throw error;
   return (data ?? []) as unknown as TopProduct[];
+}
+
+/** Personal del restaurante (solo OWNER/ADMIN; la RPC lo exige). */
+export async function getRestaurantStaff(restaurantId: string): Promise<StaffMember[]> {
+  const supabase = await createClient();
+  const { data, error } = await callUntypedRpc<StaffMember[]>(supabase, "get_restaurant_staff", {
+    p_restaurant_id: restaurantId,
+  });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Ventas de hoy, 7 o 30 días de negocio (solo OWNER/ADMIN; la RPC lo exige). */
+export async function getSalesReport(
+  restaurantId: string,
+  days: 1 | 7 | 30
+): Promise<SalesReport> {
+  const supabase = await createClient();
+  const { data, error } = await callUntypedRpc<SalesReport>(supabase, "get_sales_report", {
+    p_restaurant_id: restaurantId,
+    p_days: days,
+  });
+
+  if (error || !data) throw error ?? new Error("Sin datos de ventas");
+  return data;
 }

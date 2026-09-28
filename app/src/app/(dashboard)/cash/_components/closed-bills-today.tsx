@@ -45,7 +45,7 @@ export function ClosedBillsToday({
             >
               <div className="min-w-0">
                 <p className="font-display truncate text-[15px] font-semibold text-foreground">
-                  Cuenta #{bill.bill_number} · {bill.table_name ?? `Mesa ${bill.table_number}`}
+                  Cuenta #{bill.bill_number} · {bill.place_label}
                 </p>
                 <p className="mt-0.5 text-[12px] text-muted-foreground">
                   {timeFormatter.format(new Date(bill.closed_at))}

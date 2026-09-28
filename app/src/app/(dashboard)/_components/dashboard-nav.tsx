@@ -2,7 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, ClipboardList, LayoutGrid, ChefHat, UtensilsCrossed, Settings, Wallet } from "lucide-react";
+import {
+  LogOut,
+  ClipboardList,
+  LayoutGrid,
+  ChefHat,
+  UtensilsCrossed,
+  Settings,
+  Wallet,
+  Home,
+  TrendingUp,
+  Users,
+  BarChart3,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,13 +36,25 @@ const ROLE_LABEL: Record<UserRole, string> = {
   KITCHEN: "Cocina",
 };
 
+const MANAGERS: UserRole[] = ["OWNER", "ADMIN"];
+
+/** Pantallas de todos los días: van en la barra. */
 const NAV_LINKS = [
+  { href: "/today", label: "Hoy", icon: Home, roles: MANAGERS },
   { href: "/orders", label: "Pedidos", icon: ClipboardList, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
   { href: "/kitchen", label: "Cocina", icon: ChefHat, roles: ["OWNER", "ADMIN", "KITCHEN"] as UserRole[] },
   { href: "/tables", label: "Mesas", icon: LayoutGrid, roles: ["OWNER", "ADMIN", "WAITER"] as UserRole[] },
-  { href: "/cash", label: "Caja", icon: Wallet, roles: ["OWNER", "ADMIN"] as UserRole[] },
-  { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: ["OWNER", "ADMIN"] as UserRole[] },
-  { href: "/settings", label: "Configuración", icon: Settings, roles: ["OWNER"] as UserRole[] },
+  { href: "/cash", label: "Caja", icon: Wallet, roles: MANAGERS },
+  { href: "/sales", label: "Ventas", icon: TrendingUp, roles: MANAGERS },
+];
+
+/** Administración de vez en cuando: va en el menú del avatar. */
+const ADMIN_LINKS = [
+  { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: MANAGERS },
+  { href: "/reports", label: "Reportes", icon: BarChart3, roles: MANAGERS },
+  { href: "/staff", label: "Personal", icon: Users, roles: MANAGERS },
+  { href: "/reports", label: "Reportes", icon: BarChart3, roles: MANAGERS },
+  { href: "/settings", label: "Configuración", icon: Settings, roles: MANAGERS },
 ];
 
 export function DashboardNav({ session }: { session: MyRestaurant }) {
@@ -94,6 +118,14 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
               {session.user.full_name ?? "Usuario"}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {ADMIN_LINKS.filter((link) => link.roles.includes(session.role)).map((link) => (
+              <DropdownMenuItem key={link.href} asChild>
+                <Link href={link.href}>
+                  <link.icon /> {link.label}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+            {MANAGERS.includes(session.role) && <DropdownMenuSeparator />}
             <DropdownMenuItem onClick={() => signOut()}>
               <LogOut /> Cerrar sesión
             </DropdownMenuItem>

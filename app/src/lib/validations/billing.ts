@@ -107,6 +107,37 @@ export const forceCloseTableSchema = z.object({
   reason: reason("el motivo del cierre forzado"),
 });
 
+/** Topes iguales a los de add_items_to_bill. */
+export const ADD_ITEMS_MAX_LINES = 50;
+export const ADD_ITEMS_MAX_QUANTITY = 99;
+
+export const addItemsToBillSchema = z.object({
+  billId: uuid("Cuenta inválida"),
+  items: z
+    .array(
+      z.object({
+        productId: uuid("Producto inválido"),
+        quantity: z.coerce
+          .number({ message: "Cantidad inválida." })
+          .int("La cantidad debe ser un número entero.")
+          .min(1, "La cantidad mínima es 1.")
+          .max(ADD_ITEMS_MAX_QUANTITY, `La cantidad máxima es ${ADD_ITEMS_MAX_QUANTITY}.`),
+        notes: z
+          .string()
+          .trim()
+          .max(200, "La nota del producto admite hasta 200 caracteres.")
+          .optional()
+          .transform((v) => (v ? v : undefined)),
+      })
+    )
+    .min(1, "Agrega al menos un producto.")
+    .max(ADD_ITEMS_MAX_LINES, `Máximo ${ADD_ITEMS_MAX_LINES} productos por tanda.`),
+  /** La genera el selector al abrirse y se reutiliza en los reintentos. */
+  idempotencyKey: uuid("Falta la clave de idempotencia"),
+  sendToKitchen: z.boolean().default(false),
+});
+
+export type AddItemsToBillInput = z.input<typeof addItemsToBillSchema>;
 export type SetBillSplitInput = z.input<typeof setBillSplitSchema>;
 export type ApplyDiscountInput = z.input<typeof applyDiscountSchema>;
 export type RemoveDiscountInput = z.input<typeof removeDiscountSchema>;

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { fromUntyped } from "@/lib/supabase/untyped-table";
 import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
+import { placeLabel } from "@/lib/place-label";
+import { TABLE_KIND, type TableKind } from "@/config/constants";
 
 /**
  * Lecturas simples de caja (M6) que no necesitan RPC: las tablas ya
@@ -95,6 +97,8 @@ export interface ClosedBillToday {
   bill_number: number;
   table_number: number;
   table_name: string | null;
+  /** Venta de mostrador (C3): "Para llevar #N" en vez de "Mesa N". */
+  place_label: string;
   total: number;
   closed_at: string;
 }
@@ -130,8 +134,14 @@ export async function getClosedBillsToday(
   const bounds = boundsRows?.[0];
   if (!bounds) throw new Error("No se pudo calcular el día comercial");
 
+  // C3: `tables.kind` + `table_sessions.{counter_number, customer_label}`
+  // para poder mostrar "Para llevar #N" en vez de "Mesa 0" cuando la
+  // cuenta cerrada es de mostrador. Si esas columnas todavía no existen en
+  // la base (migraciones sin aplicar), Postgres las devuelve como
+  // ausentes y `kind`/`counter_number`/`customer_label` llegan
+  // `undefined` — el fallback de abajo sigue mostrando "Mesa N" como hoy.
   const { data, error } = await fromUntyped(supabase, "bills")
-    .select("id, bill_number, total, closed_at, tables(number, name)")
+    .select("id, bill_number, total, closed_at, tables(number, name, kind), table_sessions(counter_number, customer_label)")
     .eq("restaurant_id", restaurantId)
     .eq("status", "CLOSED")
     .gte("closed_at", bounds.start_at)
@@ -144,16 +154,27 @@ export async function getClosedBillsToday(
     bill_number: number;
     total: number;
     closed_at: string;
-    tables: { number: number; name: string | null } | { number: number; name: string | null }[] | null;
+    tables:
+      | { number: number; name: string | null; kind?: TableKind }
+      | { number: number; name: string | null; kind?: TableKind }[]
+      | null;
+    table_sessions:
+      | { counter_number: number | null; customer_label: string | null }
+      | { counter_number: number | null; customer_label: string | null }[]
+      | null;
   }>).map((row) => {
     const table = Array.isArray(row.tables) ? row.tables[0] : row.tables;
+    const tableSession = Array.isArray(row.table_sessions) ? row.table_sessions[0] : row.table_sessions;
+    const tableNumber = table?.number ?? 0;
+    const kind = table?.kind ?? TABLE_KIND.TABLE;
     return {
       id: row.id,
       bill_number: row.bill_number,
       total: row.total,
       closed_at: row.closed_at,
-      table_number: table?.number ?? 0,
+      table_number: tableNumber,
       table_name: table?.name ?? null,
+      place_label: placeLabel(kind, tableNumber, tableSession?.counter_number ?? null, tableSession?.customer_label ?? null),
     };
   });
 }

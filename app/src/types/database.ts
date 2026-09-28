@@ -592,6 +592,7 @@ export type Database = {
           product_name: string
           quantity: number
           subtotal: number
+          unit_cost: number | null
           unit_price: number
         }
         Insert: {
@@ -603,6 +604,7 @@ export type Database = {
           product_name: string
           quantity: number
           subtotal: number
+          unit_cost?: number | null
           unit_price: number
         }
         Update: {
@@ -614,6 +616,7 @@ export type Database = {
           product_name?: string
           quantity?: number
           subtotal?: number
+          unit_cost?: number | null
           unit_price?: number
         }
         Relationships: [
@@ -1106,6 +1109,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          kitchen_ready_step: boolean
           logo_url: string | null
           max_waiter_discount_pct: number
           name: string
@@ -1124,6 +1128,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          kitchen_ready_step?: boolean
           logo_url?: string | null
           max_waiter_discount_pct?: number
           name: string
@@ -1142,6 +1147,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          kitchen_ready_step?: boolean
           logo_url?: string | null
           max_waiter_discount_pct?: number
           name?: string
@@ -1156,7 +1162,10 @@ export type Database = {
       }
       table_sessions: {
         Row: {
+          client_request_id: string | null
           closed_at: string | null
+          counter_number: number | null
+          customer_label: string | null
           id: string
           last_activity_at: string
           restaurant_id: string
@@ -1164,9 +1173,13 @@ export type Database = {
           started_at: string
           status: Database["public"]["Enums"]["table_session_status"]
           table_id: string
+          table_kind: Database["public"]["Enums"]["table_kind"]
         }
         Insert: {
+          client_request_id?: string | null
           closed_at?: string | null
+          counter_number?: number | null
+          customer_label?: string | null
           id?: string
           last_activity_at?: string
           restaurant_id: string
@@ -1174,9 +1187,13 @@ export type Database = {
           started_at?: string
           status?: Database["public"]["Enums"]["table_session_status"]
           table_id: string
+          table_kind?: Database["public"]["Enums"]["table_kind"]
         }
         Update: {
+          client_request_id?: string | null
           closed_at?: string | null
+          counter_number?: number | null
+          customer_label?: string | null
           id?: string
           last_activity_at?: string
           restaurant_id?: string
@@ -1184,6 +1201,7 @@ export type Database = {
           started_at?: string
           status?: Database["public"]["Enums"]["table_session_status"]
           table_id?: string
+          table_kind?: Database["public"]["Enums"]["table_kind"]
         }
         Relationships: [
           {
@@ -1200,12 +1218,20 @@ export type Database = {
             referencedRelation: "tables"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "table_sessions_table_kind_fkey"
+            columns: ["table_id", "table_kind"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id", "kind"]
+          },
         ]
       }
       tables: {
         Row: {
           created_at: string
           id: string
+          kind: Database["public"]["Enums"]["table_kind"]
           name: string | null
           number: number
           qr_token: string
@@ -1216,6 +1242,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["table_kind"]
           name?: string | null
           number: number
           qr_token?: string
@@ -1226,6 +1253,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["table_kind"]
           name?: string | null
           number?: number
           qr_token?: string
@@ -1332,6 +1360,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_staff_member: {
+        Args: {
+          p_full_name: string
+          p_restaurant_id: string
+          p_role: Database["public"]["Enums"]["member_role"]
+          p_user_id: string
+        }
+        Returns: string
+      }
       apply_bill_discount: {
         Args: {
           p_bill_id: string
@@ -1341,6 +1378,10 @@ export type Database = {
           p_value: number
         }
         Returns: Json
+      }
+      assert_can_manage_member: {
+        Args: { p_member_id: string }
+        Returns: string
       }
       bill_json: { Args: { p_bill_id: string }; Returns: Json }
       business_date: {
@@ -1355,6 +1396,17 @@ export type Database = {
         }[]
       }
       business_today: { Args: { p_restaurant_id: string }; Returns: string }
+      can_manage_staff_role: {
+        Args: {
+          p_restaurant_id: string
+          p_role: Database["public"]["Enums"]["member_role"]
+        }
+        Returns: boolean
+      }
+      cancel_counter_sale: {
+        Args: { p_bill_id: string; p_reason: string }
+        Returns: Json
+      }
       cancel_order: {
         Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
@@ -1374,6 +1426,20 @@ export type Database = {
       close_table_session: {
         Args: { p_force?: boolean; p_reason?: string; p_table_id: string }
         Returns: undefined
+      }
+      counter_sale_json: {
+        Args: { p_replayed: boolean; p_session_id: string }
+        Returns: Json
+      }
+      create_counter_sale: {
+        Args: {
+          p_customer_label?: string
+          p_idempotency_key: string
+          p_items: Json
+          p_notes?: string
+          p_restaurant_id?: string
+        }
+        Returns: Json
       }
       create_customer_order: {
         Args: { p_items: Json; p_notes?: string; p_session_token: string }
@@ -1433,7 +1499,10 @@ export type Database = {
       find_or_create_active_table_session: {
         Args: { p_restaurant_id: string; p_table_id: string }
         Returns: {
+          client_request_id: string | null
           closed_at: string | null
+          counter_number: number | null
+          customer_label: string | null
           id: string
           last_activity_at: string
           restaurant_id: string
@@ -1441,6 +1510,7 @@ export type Database = {
           started_at: string
           status: Database["public"]["Enums"]["table_session_status"]
           table_id: string
+          table_kind: Database["public"]["Enums"]["table_kind"]
         }
         SetofOptions: {
           from: "*"
@@ -1465,6 +1535,11 @@ export type Database = {
       }
       get_my_restaurant: { Args: never; Returns: Json }
       get_public_menu: { Args: { p_slug: string }; Returns: Json }
+      get_restaurant_staff: { Args: { p_restaurant_id: string }; Returns: Json }
+      get_sales_report: {
+        Args: { p_days?: number; p_restaurant_id: string }
+        Returns: Json
+      }
       get_session_bill: { Args: { p_session_token: string }; Returns: Json }
       get_session_calls: { Args: { p_session_token: string }; Returns: Json }
       get_session_orders: { Args: { p_session_token: string }; Returns: Json }
@@ -1538,12 +1613,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      lock_counter_table: {
+        Args: { p_restaurant_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["table_kind"]
+          name: string | null
+          number: number
+          qr_token: string
+          restaurant_id: string
+          status: Database["public"]["Enums"]["table_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tables"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       mark_order_delivered: { Args: { p_order_id: string }; Returns: undefined }
       mark_order_ready: { Args: { p_order_id: string }; Returns: undefined }
       open_bill: { Args: { p_table_session_id: string }; Returns: Json }
       open_cash_session: {
         Args: { p_opening_float?: number; p_register_id: string }
         Returns: Json
+      }
+      place_label: {
+        Args: {
+          p_counter_number: number
+          p_customer_label: string
+          p_kind: Database["public"]["Enums"]["table_kind"]
+          p_table_number: number
+        }
+        Returns: string
       }
       recompute_bill: {
         Args: { p_bill_id: string }
@@ -1610,6 +1714,129 @@ export type Database = {
         Args: { p_discount_id: string; p_reason?: string }
         Returns: Json
       }
+      report_discounts: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          amount: number
+          applied_at: string
+          applied_by: string
+          applied_by_name: string
+          bill_id: string
+          bill_number: number
+          bill_status: Database["public"]["Enums"]["bill_status"]
+          business_date: string
+          discount_id: string
+          kind: Database["public"]["Enums"]["discount_kind"]
+          order_item_id: string
+          place_label: string
+          product_name: string
+          reason: string
+          table_name: string
+          table_number: number
+          value: number
+        }[]
+      }
+      report_guard: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          cutoff: string
+          end_at: string
+          start_at: string
+          tz: string
+        }[]
+      }
+      report_payments_by_method: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          amount: number
+          method: Database["public"]["Enums"]["payment_method"]
+          payments_count: number
+          tips: number
+          total_collected: number
+          voided_amount: number
+          voided_count: number
+        }[]
+      }
+      report_peak_hours: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          hour: number
+          isodow: number
+          items_count: number
+          orders_count: number
+          orders_total: number
+        }[]
+      }
+      report_prep_times: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          avg_minutes: number
+          discarded_count: number
+          orders_count: number
+          p50_minutes: number
+          p90_minutes: number
+          stage: string
+        }[]
+      }
+      report_sales_by_category: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          category_id: string
+          category_name: string
+          gross_sales: number
+          orders_count: number
+          products_count: number
+          quantity: number
+        }[]
+      }
+      report_sales_by_period: {
+        Args: {
+          p_from: string
+          p_granularity?: string
+          p_restaurant_id: string
+          p_to: string
+        }
+        Returns: {
+          avg_ticket: number
+          bills_count: number
+          delivered_orders_total: number
+          discounts: number
+          gross_sales: number
+          net_sales: number
+          period_end: string
+          period_start: string
+          tips: number
+        }[]
+      }
+      report_sales_by_product: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          category_id: string
+          category_name: string
+          gross_sales: number
+          orders_count: number
+          product_id: string
+          product_name: string
+          quantity: number
+        }[]
+      }
+      report_sales_by_staff: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: {
+          full_name: string
+          member_role: Database["public"]["Enums"]["member_role"]
+          orders_accepted: number
+          orders_accepted_total: number
+          payments_amount: number
+          payments_count: number
+          tips_amount: number
+          user_id: string
+        }[]
+      }
+      report_sales_summary: {
+        Args: { p_from: string; p_restaurant_id: string; p_to: string }
+        Returns: Json
+      }
       resolve_open_cash_session: {
         Args: { p_cash_session_id?: string; p_restaurant_id: string }
         Returns: string
@@ -1645,6 +1872,14 @@ export type Database = {
       table_session_last_activity: {
         Args: { p_session_id: string }
         Returns: string
+      }
+      update_staff_member: {
+        Args: {
+          p_member_id: string
+          p_role: Database["public"]["Enums"]["member_role"]
+          p_status: Database["public"]["Enums"]["member_status"]
+        }
+        Returns: undefined
       }
       user_belongs_to_restaurant: {
         Args: { target_restaurant_id: string }
@@ -1718,6 +1953,7 @@ export type Database = {
       payment_method: "CASH" | "CARD" | "TRANSFER" | "OTHER"
       payment_status: "COMPLETED" | "VOIDED"
       restaurant_status: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+      table_kind: "TABLE" | "COUNTER"
       table_session_status: "ACTIVE" | "CLOSED" | "EXPIRED"
       table_status:
         | "AVAILABLE"
@@ -1913,6 +2149,7 @@ export const Constants = {
       payment_method: ["CASH", "CARD", "TRANSFER", "OTHER"],
       payment_status: ["COMPLETED", "VOIDED"],
       restaurant_status: ["ACTIVE", "INACTIVE", "SUSPENDED"],
+      table_kind: ["TABLE", "COUNTER"],
       table_session_status: ["ACTIVE", "CLOSED", "EXPIRED"],
       table_status: [
         "AVAILABLE",

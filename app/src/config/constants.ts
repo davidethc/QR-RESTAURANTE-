@@ -35,6 +35,12 @@ export const TABLE_SESSION_STATUS = {
   EXPIRED: "EXPIRED",
 } as const;
 
+/** Mesa real o el "Mostrador" oculto de las ventas para llevar (C1). */
+export const TABLE_KIND = {
+  TABLE: "TABLE",
+  COUNTER: "COUNTER",
+} as const;
+
 export const RESTAURANT_STATUS = {
   ACTIVE: "ACTIVE",
   INACTIVE: "INACTIVE",
@@ -71,6 +77,7 @@ export const AUDIT_ACTION = {
   REMOVE_DISCOUNT: "REMOVE_DISCOUNT",
   SET_BILL_SPLIT: "SET_BILL_SPLIT",
   RECORD_PAYMENT: "RECORD_PAYMENT",
+  ADD_BILL_ITEMS: "ADD_BILL_ITEMS",
   VOID_PAYMENT: "VOID_PAYMENT",
   CLOSE_BILL: "CLOSE_BILL",
   VOID_BILL: "VOID_BILL",
@@ -135,6 +142,7 @@ export type CallType = (typeof CALL_TYPE)[keyof typeof CALL_TYPE];
 export type CallStatus = (typeof CALL_STATUS)[keyof typeof CALL_STATUS];
 export type TableStatus = (typeof TABLE_STATUS)[keyof typeof TABLE_STATUS];
 export type TableSessionStatus = (typeof TABLE_SESSION_STATUS)[keyof typeof TABLE_SESSION_STATUS];
+export type TableKind = (typeof TABLE_KIND)[keyof typeof TABLE_KIND];
 export type RestaurantStatus = (typeof RESTAURANT_STATUS)[keyof typeof RESTAURANT_STATUS];
 export type MemberStatus = (typeof MEMBER_STATUS)[keyof typeof MEMBER_STATUS];
 export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];

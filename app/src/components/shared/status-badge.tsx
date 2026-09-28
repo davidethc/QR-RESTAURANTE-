@@ -17,8 +17,8 @@ const BADGE_BASE =
 
 const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING: "Pendiente",
-  ACCEPTED: "Aceptado",
-  PREPARING: "Preparando",
+  ACCEPTED: "En cocina",
+  PREPARING: "En cocina",
   READY: "Listo",
   DELIVERED: "Entregado",
   REJECTED: "Rechazado",

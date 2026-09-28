@@ -8,3 +8,8 @@ import type { UserRole } from "@/config/constants";
 export function canHandleMoney(role: UserRole | null | undefined): boolean {
   return role === "OWNER" || role === "ADMIN";
 }
+
+/** Quién ve y gestiona al personal, las ventas y la pantalla "Hoy". */
+export function isManager(role: UserRole | null | undefined): boolean {
+  return role === "OWNER" || role === "ADMIN";
+}

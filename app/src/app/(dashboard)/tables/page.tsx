@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TablesLive } from "./_components/tables-live";
 import { CreateTablesDialog } from "./_components/create-tables-dialog";
 import { TablesPdfButton } from "./_components/tables-pdf-button";
-import { TablesBoardV2 } from "./_components/tables-board-v2";
+import { TablesBoard } from "./_components/tables-board";
 import { CartaLinkDialog } from "./_components/carta-link-dialog";
 import {
   getMyRestaurant,
@@ -68,7 +68,7 @@ export default async function TablesPage() {
           </div>
         }
       />
-      <TablesBoardV2
+      <TablesBoard
         tables={tables}
         canManage={canManage}
         canServeTable={canServeTable}

@@ -31,7 +31,7 @@ export function LoginForm() {
         setError("root", { message: result.error });
         return;
       }
-      router.push("/orders");
+      router.push("/today");
       router.refresh();
     });
   }

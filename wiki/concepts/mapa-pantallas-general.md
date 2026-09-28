@@ -2,7 +2,7 @@
 title: "Mapa de Pantallas - General"
 type: "concept"
 created: "2026-09-01"
-updated: "2026-09-01"
+updated: "2026-09-28"
 sources: ["MAPA DE PANTALLAS — MVP.md"]
 tags: ["pantallas", "ui", "mvp", "experiencia"]
 ---
@@ -296,6 +296,7 @@ Una vez definido este mapa, se procede a:
 - [[MVP - Alcance y Especificaciones]] — Estas pantallas definen el alcance del MVP
 - [[Fase UX — Wireframes (Síntesis)]] — Wireframes que especifican estas pantallas
 - [[Arquitectura Técnica MVP]] — Cómo se implementan estas pantallas
+- [[Panel del Admin]] — Pantallas del dueño/administrador ya construidas (Hoy, Personal, Ventas)
 
 **Fuente Original**: Ver [[Fuentes Originales]] → Documento 3
 

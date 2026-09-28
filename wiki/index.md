@@ -2,7 +2,7 @@
 title: "Wiki Index"
 type: "index"
 created: "2026-09-01"
-updated: "2026-09-26"
+updated: "2026-09-28"
 ---
 
 # Índice del Wiki Monky.com
@@ -23,6 +23,7 @@ Catálogo de todas las páginas en el wiki. Se actualiza con cada ingesta.
 - [[Pantallas del Cliente - Detalles]] — Especificación detallada de las 11 pantallas de experiencia del cliente (mobile-first)
 - [[Arquitectura Técnica MVP]] — Stack tecnológico, modelo de datos, infraestructura (Next.js + Supabase + PostgreSQL)
 - [[Reglas de Negocio MVP]] — 26 reglas que el sistema debe enforzar (validaciones, restricciones)
+- [[Panel del Admin]] — Hoy, Personal, Ventas y cobro en Configuración para dueño/administrador (2026-09-28)
 - [[Modelo de Datos Definitivo]] — **NUEVO** — Schema SQL seguro con 11 tablas, ENUMs, índices, RLS, validaciones server-side (DATABASE DESIGN V2)
 
 ## Syntheses
