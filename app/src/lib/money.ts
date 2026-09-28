@@ -128,3 +128,22 @@ export function splitIncludedTax(
   const baseCents = Math.round((totalCents * 10000) / (10000 + rateBasis));
   return { baseCents, taxCents: totalCents - baseCents };
 }
+
+/**
+ * Atajos de "efectivo recibido" para la hoja de cobro: los billetes con que
+ * es probable que pague el cliente, redondeando hacia arriba lo que debe a
+ * 1, 5, 10, 20, 50 y 100. Solo montos mayores que lo adeudado (el "exacto"
+ * ya es su propio atajo), sin repetir y como máximo `max`.
+ * 9.40 -> [10, 20, 50]; 23 -> [25, 30, 40].
+ */
+export function cashQuickAmounts(due: number, max = 3): number[] {
+  const dueCents = toCents(due);
+  if (dueCents <= 0) return [];
+  const result: number[] = [];
+  for (const bill of [100, 500, 1000, 2000, 5000, 10000]) {
+    const rounded = Math.ceil(dueCents / bill) * bill;
+    if (rounded > dueCents && !result.includes(rounded)) result.push(rounded);
+    if (result.length >= max) break;
+  }
+  return result.map(fromCents);
+}

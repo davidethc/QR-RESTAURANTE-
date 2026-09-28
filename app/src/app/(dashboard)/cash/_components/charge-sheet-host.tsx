@@ -10,7 +10,11 @@ interface OpenChargeOptions {
   tableSessionId: string;
   tableLabel: string;
   /** Tope de descuento del mesero para esta apertura. Si se omite se usa el
-   * que trae el provider (de `getRestaurantSettings` en el layout). */
+   * que trae el provider (de `getRestaurantSettings` en el layout).
+   * Hoy no llega a la hoja: solo cobra OWNER/ADMIN (sin tope), así que la
+   * hoja ya no lo usa. Se mantiene en el contrato para no romper a quienes
+   * lo pasan (call-card, release-table-button, open-bills-list); limpiarlo
+   * va en un commit aparte. */
   maxWaiterDiscountPct?: number;
 }
 
@@ -76,8 +80,6 @@ export function ChargeSheetProvider({
           }}
           tableSessionId={target.tableSessionId}
           tableLabel={target.tableLabel}
-          role={role}
-          maxWaiterDiscountPct={target.maxWaiterDiscountPct}
           onSettled={() => {
             setOpen(false);
             router.refresh();

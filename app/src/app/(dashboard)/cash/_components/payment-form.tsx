@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Banknote, CreditCard, Landmark, CircleEllipsis, Loader2 } from "lucide-react";
+import { Banknote, CreditCard, Landmark, CircleEllipsis } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,8 @@ import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field
 import { notify } from "@/lib/notifications";
 import { recordPayment } from "@/lib/actions/billing";
 import { recordPaymentSchema, type RecordPaymentInput } from "@/lib/validations/billing";
-import { calcChange } from "@/lib/money";
-import { formatPrice } from "@/lib/utils";
+import { calcChange, cashQuickAmounts } from "@/lib/money";
+import { cn, formatPrice } from "@/lib/utils";
 import { PAYMENT_METHOD } from "@/config/constants";
 import type { PaymentMethod } from "@/config/constants";
 import type { Bill, RecordPaymentResult } from "@/types/billing";
@@ -37,28 +37,42 @@ function emptyToUndefined(v: string) {
   return v === "" ? undefined : Number(v);
 }
 
+const TIP_PERCENTS = [0, 5, 10] as const;
+
+export type PaymentFormStatus = { amount: number; submitting: boolean };
+
 /**
  * Formulario de cobro dentro de la hoja de cuenta. La forma de pago, el
- * monto y la propina los edita el mesero; los ítems a pagar (modo "por
+ * monto y la propina los edita quien cobra; los ítems a pagar (modo "por
  * ítems") los decide la hoja (ChargeSheet) y llegan ya armados — no son
  * un campo visible de este formulario.
+ *
+ * El botón de enviar NO vive aquí: está en la barra fija de la hoja
+ * (ChargeFooter) y apunta a este form con `form={formId}`, así el saldo y
+ * la acción quedan siempre a la vista aunque el formulario se desplace.
+ * `onStatusChange` le avisa a la hoja el monto y si hay un envío en curso
+ * para pintar ese botón.
  */
 export function PaymentForm({
+  formId,
   bill,
   suggestedAmount,
   resetToken,
   paymentItems,
   idempotencyKey,
   onPaid,
+  onStatusChange,
 }: {
+  formId: string;
   bill: Bill;
   suggestedAmount: number;
-  /** Cambia cuando el monto sugerido debe pisar lo que el mesero escribió
+  /** Cambia cuando el monto sugerido debe pisar lo que se escribió
    *  (cambió el modo de división, las partes, o los ítems elegidos). */
   resetToken: string;
   paymentItems?: { order_item_id: string; quantity: number }[];
   idempotencyKey: string;
   onPaid: (result: RecordPaymentResult) => void;
+  onStatusChange: (status: PaymentFormStatus) => void;
 }) {
   // Ver la nota en product-dialog.tsx: RHF lee refs al invocar
   // handleSubmit, incompatible con el React Compiler.
@@ -102,17 +116,41 @@ export function PaymentForm({
   const tipAmount = useWatch({ control, name: "tipAmount" });
   const tenderedAmount = useWatch({ control, name: "tenderedAmount" });
 
+  const amountValue = Number(amount) || 0;
+  const tipValue = Number(tipAmount) || 0;
+
+  useEffect(() => {
+    onStatusChange({ amount: amountValue, submitting: isSubmitting });
+    // `onStatusChange` es un setState del padre: estable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amountValue, isSubmitting]);
+
   const change = useMemo(() => {
     if (method !== PAYMENT_METHOD.CASH) return null;
     try {
-      const amountNum = Number(amount) || 0;
-      const tipNum = Number(tipAmount) || 0;
-      const tenderedNum = Number(tenderedAmount) || amountNum + tipNum;
-      return calcChange(tenderedNum, amountNum, tipNum);
+      const tenderedNum = Number(tenderedAmount) || amountValue + tipValue;
+      return calcChange(tenderedNum, amountValue, tipValue);
     } catch {
       return null;
     }
-  }, [method, amount, tipAmount, tenderedAmount]);
+  }, [method, amountValue, tipValue, tenderedAmount]);
+
+  const quickCash = useMemo(() => {
+    try {
+      return cashQuickAmounts(amountValue + tipValue);
+    } catch {
+      return [];
+    }
+  }, [amountValue, tipValue]);
+
+  // Qué chip de propina está activo: el que da exactamente la propina
+  // escrita; si se escribió otra cifra no se marca ninguno.
+  const tipPercentValue = useMemo(() => {
+    const match = TIP_PERCENTS.find(
+      (pct) => Math.round(amountValue * pct) === Math.round(tipValue * 100)
+    );
+    return match === undefined ? "" : String(match);
+  }, [amountValue, tipValue]);
 
   function onSubmit(values: RecordPaymentInput) {
     return recordPayment({
@@ -130,10 +168,10 @@ export function PaymentForm({
     });
   }
 
-  const amountValue = Number(amount) || 0;
+  const tendered = Number(tenderedAmount) || 0;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+    <form id={formId} onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
       <FieldGroup>
         <Field>
           <FieldLabel>Forma de pago</FieldLabel>
@@ -146,17 +184,16 @@ export function PaymentForm({
                 variant="outline"
                 value={field.value}
                 onValueChange={(v) => v && field.onChange(v)}
-                className="grid w-full grid-cols-4 gap-2"
+                className="grid w-full grid-cols-2 gap-2 lg:grid-cols-4"
               >
                 {METHODS.map((m) => (
                   <ToggleGroupItem
                     key={m.value}
                     value={m.value}
-                    aria-label={m.label}
-                    className="h-16 min-w-0 flex-col gap-1 rounded-xl border-border/70 text-[11px] font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+                    className="h-14 min-w-0 justify-start gap-2.5 rounded-2xl border-border/70 px-4 text-[14px] font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary lg:h-20 lg:flex-col lg:justify-center lg:gap-1.5 lg:px-2"
                   >
-                    <m.icon className="h-5 w-5" />
-                    {m.label}
+                    <m.icon aria-hidden className="size-5 shrink-0 lg:size-6" />
+                    <span className="truncate">{m.label}</span>
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
@@ -164,58 +201,127 @@ export function PaymentForm({
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field>
-            <FieldLabel htmlFor="pay-amount">Monto</FieldLabel>
-            <Input
-              id="pay-amount"
-              type="number"
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              className="h-12 font-display text-[17px] tabular-nums"
-              {...register("amount", { setValueAs: emptyToUndefined })}
-            />
-            <FieldError errors={[errors.amount]} />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="pay-tip">Propina</FieldLabel>
+        <Field data-invalid={!!errors.amount || undefined}>
+          <div className="flex items-end justify-between gap-2">
+            <FieldLabel htmlFor="pay-amount">Monto a cobrar</FieldLabel>
+            {amountValue !== suggestedAmount && suggestedAmount > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="-my-2 h-11 rounded-full px-3 text-[13px] font-semibold text-primary"
+                onClick={() => setValue("amount", suggestedAmount, { shouldValidate: true })}
+              >
+                Volver a {formatPrice(suggestedAmount)}
+              </Button>
+            )}
+          </div>
+          <Input
+            id="pay-amount"
+            type="number"
+            step="0.01"
+            min="0"
+            inputMode="decimal"
+            aria-invalid={!!errors.amount || undefined}
+            className="h-14 rounded-2xl font-display text-[22px] md:text-[22px] font-semibold tabular-nums text-wine"
+            {...register("amount", { setValueAs: emptyToUndefined })}
+          />
+          <FieldError errors={[errors.amount]} />
+        </Field>
+
+        <Field data-invalid={!!errors.tipAmount || undefined}>
+          <FieldLabel htmlFor="pay-tip">Propina</FieldLabel>
+          <div className="flex gap-2">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={tipPercentValue}
+              onValueChange={(v) => {
+                if (v === "") return;
+                const cents = Math.round(amountValue * Number(v));
+                setValue("tipAmount", cents / 100, { shouldValidate: true });
+              }}
+              aria-label="Propina sugerida"
+              className="grid flex-1 grid-cols-3 gap-2"
+            >
+              {TIP_PERCENTS.map((pct) => (
+                <ToggleGroupItem
+                  key={pct}
+                  value={String(pct)}
+                  className="h-11 min-w-0 rounded-xl text-[14px] font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+                >
+                  {pct === 0 ? "Sin" : `${pct}%`}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
             <Input
               id="pay-tip"
               type="number"
               step="0.01"
               min="0"
               inputMode="decimal"
-              className="h-12 font-display text-[17px] tabular-nums"
+              aria-invalid={!!errors.tipAmount || undefined}
+              className="h-11 w-28 shrink-0 rounded-xl font-display text-[16px] md:text-[16px] tabular-nums"
               {...register("tipAmount", {
                 setValueAs: (v: string) => (v === "" ? 0 : Number(v)),
               })}
             />
-            <FieldError errors={[errors.tipAmount]} />
-          </Field>
-        </div>
+          </div>
+          <FieldError errors={[errors.tipAmount]} />
+        </Field>
 
         {method === PAYMENT_METHOD.CASH && (
-          <Field>
-            <FieldLabel htmlFor="pay-tendered">
-              Recibido (vacío = paga exacto)
-            </FieldLabel>
+          <Field data-invalid={!!errors.tenderedAmount || undefined}>
+            <FieldLabel htmlFor="pay-tendered">Efectivo recibido</FieldLabel>
+            <div className="grid grid-cols-4 gap-2" role="group" aria-label="Billete recibido">
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={tendered === 0}
+                className={cn(
+                  "h-11 min-w-0 rounded-xl px-1 text-[14px] font-semibold",
+                  tendered === 0 && "border-primary bg-primary/10 text-primary"
+                )}
+                onClick={() => setValue("tenderedAmount", undefined, { shouldValidate: true })}
+              >
+                Exacto
+              </Button>
+              {quickCash.map((value) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant="outline"
+                  aria-pressed={tendered === value}
+                  className={cn(
+                    "h-11 min-w-0 rounded-xl px-1 font-display text-[15px] font-semibold tabular-nums",
+                    tendered === value && "border-primary bg-primary/10 text-primary"
+                  )}
+                  onClick={() => setValue("tenderedAmount", value, { shouldValidate: true })}
+                >
+                  {formatPrice(value)}
+                </Button>
+              ))}
+            </div>
             <Input
               id="pay-tendered"
               type="number"
               step="0.01"
               min="0"
               inputMode="decimal"
-              className="h-12 font-display text-[17px] tabular-nums"
+              placeholder="Otro monto (vacío = paga exacto)"
+              aria-invalid={!!errors.tenderedAmount || undefined}
+              className="h-12 rounded-2xl font-display text-[17px] md:text-[17px] tabular-nums"
               {...register("tenderedAmount", { setValueAs: emptyToUndefined })}
             />
             <FieldError errors={[errors.tenderedAmount]} />
-            <p className="flex items-baseline justify-between text-[13px] font-medium text-muted-foreground">
-              <span>Vuelto</span>
-              <span className="font-display text-[16px] tabular-nums text-foreground">
+            <div
+              className="flex items-baseline justify-between rounded-2xl bg-secondary/60 px-4 py-3"
+              aria-live="polite"
+            >
+              <span className="text-[14px] font-semibold text-muted-foreground">Vuelto</span>
+              <span className="font-display text-[26px] leading-none font-semibold tabular-nums text-wine">
                 {change !== null ? formatPrice(change) : "—"}
               </span>
-            </p>
+            </div>
           </Field>
         )}
 
@@ -225,6 +331,7 @@ export function PaymentForm({
             <Input
               id="pay-reference"
               placeholder="N.º de comprobante o autorización"
+              className="h-12 rounded-2xl text-[15px] md:text-[15px]"
               {...register("reference")}
             />
             <FieldError errors={[errors.reference]} />
@@ -233,15 +340,6 @@ export function PaymentForm({
 
         <FieldError errors={[errors.root]} />
       </FieldGroup>
-
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="clay clay-primary h-14 w-full rounded-full text-[16px] font-semibold"
-      >
-        {isSubmitting && <Loader2 className="animate-spin" />}
-        Cobrar {formatPrice(amountValue)}
-      </Button>
     </form>
   );
 }

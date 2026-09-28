@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   applyDiscount,
   calcChange,
+  cashQuickAmounts,
   fromCents,
   nextEqualShare,
   splitEqually,
@@ -137,5 +138,22 @@ describe("splitIncludedTax", () => {
   it("rechaza total negativo o con fracción de centavo", () => {
     expect(() => splitIncludedTax(-1)).toThrow();
     expect(() => splitIncludedTax(1.5)).toThrow();
+  });
+});
+
+describe("cashQuickAmounts", () => {
+  it("redondea hacia arriba a billetes comunes, sin repetir", () => {
+    expect(cashQuickAmounts(9.4)).toEqual([10, 20, 50]);
+    expect(cashQuickAmounts(23)).toEqual([25, 30, 40]);
+    expect(cashQuickAmounts(0.99)).toEqual([1, 5, 10]);
+  });
+
+  it("omite el monto exacto y respeta el máximo", () => {
+    expect(cashQuickAmounts(20)).toEqual([50, 100]);
+    expect(cashQuickAmounts(3.5, 2)).toEqual([4, 5]);
+  });
+
+  it("no ofrece atajos si no se debe nada", () => {
+    expect(cashQuickAmounts(0)).toEqual([]);
   });
 });

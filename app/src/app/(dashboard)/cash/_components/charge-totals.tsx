@@ -1,0 +1,53 @@
+import { Separator } from "@/components/ui/separator";
+import { formatPrice } from "@/lib/utils";
+import type { Bill } from "@/types/billing";
+
+/**
+ * Bloque de totales al pie del ticket. El saldo es el número más grande de
+ * la hoja (font-display, color wine). No lleva `aria-live`: el anuncio del
+ * saldo vive en la barra inferior (ChargeFooter), que está siempre montada,
+ * para no leerlo dos veces.
+ */
+export function ChargeTotals({ bill, partLabel }: { bill: Bill; partLabel: string | null }) {
+  return (
+    <div className="flex flex-col gap-1.5 text-[14px]">
+      <dl className="flex flex-col gap-1.5">
+        <Row label="Subtotal" value={formatPrice(bill.subtotal)} />
+        {bill.discount_total > 0 && (
+          <Row label="Descuento" value={`−${formatPrice(bill.discount_total)}`} />
+        )}
+        {bill.paid_total > 0 && (
+          <>
+            <Row label="Total" value={formatPrice(bill.total)} />
+            <Row label="Pagado" value={`−${formatPrice(bill.paid_total)}`} />
+          </>
+        )}
+      </dl>
+      {/* En móvil el saldo ya está en la barra inferior, justo debajo. */}
+      <Separator className="my-1.5 max-lg:hidden" />
+      <dl className="max-lg:hidden flex items-baseline justify-between gap-3">
+        <dt className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">Saldo</dt>
+        <dd className="font-display text-[34px] leading-none font-semibold tabular-nums text-wine">
+          {formatPrice(bill.balance)}
+        </dd>
+      </dl>
+      {partLabel && (
+        <p className="text-right text-[13px] font-medium text-muted-foreground">{partLabel}</p>
+      )}
+      {bill.tip_total > 0 && (
+        <p className="text-right text-[13px] text-muted-foreground">
+          Propinas aparte: {formatPrice(bill.tip_total)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3 text-muted-foreground">
+      <dt>{label}</dt>
+      <dd className="tabular-nums text-foreground">{value}</dd>
+    </div>
+  );
+}
