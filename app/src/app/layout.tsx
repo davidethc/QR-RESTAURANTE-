@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Bricolage_Grotesque, Figtree, Geist } from "next/font/google";
+import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
 
@@ -23,11 +23,6 @@ const bricolage = Bricolage_Grotesque({
   axes: ["opsz", "wdth"],
 });
 const figtree = Figtree({ subsets: ["latin"], variable: "--font-sans" });
-/**
- * Geist solo para el panel (styles/themes/admin.css). Sin preload: la
- * carta del comensal no la usa y no debe descargarla.
- */
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist", preload: false });
 
 export const metadata: Metadata = {
   title: "Monky",
@@ -41,8 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={cn(
         "h-full antialiased font-sans",
         figtree.variable,
-        bricolage.variable,
-        geist.variable
+        bricolage.variable
       )}
     >
       <body className="min-h-full flex flex-col">

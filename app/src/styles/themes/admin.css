@@ -25,6 +25,8 @@ body:has([data-theme="admin"]) {
     --muted-foreground: #756B5F;
     --border: #ECE9E1;
     --border-strong: #DDD9CE;
+    /* Borde de controles de formulario: 3,3:1 sobre blanco (WCAG 1.4.11). */
+    --input: #948D7E;
     --success-soft: #EDF3E9;
     --success-soft-foreground: #2E6B23;
     --success-border: #D5E3CE;
@@ -117,13 +119,13 @@ body:has([data-theme="admin"]) .clay:active {
       height: 2.5rem;
       padding-inline: 0.75rem;
       background-color: var(--card);
-      border-color: var(--border-strong);
+      border-color: var(--input);
       font-size: var(--font-size-body-sm);
     }
     & [data-slot="textarea"] {
       padding: 0.625rem 0.75rem;
       background-color: var(--card);
-      border-color: var(--border-strong);
+      border-color: var(--input);
       font-size: var(--font-size-body-sm);
     }
     & :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]):focus-visible {
