@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import type { OrderStatus, CallStatus } from "@/config/constants";
 import type {
   MyRestaurant,
@@ -10,6 +11,7 @@ import type {
   RestaurantSettings,
   TableForOrder,
   TopProduct,
+  StaffMember,
 } from "@/types/staff";
 
 /**
@@ -179,4 +181,15 @@ export async function getTopProducts(
 
   if (error) throw error;
   return (data ?? []) as unknown as TopProduct[];
+}
+
+/** Personal del restaurante (solo OWNER/ADMIN; la RPC lo exige). */
+export async function getRestaurantStaff(restaurantId: string): Promise<StaffMember[]> {
+  const supabase = await createClient();
+  const { data, error } = await callUntypedRpc<StaffMember[]>(supabase, "get_restaurant_staff", {
+    p_restaurant_id: restaurantId,
+  });
+
+  if (error) throw error;
+  return data ?? [];
 }

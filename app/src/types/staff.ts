@@ -203,3 +203,17 @@ export interface RestaurantSettings {
    *  servidor. */
   timezone: string;
 }
+
+/** Una persona del personal, como la devuelve `get_restaurant_staff`. */
+export interface StaffMember {
+  member_id: string;
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  role: UserRole;
+  status: MemberStatus;
+  created_at: string;
+  is_me: boolean;
+  /** Quien mira puede cambiarle rol, estado o clave. */
+  can_manage: boolean;
+}
