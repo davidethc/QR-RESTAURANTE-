@@ -39,9 +39,9 @@ export default async function StaffPage() {
           ) : undefined
         }
       />
-      <div className="flex flex-col gap-4 px-4 pb-10 sm:px-6">
+      <div className="flex flex-col gap-4 px-4 pb-12 md:px-8">
         {!canCreate && (
-          <p className="rounded-xl border border-dashed border-border bg-muted/40 p-3 text-meta text-muted-foreground">
+          <p className="rounded-card border border-dashed border-border bg-muted p-3 text-meta text-muted-foreground">
             Para crear cuentas o cambiar claves falta configurar{" "}
             <code className="font-mono text-foreground">SUPABASE_SECRET_KEY</code> en
             el servidor. Mientras tanto puedes cambiar roles y activar o

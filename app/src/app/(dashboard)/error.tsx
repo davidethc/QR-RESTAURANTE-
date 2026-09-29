@@ -29,7 +29,7 @@ export default function DashboardError({
         digest={error.digest}
         onRetry={retry}
       >
-        <Button asChild variant="outline" className="h-11 rounded-full px-6 text-body-sm font-semibold">
+        <Button asChild variant="outline" className="h-10">
           <Link href="/today">Ir al inicio</Link>
         </Button>
       </RecoverableError>

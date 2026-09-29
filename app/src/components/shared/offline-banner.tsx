@@ -24,11 +24,11 @@ export function OfflineBanner({
     <div
       role="alert"
       className={cn(
-        "flex items-start gap-2.5 rounded-2xl bg-honey-soft px-4 py-3 text-body-sm text-honey-soft-foreground",
+        "flex items-start gap-2.5 rounded-card bg-warning-soft px-4 py-3 text-body-sm text-warning-soft-foreground",
         className
       )}
     >
-      <WifiOff className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+      <WifiOff className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} aria-hidden />
       <span>
         <span className="font-semibold">Sin conexión.</span> {message}
       </span>
