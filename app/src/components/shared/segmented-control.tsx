@@ -36,7 +36,7 @@ export function segmentedItemClass(
   className?: string
 ) {
   return cn(
-    "flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-control font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+    "flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-control font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-disabled:cursor-wait aria-disabled:opacity-60 disabled:opacity-50",
     SIZE_ITEM_CLASS[size],
     active
       ? "bg-card text-foreground shadow-sm"
@@ -69,10 +69,17 @@ export function SegmentedControl<T extends string>({
 }) {
   const itemRefs = React.useRef(new Map<string, HTMLButtonElement>());
 
+  // aria-disabled en vez de disabled: un botón deshabilitado suelta el
+  // foco, y mientras se recargan los datos el teclado quedaría en <body>.
+  function select(next: T) {
+    if (disabled || next === value) return;
+    onValueChange(next);
+  }
+
   function selectAndFocus(index: number) {
     const option = options[index];
     if (!option) return;
-    onValueChange(option.value);
+    select(option.value);
     itemRefs.current.get(option.value)?.focus();
   }
 
@@ -118,8 +125,8 @@ export function SegmentedControl<T extends string>({
             role="radio"
             aria-checked={active}
             tabIndex={active ? 0 : -1}
-            disabled={disabled}
-            onClick={() => onValueChange(option.value)}
+            aria-disabled={disabled || undefined}
+            onClick={() => select(option.value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={segmentedItemClass(active, size)}
           >
