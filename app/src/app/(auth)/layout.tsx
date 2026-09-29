@@ -19,7 +19,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div data-theme="admin" className="min-h-full bg-background">
+    <div data-theme="admin" className="flex min-h-dvh flex-col bg-background">
       <style>{`:root{--font-geist:${geist.style.fontFamily}}`}</style>
       {children}
     </div>

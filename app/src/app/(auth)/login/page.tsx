@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Iniciar sesión" };
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-full flex-col items-center justify-center px-6 py-12">
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-[400px] rounded-card border border-border bg-card px-7 py-8 shadow-sm">
         <div className="mb-7 flex flex-col items-center text-center">
           <span className="mb-4 grid size-10 place-items-center rounded-control bg-primary text-body font-semibold text-primary-foreground">
