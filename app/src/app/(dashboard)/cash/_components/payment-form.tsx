@@ -196,7 +196,7 @@ export function PaymentForm({
                   <ToggleGroupItem
                     key={m.value}
                     value={m.value}
-                    className="h-14 min-w-0 justify-start gap-2.5 rounded-2xl border-border/70 px-4 text-body-sm font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary lg:h-20 lg:flex-col lg:justify-center lg:gap-1.5 lg:px-2"
+                    className="h-14 min-w-0 justify-start gap-2.5 rounded-control border-border/70 px-4 text-body-sm font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary-soft data-[state=on]:text-primary lg:h-20 lg:flex-col lg:justify-center lg:gap-1.5 lg:px-2"
                   >
                     <m.icon aria-hidden className="size-5 shrink-0 lg:size-6" />
                     <span className="truncate">{m.label}</span>
@@ -228,7 +228,7 @@ export function PaymentForm({
             min="0"
             inputMode="decimal"
             aria-invalid={!!errors.amount || undefined}
-            className="h-14 rounded-2xl font-display text-title-lg md:text-title-lg font-semibold tabular-nums text-wine"
+            className="h-14 rounded-control text-2xl md:text-2xl font-semibold tabular-nums text-foreground"
             {...register("amount", { setValueAs: emptyToUndefined })}
           />
           <FieldError errors={[errors.amount]} />
@@ -253,7 +253,7 @@ export function PaymentForm({
                 <ToggleGroupItem
                   key={pct}
                   value={String(pct)}
-                  className="h-11 min-w-0 rounded-xl text-body-sm font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+                  className="h-11 min-w-0 rounded-control text-body-sm font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary-soft data-[state=on]:text-primary"
                 >
                   {pct === 0 ? "Sin" : `${pct}%`}
                 </ToggleGroupItem>
@@ -266,7 +266,7 @@ export function PaymentForm({
               min="0"
               inputMode="decimal"
               aria-invalid={!!errors.tipAmount || undefined}
-              className="h-11 w-28 shrink-0 rounded-xl font-display text-body-lg md:text-body-lg tabular-nums"
+              className="h-11 w-28 shrink-0 rounded-control text-lead md:text-lead tabular-nums"
               {...register("tipAmount", {
                 setValueAs: (v: string) => (v === "" ? 0 : Number(v)),
               })}
@@ -284,8 +284,8 @@ export function PaymentForm({
                 variant="outline"
                 aria-pressed={tendered === 0}
                 className={cn(
-                  "h-11 min-w-0 rounded-xl px-1 text-body-sm font-semibold",
-                  tendered === 0 && "border-primary bg-primary/10 text-primary"
+                  "h-11 min-w-0 rounded-control px-1 text-body-sm font-semibold",
+                  tendered === 0 && "border-primary bg-primary-soft text-primary"
                 )}
                 onClick={() => setValue("tenderedAmount", undefined, { shouldValidate: true })}
               >
@@ -298,8 +298,8 @@ export function PaymentForm({
                   variant="outline"
                   aria-pressed={tendered === value}
                   className={cn(
-                    "h-11 min-w-0 rounded-xl px-1 font-display text-body font-semibold tabular-nums",
-                    tendered === value && "border-primary bg-primary/10 text-primary"
+                    "h-11 min-w-0 rounded-control px-1 text-body font-semibold tabular-nums",
+                    tendered === value && "border-primary bg-primary-soft text-primary"
                   )}
                   onClick={() => setValue("tenderedAmount", value, { shouldValidate: true })}
                 >
@@ -315,16 +315,16 @@ export function PaymentForm({
               inputMode="decimal"
               placeholder="Otro monto (vacío = paga exacto)"
               aria-invalid={!!errors.tenderedAmount || undefined}
-              className="h-12 rounded-2xl font-display text-lead md:text-lead tabular-nums"
+              className="h-12 rounded-control text-lead md:text-lead tabular-nums"
               {...register("tenderedAmount", { setValueAs: emptyToUndefined })}
             />
             <FieldError errors={[errors.tenderedAmount]} />
             <div
-              className="flex items-baseline justify-between rounded-2xl bg-secondary/60 px-4 py-3"
+              className="flex items-baseline justify-between rounded-control bg-secondary px-4 py-3"
               aria-live="polite"
             >
               <span className="text-body-sm font-semibold text-muted-foreground">Vuelto</span>
-              <span className="font-display text-display leading-none font-semibold tabular-nums text-wine">
+              <span className="text-2xl leading-none font-semibold tabular-nums text-foreground">
                 {change !== null ? formatPrice(change) : "—"}
               </span>
             </div>
@@ -337,7 +337,7 @@ export function PaymentForm({
             <Input
               id="pay-reference"
               placeholder="N.º de comprobante o autorización"
-              className="h-12 rounded-2xl text-body md:text-body"
+              className="h-12 rounded-control text-body md:text-body"
               {...register("reference")}
             />
             <FieldError errors={[errors.reference]} />

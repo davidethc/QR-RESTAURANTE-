@@ -4,7 +4,7 @@ import type { Bill } from "@/types/billing";
 
 /**
  * Bloque de totales al pie del ticket. El saldo es el número más grande de
- * la hoja (font-display, color wine). No lleva `aria-live`: el anuncio del
+ * la hoja (text-2xl). No lleva `aria-live`: el anuncio del
  * saldo vive en la barra inferior (ChargeFooter), que está siempre montada,
  * para no leerlo dos veces.
  */
@@ -27,7 +27,7 @@ export function ChargeTotals({ bill, partLabel }: { bill: Bill; partLabel: strin
       <Separator className="my-1.5 max-lg:hidden" />
       <dl className="max-lg:hidden flex items-baseline justify-between gap-3">
         <dt className="text-meta font-semibold tracking-wide text-muted-foreground uppercase">Saldo</dt>
-        <dd className="font-display text-[34px] leading-none font-semibold tabular-nums text-wine">
+        <dd className="text-2xl leading-none font-semibold tabular-nums text-foreground">
           {formatPrice(bill.balance)}
         </dd>
       </dl>

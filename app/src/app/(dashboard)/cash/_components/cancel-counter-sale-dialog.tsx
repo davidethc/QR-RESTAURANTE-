@@ -68,7 +68,7 @@ export function CancelCounterSaleDialog({ billId, placeLabel }: { billId: string
         <Button
           variant="ghost"
           size="sm"
-          className="h-11 rounded-full text-meta font-semibold text-muted-foreground"
+          className="h-11 text-meta font-semibold text-muted-foreground"
         >
           <Ban className="h-4 w-4" /> Cancelar venta
         </Button>
@@ -95,7 +95,7 @@ export function CancelCounterSaleDialog({ billId, placeLabel }: { billId: string
               type="submit"
               variant="destructive"
               disabled={isSubmitting}
-              className="clay clay-wine h-11 rounded-full"
+              className="h-11"
             >
               {isSubmitting && <Loader2 className="animate-spin" />}
               Cancelar venta

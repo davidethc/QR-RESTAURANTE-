@@ -144,13 +144,13 @@ export function ChargeProductPicker({
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent side="bottom" className="h-[88vh] gap-0 rounded-t-3xl p-0 sm:mx-auto sm:max-w-lg sm:border-x">
-          <SheetHeader className="border-b border-border/60 px-4 pb-3">
-            <SheetTitle className="font-display text-title-sm">Agregar a la cuenta</SheetTitle>
+          <SheetHeader className="border-b border-border px-4 pb-3">
+            <SheetTitle className="text-title-sm">Agregar a la cuenta</SheetTitle>
             <SheetDescription>Se suma al saldo de esta cuenta.</SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto pb-48">
-            <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur">
+            <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
               <div className="relative">
                 <Search
                   aria-hidden
@@ -184,7 +184,7 @@ export function ChargeProductPicker({
 
             {menuError && (
               <div className="p-4">
-                <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-body-sm text-destructive">
+                <p role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-body-sm text-destructive">
                   {menuError}
                 </p>
                 <Button variant="outline" className="mt-3 h-11 w-full rounded-full" onClick={loadMenu}>
@@ -195,7 +195,7 @@ export function ChargeProductPicker({
 
             {menu && !results && menu.topProducts.length > 0 && (
               <section className="px-4 pt-4">
-                <p className="mb-2 flex items-center gap-1.5 text-tiny font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="mb-2 flex items-center gap-1.5 text-caption font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   <Flame aria-hidden className="size-3.5" /> Los más pedidos
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -207,7 +207,7 @@ export function ChargeProductPicker({
                       className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-body-sm font-semibold active:scale-[0.97]"
                     >
                       {product.name}
-                      <span className="tabular-nums text-wine">{formatPrice(product.price)}</span>
+                      <span className="tabular-nums text-foreground">{formatPrice(product.price)}</span>
                     </button>
                   ))}
                 </div>
@@ -237,10 +237,10 @@ export function ChargeProductPicker({
                           aria-expanded={isOpen}
                           className="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left active:bg-muted"
                         >
-                          <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-title leading-none">
+                          <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-control bg-secondary text-title leading-none">
                             {getCategoryIcon(category.name)}
                           </span>
-                          <span className="font-display min-w-0 flex-1 truncate text-lead font-bold text-foreground">
+                          <span className="min-w-0 flex-1 truncate text-lead font-semibold text-foreground">
                             {category.name}
                           </span>
                           <span className="shrink-0 text-meta tabular-nums text-muted-foreground">
@@ -273,14 +273,14 @@ export function ChargeProductPicker({
                       onChange={(q) => cart.setQuantity(item.id, q)}
                     />
                     <span className="min-w-0 flex-1 truncate text-body-sm font-medium">{item.name}</span>
-                    <span className="w-16 shrink-0 text-right text-body-sm font-semibold tabular-nums text-wine">
+                    <span className="w-16 shrink-0 text-right text-body-sm font-semibold tabular-nums text-foreground">
                       {formatPrice(item.price * item.quantity)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              <label className="mb-3 flex min-h-11 items-center gap-3 rounded-xl bg-secondary/60 px-3 text-body-sm">
+              <label className="mb-3 flex min-h-11 items-center gap-3 rounded-control bg-secondary px-3 text-body-sm">
                 <ChefHat aria-hidden className="size-4 text-muted-foreground" />
                 <span className="flex-1">Mandar a cocina</span>
                 <Switch checked={sendToKitchen} onCheckedChange={setSendToKitchen} aria-label="Mandar a cocina" />
@@ -290,13 +290,13 @@ export function ChargeProductPicker({
                 size="lg"
                 disabled={pending}
                 onClick={handleConfirm}
-                className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-body"
+                className="h-13 w-full justify-between rounded-control px-5 text-body"
               >
                 <span className="flex items-center gap-2">
                   {pending && <Loader2 className="animate-spin" />}
                   Agregar · {cart.count} {cart.count === 1 ? "plato" : "platos"}
                 </span>
-                <span className="font-display text-title font-bold tabular-nums">{formatPrice(cart.total)}</span>
+                <span className="text-title font-semibold tabular-nums">{formatPrice(cart.total)}</span>
               </Button>
             </div>
           )}
@@ -316,7 +316,7 @@ function ProductList({
   quantityOf: (productId: string) => number;
 }) {
   return (
-    <ul className="mx-4 mb-3 divide-y divide-border/60 overflow-hidden rounded-2xl bg-card">
+    <ul className="mx-4 mb-3 divide-y divide-border overflow-hidden rounded-card bg-card">
       {products.map((product) => {
         const inCart = quantityOf(product.id);
         return (
@@ -328,11 +328,11 @@ function ProductList({
             >
               <span className="min-w-0 flex-1 truncate text-body font-semibold">{product.name}</span>
               {inCart > 0 && (
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-bold tabular-nums text-primary-foreground">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-semibold tabular-nums text-primary-foreground">
                   {inCart}
                 </span>
               )}
-              <span className="shrink-0 text-body font-semibold tabular-nums text-wine">
+              <span className="shrink-0 text-body font-semibold tabular-nums text-foreground">
                 {formatPrice(product.price)}
               </span>
             </button>
