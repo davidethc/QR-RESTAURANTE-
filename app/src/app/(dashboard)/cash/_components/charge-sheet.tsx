@@ -198,9 +198,9 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
           bill && !settled && "data-[side=right]:lg:max-w-[min(1120px,96vw)]"
         )}
       >
-        <SheetHeader className="flex-row items-center gap-3 border-b border-border/60 bg-card/60 py-3 pr-16 pl-4 lg:pl-6">
+        <SheetHeader className="flex-row items-center gap-3 border-b border-border bg-card py-3 pr-16 pl-4 lg:pl-6">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <SheetTitle className="truncate font-display text-[19px] font-semibold">Cobrar · {tableLabel}</SheetTitle>
+            <SheetTitle className="truncate text-title-sm font-semibold">Cobrar · {tableLabel}</SheetTitle>
             <SheetDescription className="flex items-center gap-2">
               {bill ? `Cuenta #${bill.bill_number}` : "Cargando la cuenta…"}
               {bill?.status === "OPEN" && <Badge variant="secondary">Abierta</Badge>}
@@ -208,7 +208,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
             </SheetDescription>
           </div>
           {bill && !settled && (
-            <Button asChild variant="outline" className="h-11 min-w-11 shrink-0 rounded-full px-3 text-body-sm font-semibold sm:px-4">
+            <Button asChild variant="outline" className="h-11 min-w-11 shrink-0 px-3 text-body-sm font-semibold sm:px-4">
               <Link
                 href={`/cash/ticket/${bill.id}?print=1`}
                 target="_blank"
@@ -230,10 +230,10 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
 
         {loadError && (
           <div className="flex flex-col gap-3 p-4">
-            <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-body-sm text-destructive">
+            <p role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-body-sm text-destructive">
               {loadError}
             </p>
-            <Button variant="outline" className="h-12 w-full rounded-full" onClick={load}>
+            <Button variant="outline" className="h-12 w-full" onClick={load}>
               Reintentar
             </Button>
           </div>
@@ -241,18 +241,18 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
 
         {bill && settled && (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 overflow-y-auto px-6 py-16 text-center">
-            <span className="flex size-16 items-center justify-center rounded-full bg-success/15 text-success">
+            <span className="flex size-16 items-center justify-center rounded-full bg-success-soft text-success-soft-foreground">
               <CheckCircle2 className="size-9" aria-hidden />
             </span>
-            <p className="font-display text-title font-semibold text-foreground">Mesa cobrada ✓</p>
+            <p className="text-title font-semibold text-foreground">Mesa cobrada ✓</p>
             <p className="text-body-sm text-muted-foreground">{tableLabel} quedó libre para el próximo cliente.</p>
-            <Button asChild variant="outline" className="mt-4 h-12 w-full rounded-full text-body font-semibold">
+            <Button asChild variant="outline" className="mt-4 h-12 w-full text-body font-semibold">
               <Link href={`/cash/ticket/${bill.id}?print=1`} target="_blank" rel="noopener noreferrer">
                 <Printer aria-hidden data-icon="inline-start" /> Imprimir ticket
               </Link>
             </Button>
             <Button
-              className="clay clay-primary h-12 w-full rounded-full text-body font-semibold"
+              className="h-12 w-full text-body font-semibold"
               onClick={() => onSettled?.()}
             >
               Listo
@@ -266,7 +266,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
             onValueChange={(v) => setTab(v as ChargeTab)}
             className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-0 lg:grid-cols-[minmax(0,1fr)_400px]"
           >
-            <div className="border-b border-border/60 px-4 py-2 lg:col-start-1 lg:row-start-1 lg:px-6 lg:pt-4 lg:pb-3">
+            <div className="border-b border-border px-4 py-2 lg:col-start-1 lg:row-start-1 lg:px-6 lg:pt-4 lg:pb-3">
               <TabsList className="w-full group-data-horizontal/tabs:h-[3.25rem] lg:w-fit" aria-label="Secciones del cobro">
                 <TabsTrigger value="account" className={cn(tabTriggerClass, "lg:hidden")}>
                   Cuenta
@@ -290,7 +290,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                 {bill.status === "OPEN" ? (
                   <div className="flex flex-col gap-4">
                     {bill.split_mode === SPLIT_MODE.ITEMS && !paymentItems && (
-                      <p className="rounded-xl bg-honey-soft px-3 py-2.5 text-body-sm text-honey-soft-foreground">
+                      <p className="rounded-control bg-warning-soft px-3 py-2.5 text-body-sm text-warning-soft-foreground">
                         Marca en el ticket{isDesktop ? "" : " (pestaña Cuenta)"} qué ítems paga esta persona.
                       </p>
                     )}
@@ -309,7 +309,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                     />
                   </div>
                 ) : (
-                  <p className="rounded-xl bg-honey-soft px-3 py-2.5 text-body-sm text-honey-soft-foreground">
+                  <p className="rounded-control bg-warning-soft px-3 py-2.5 text-body-sm text-warning-soft-foreground">
                     {bill.can_close
                       ? "La cuenta está pagada. Ciérrala para liberar la mesa."
                       : "Ya está pagada. Falta que salgan los pedidos en curso para poder cerrar la mesa."}
@@ -333,14 +333,14 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
               value="account"
               forceMount
               className={cn(
-                "flex min-h-0 flex-col bg-secondary/30 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:border-l lg:border-border/60",
+                "flex min-h-0 flex-col bg-secondary lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:border-l lg:border-border",
                 activeTab !== "account" && "max-lg:hidden"
               )}
             >
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 lg:p-6">
-                <h3 className="mb-3 hidden font-display text-body-lg font-semibold text-foreground lg:block">Consumo</h3>
+                <h3 className="mb-3 hidden text-lead font-semibold text-foreground lg:block">Consumo</h3>
                 {bill.status === "PAID" && !bill.can_close && (
-                  <p className="mb-3 rounded-xl bg-honey-soft px-3 py-2 text-meta text-honey-soft-foreground lg:hidden">
+                  <p className="mb-3 rounded-control bg-warning-soft px-3 py-2 text-meta text-warning-soft-foreground lg:hidden">
                     Ya está pagada. Falta que salgan los pedidos en curso para poder cerrar la mesa.
                   </p>
                 )}
@@ -363,7 +363,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                   </div>
                 )}
               </div>
-              <div className="border-t border-border/60 bg-card px-4 py-3 lg:px-6 lg:py-4">
+              <div className="border-t border-border bg-card px-4 py-3 lg:px-6 lg:py-4">
                 <ChargeTotals bill={bill} partLabel={currentPartLabel} />
               </div>
             </TabsContent>

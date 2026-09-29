@@ -123,7 +123,7 @@ export function QuickSaleSheet({
       <Button
         onClick={handleTriggerClick}
         size="lg"
-        className="clay clay-primary h-14 w-full gap-2 rounded-2xl text-body font-semibold"
+        className="h-14 w-full gap-2 rounded-control text-body font-semibold"
       >
         <ShoppingBag aria-hidden className="size-5" /> Venta rápida
       </Button>
@@ -138,13 +138,13 @@ export function QuickSaleSheet({
           side="bottom"
           className="h-[92vh] gap-0 rounded-t-3xl p-0 sm:mx-auto sm:max-w-lg sm:border-x"
         >
-          <SheetHeader className="border-b border-border/60 px-4 pb-3">
-            <SheetTitle className="font-display text-title-sm">Venta rápida</SheetTitle>
+          <SheetHeader className="border-b border-border px-4 pb-3">
+            <SheetTitle className="text-title-sm">Venta rápida</SheetTitle>
             <SheetDescription>Para llevar. Se manda a cocina y se cobra antes de entregar.</SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto pb-44">
-            <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur">
+            <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
               <div className="relative">
                 <Search
                   aria-hidden
@@ -177,7 +177,7 @@ export function QuickSaleSheet({
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Ej: Ana"
                     maxLength={40}
-                    className="h-11 rounded-xl text-body"
+                    className="h-11 rounded-control text-body"
                   />
                 </Field>
               </FieldGroup>
@@ -185,7 +185,7 @@ export function QuickSaleSheet({
 
             {!results && topProducts.length > 0 && (
               <section className="px-4 pt-4">
-                <p className="mb-2 flex items-center gap-1.5 text-tiny font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="mb-2 flex items-center gap-1.5 text-caption font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   <Flame aria-hidden className="size-3.5" /> Los más pedidos
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -197,7 +197,7 @@ export function QuickSaleSheet({
                       className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-body-sm font-semibold active:scale-[0.97]"
                     >
                       {product.name}
-                      <span className="tabular-nums text-wine">{formatPrice(product.price)}</span>
+                      <span className="tabular-nums text-foreground">{formatPrice(product.price)}</span>
                     </button>
                   ))}
                 </div>
@@ -233,7 +233,7 @@ export function QuickSaleSheet({
                         <span
                           aria-hidden
                           className={cn(
-                            "flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-title leading-none transition-transform duration-200",
+                            "flex size-10 shrink-0 items-center justify-center rounded-control bg-secondary text-title leading-none transition-transform duration-200",
                             isOpen && "scale-105"
                           )}
                         >
@@ -241,7 +241,7 @@ export function QuickSaleSheet({
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="flex items-baseline justify-between gap-2">
-                            <span className="font-display truncate text-lead font-bold leading-tight text-foreground">
+                            <span className="truncate text-lead font-semibold leading-tight text-foreground">
                               {category.name}
                             </span>
                             <span className="shrink-0 text-meta tabular-nums text-muted-foreground">
@@ -290,12 +290,12 @@ export function QuickSaleSheet({
                         aria-label={`Indicación para ${item.name}`}
                         className={cn(
                           "flex size-9 shrink-0 items-center justify-center rounded-full",
-                          item.notes ? "bg-honey-soft text-honey-soft-foreground" : "text-muted-foreground hover:bg-muted"
+                          item.notes ? "bg-warning-soft text-warning-soft-foreground" : "text-muted-foreground hover:bg-muted"
                         )}
                       >
                         <PencilLine className="size-4" />
                       </button>
-                      <span className="w-16 shrink-0 text-right text-body-sm font-semibold tabular-nums text-wine">
+                      <span className="w-16 shrink-0 text-right text-body-sm font-semibold tabular-nums text-foreground">
                         {formatPrice(item.price * item.quantity)}
                       </span>
                     </div>
@@ -308,7 +308,7 @@ export function QuickSaleSheet({
                           placeholder="Ej: sin cebolla, término medio…"
                           rows={2}
                           autoFocus
-                          className="rounded-xl text-body-sm"
+                          className="rounded-control text-body-sm"
                         />
                         <Button
                           type="button"
@@ -332,12 +332,12 @@ export function QuickSaleSheet({
                     size="lg"
                     disabled={!online}
                     title={online ? undefined : "Sin conexión: espera a que vuelva la red"}
-                    className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-body"
+                    className="h-13 w-full justify-between rounded-control px-5 text-body"
                   >
                     <span>
                       {online ? "Cobrar" : "Sin conexión"} · {cart.count} {cart.count === 1 ? "plato" : "platos"}
                     </span>
-                    <span className="font-display text-title font-bold tabular-nums">{formatPrice(cart.total)}</span>
+                    <span className="text-title font-semibold tabular-nums">{formatPrice(cart.total)}</span>
                   </Button>
                 }
                 title="¿Confirmar venta para llevar?"
@@ -373,7 +373,7 @@ function ProductList({
   quantityOf: (productId: string) => number;
 }) {
   return (
-    <ul className="divide-y divide-border/60 overflow-hidden bg-card mx-4 mb-3 rounded-2xl">
+    <ul className="divide-y divide-border overflow-hidden bg-card mx-4 mb-3 rounded-card">
       {products.map((product) => {
         const inCart = quantityOf(product.id);
         return (
@@ -385,11 +385,11 @@ function ProductList({
             >
               <span className="min-w-0 flex-1 truncate text-body font-semibold">{product.name}</span>
               {inCart > 0 && (
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-bold tabular-nums text-primary-foreground">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-semibold tabular-nums text-primary-foreground">
                   {inCart}
                 </span>
               )}
-              <span className="shrink-0 text-body font-semibold tabular-nums text-wine">
+              <span className="shrink-0 text-body font-semibold tabular-nums text-foreground">
                 {formatPrice(product.price)}
               </span>
             </button>

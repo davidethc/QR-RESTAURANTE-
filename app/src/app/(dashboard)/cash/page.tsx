@@ -104,7 +104,7 @@ export default async function CashPage() {
         description={summary ? "Caja abierta" : "La caja está cerrada"}
         action={<CashPageLive restaurantId={restaurantId} />}
       />
-      <div className="flex flex-col gap-6 px-4 pb-10 sm:px-6">
+      <div className="flex flex-col gap-8 px-4 pb-12 md:px-8">
         <OfflineBanner message="No se puede cobrar ni registrar pagos hasta que vuelva la red." />
         <CashSessionArea
           summary={summary}

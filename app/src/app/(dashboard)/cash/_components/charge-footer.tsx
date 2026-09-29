@@ -8,7 +8,7 @@ import type { Bill } from "@/types/billing";
 
 export type ChargeTab = "account" | "pay" | "adjust";
 
-const primaryClass = "clay clay-primary h-14 min-w-0 flex-1 rounded-full text-body-lg font-semibold lg:flex-none lg:px-8";
+const primaryClass = "h-14 min-w-0 flex-1 text-lead font-semibold lg:flex-none lg:px-8";
 
 /**
  * Barra fija al pie de la hoja: el saldo siempre a la vista (en móvil) y
@@ -71,7 +71,7 @@ export function ChargeFooter({
       >
         {paySubmitting && <Loader2 className="animate-spin" data-icon="inline-start" aria-hidden />}
         {online ? "Cobrar" : "Sin conexión"}{" "}
-        <span className="font-display tabular-nums">{formatPrice(payAmount)}</span>
+        <span className="tabular-nums">{formatPrice(payAmount)}</span>
       </Button>
     );
   } else if (bill.status === "OPEN") {
@@ -89,10 +89,10 @@ export function ChargeFooter({
   }
 
   return (
-    <div className="flex items-center gap-4 border-t border-border/70 bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:justify-end lg:px-6">
+    <div className="flex items-center gap-4 border-t border-border bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:justify-end lg:px-6">
       <div className="flex min-w-0 flex-col lg:sr-only" aria-live="polite" aria-atomic="true">
         <span className="text-caption font-semibold tracking-wide text-muted-foreground uppercase">Saldo</span>
-        <span className="font-display text-display leading-none font-semibold tabular-nums text-wine">
+        <span className="text-2xl leading-none font-semibold tabular-nums text-foreground">
           {formatPrice(bill.balance)}
         </span>
       </div>

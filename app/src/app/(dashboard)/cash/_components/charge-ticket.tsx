@@ -39,7 +39,7 @@ export function ChargeTicket({
 
   if (orders.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-body-sm text-muted-foreground">
+      <p className="rounded-card border border-dashed border-border px-4 py-8 text-center text-body-sm text-muted-foreground">
         Esta cuenta todavía no tiene pedidos.
       </p>
     );
@@ -85,8 +85,8 @@ export function ChargeTicket({
                       <label
                         htmlFor={`bill-item-${item.id}`}
                         className={cn(
-                          "-mx-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 transition-colors active:bg-secondary",
-                          selectedItems[item.id] && "bg-primary/10"
+                          "-mx-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-control px-2 py-1.5 transition-colors active:bg-secondary",
+                          selectedItems[item.id] && "bg-primary-soft"
                         )}
                       >
                         <Checkbox
