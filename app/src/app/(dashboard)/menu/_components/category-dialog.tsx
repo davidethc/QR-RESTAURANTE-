@@ -9,13 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { notify } from "@/lib/notifications";
 import { createCategory, updateCategory } from "@/lib/actions/menu";
@@ -66,8 +68,8 @@ export function CategoryDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         {isEdit ? (
           <Button variant="ghost" size="icon" aria-label="Editar categoría">
             <Pencil className="h-4 w-4" />
@@ -77,37 +79,51 @@ export function CategoryDialog({
             <Plus /> Categoría
           </Button>
         )}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
+      </SheetTrigger>
+      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
+        <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
+          <SheetTitle className="text-title-sm font-semibold">
             {isEdit ? "Editar categoría" : "Nueva categoría"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="cat-name">Nombre</FieldLabel>
-              <Input id="cat-name" {...register("name")} />
-              <FieldError errors={[errors.name]} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="cat-description">
-                Descripción (opcional)
-              </FieldLabel>
-              <Textarea id="cat-description" rows={2} {...register("description")} />
-              <FieldError errors={[errors.description]} />
-            </Field>
-            <FieldError errors={[errors.root]} />
-          </FieldGroup>
-          <DialogFooter className="mt-4">
+          </SheetTitle>
+          <SheetDescription>
+            Agrupa los productos que se muestran juntos en la carta del QR.
+          </SheetDescription>
+        </SheetHeader>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-1 flex-col overflow-hidden"
+        >
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="cat-name">Nombre</FieldLabel>
+                <Input id="cat-name" {...register("name")} />
+                <FieldError errors={[errors.name]} />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="cat-description">
+                  Descripción (opcional)
+                </FieldLabel>
+                <Textarea id="cat-description" rows={2} {...register("description")} />
+                <FieldError errors={[errors.description]} />
+              </Field>
+              <FieldError errors={[errors.root]} />
+            </FieldGroup>
+          </div>
+          <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border px-6 py-4">
+            <SheetClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </SheetClose>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="animate-spin" />}
               {isEdit ? "Guardar" : "Crear"}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

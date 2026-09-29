@@ -57,22 +57,22 @@ export function CategoryAdminSection({
   return (
     <motion.section
       layout
-      className={cn("flex flex-col gap-3", isDragging && "opacity-40")}
+      className={cn(isDragging && "opacity-40")}
       onDragOver={category ? (e) => e.preventDefault() : undefined}
       onDrop={category ? onCategoryDrop : undefined}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-secondary px-4 py-2.5 md:px-5">
+        <div className="flex min-w-0 items-center gap-2">
           {category && (
-            <div className="flex items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
               <span
                 draggable
                 onDragStart={onCategoryDragStart}
                 onDragEnd={onCategoryDragEnd}
-                className="cursor-grab text-muted-foreground active:cursor-grabbing"
+                className="cursor-grab active:cursor-grabbing"
                 aria-hidden="true"
               >
-                <GripVertical className="h-4 w-4" />
+                <GripVertical className="h-3.5 w-3.5" />
               </span>
               <div className="flex flex-col">
                 <button
@@ -80,65 +80,76 @@ export function CategoryAdminSection({
                   onClick={onCategoryMoveUp}
                   disabled={isFirstCategory}
                   aria-label="Mover categoría arriba"
-                  className="text-muted-foreground disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
+                  className="disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
                 >
-                  <ChevronUp className="h-3.5 w-3.5" />
+                  <ChevronUp className="h-3 w-3" />
                 </button>
                 <button
                   type="button"
                   onClick={onCategoryMoveDown}
                   disabled={isLastCategory}
                   aria-label="Mover categoría abajo"
-                  className="text-muted-foreground disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
+                  className="disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
                 >
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <ChevronDown className="h-3 w-3" />
                 </button>
               </div>
             </div>
           )}
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
+          <div className="min-w-0">
+            <span className="text-body-sm font-semibold text-foreground">
               {category?.name ?? "Sin categoría"}
-            </h2>
+              <span className="ml-1.5 font-normal text-muted-foreground">
+                {products.length}
+              </span>
+            </span>
             {category?.description && (
-              <p className="text-sm text-muted-foreground">
+              <p className="truncate text-caption text-muted-foreground">
                 {category.description}
               </p>
             )}
           </div>
         </div>
-        {category && (
-          <div className="flex items-center gap-1">
-            <CategoryDialog
-              restaurantId={restaurantId}
-              category={category}
-            />
-            <ConfirmDialog
-              trigger={
-                <Button variant="ghost" size="icon" aria-label="Eliminar categoría">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              }
-              title="¿Eliminar esta categoría?"
-              description={
-                products.length > 0
-                  ? `"${category.name}" tiene ${products.length} producto(s). Elimínalos o muévelos primero.`
-                  : `"${category.name}" se eliminará. Esta acción no se puede deshacer.`
-              }
-              destructive
-              confirmLabel="Eliminar"
-              action={() => deleteCategory(category.id)}
-              successMessage="Categoría eliminada"
-              onSuccess={() => router.refresh()}
-            />
-          </div>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          <ProductDialog
+            restaurantId={restaurantId}
+            categories={allCategories}
+            allProducts={allProducts}
+            defaultCategoryId={category?.id}
+          />
+          {category && (
+            <>
+              <CategoryDialog
+                restaurantId={restaurantId}
+                category={category}
+              />
+              <ConfirmDialog
+                trigger={
+                  <Button variant="ghost" size="icon" aria-label="Eliminar categoría">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                }
+                title="¿Eliminar esta categoría?"
+                description={
+                  products.length > 0
+                    ? `"${category.name}" tiene ${products.length} producto(s). Elimínalos o muévelos primero.`
+                    : `"${category.name}" se eliminará. Esta acción no se puede deshacer.`
+                }
+                destructive
+                confirmLabel="Eliminar"
+                action={() => deleteCategory(category.id)}
+                successMessage="Categoría eliminada"
+                onSuccess={() => router.refresh()}
+              />
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {products.length === 0 ? (
-          <EmptyState title="Sin productos todavía" />
-        ) : (
+      {products.length === 0 ? (
+        <EmptyState title="Sin productos todavía" />
+      ) : (
+        <div className="divide-y divide-border">
           <AnimatePresence initial={false}>
             {products.map((product, index) => (
               <ProductRow
@@ -158,15 +169,8 @@ export function CategoryAdminSection({
               />
             ))}
           </AnimatePresence>
-        )}
-      </div>
-
-      <ProductDialog
-        restaurantId={restaurantId}
-        categories={allCategories}
-        allProducts={allProducts}
-        defaultCategoryId={category?.id}
-      />
+        </div>
+      )}
     </motion.section>
   );
 }

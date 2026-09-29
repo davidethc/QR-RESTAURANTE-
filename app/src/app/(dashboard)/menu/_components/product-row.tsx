@@ -63,22 +63,21 @@ export function ProductRow({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       className={cn(
-        "flex items-center gap-3 rounded-xl border-l-4 border bg-card p-3",
-        product.available ? "border-l-success-indicator" : "border-l-warning-indicator",
+        "flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-secondary/60 md:px-5",
         isDragging && "opacity-40"
       )}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
     >
-      <div className="flex items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
         <span
           draggable
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
-          className="cursor-grab text-muted-foreground active:cursor-grabbing"
+          className="cursor-grab active:cursor-grabbing"
           aria-hidden="true"
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-3.5 w-3.5" />
         </span>
         <div className="flex flex-col">
           <button
@@ -86,44 +85,45 @@ export function ProductRow({
             onClick={onMoveUp}
             disabled={isFirst}
             aria-label="Mover producto arriba"
-            className="text-muted-foreground disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
+            className="disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
           >
-            <ChevronUp className="h-3.5 w-3.5" />
+            <ChevronUp className="h-3 w-3" />
           </button>
           <button
             type="button"
             onClick={onMoveDown}
             disabled={isLast}
             aria-label="Mover producto abajo"
-            className="text-muted-foreground disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
+            className="disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
           >
-            <ChevronDown className="h-3.5 w-3.5" />
+            <ChevronDown className="h-3 w-3" />
           </button>
         </div>
       </div>
 
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-muted">
+      <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-control border border-border bg-secondary">
         {product.image_url ? (
           <Image
             src={product.image_url}
             alt={product.name}
             fill
-            sizes="56px"
+            sizes="36px"
             className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <UtensilsCrossed className="h-5 w-5 text-muted-foreground" />
+            <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
           </div>
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">
-          {product.name}
-        </p>
-        <p className="text-sm text-wine">{formatPrice(product.price)}</p>
-      </div>
+      <p className="min-w-0 flex-1 truncate text-body-sm font-medium text-foreground">
+        {product.name}
+      </p>
+
+      <p className="w-20 shrink-0 text-right text-body-sm text-foreground tabular-nums">
+        {formatPrice(product.price)}
+      </p>
 
       <Switch
         checked={product.available}
@@ -132,27 +132,29 @@ export function ProductRow({
         aria-label="Disponible"
       />
 
-      <ProductDialog
-        restaurantId={restaurantId}
-        categories={categories}
-        allProducts={allProducts}
-        product={product}
-      />
+      <div className="flex shrink-0 items-center gap-0.5">
+        <ProductDialog
+          restaurantId={restaurantId}
+          categories={categories}
+          allProducts={allProducts}
+          product={product}
+        />
 
-      <ConfirmDialog
-        trigger={
-          <Button variant="ghost" size="icon" aria-label="Eliminar producto">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        }
-        title="¿Eliminar este producto?"
-        description={`"${product.name}" se eliminará de la carta. Esta acción no se puede deshacer.`}
-        destructive
-        confirmLabel="Eliminar"
-        action={() => deleteProduct(product.id)}
-        successMessage="Producto eliminado"
-        onSuccess={() => router.refresh()}
-      />
+        <ConfirmDialog
+          trigger={
+            <Button variant="ghost" size="icon" aria-label="Eliminar producto">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          }
+          title="¿Eliminar este producto?"
+          description={`"${product.name}" se eliminará de la carta. Esta acción no se puede deshacer.`}
+          destructive
+          confirmLabel="Eliminar"
+          action={() => deleteProduct(product.id)}
+          successMessage="Producto eliminado"
+          onSuccess={() => router.refresh()}
+        />
+      </div>
     </motion.div>
   );
 }

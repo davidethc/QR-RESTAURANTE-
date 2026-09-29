@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getAdminMenu } from "@/lib/queries/staff";
 import { MenuAdminBoard } from "./_components/menu-admin-board";
+import { CategoryDialog } from "./_components/category-dialog";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -24,6 +25,7 @@ export default async function MenuAdminPage() {
       <PageHeader
         title="Carta"
         description={`${menu.categories.length} categorías · ${menu.products.length} productos`}
+        action={<CategoryDialog restaurantId={session.restaurant.id} />}
       />
       <MenuAdminBoard
         restaurantId={session.restaurant.id}

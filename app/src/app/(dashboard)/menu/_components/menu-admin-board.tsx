@@ -2,9 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UtensilsCrossed, CircleCheck, CircleSlash } from "lucide-react";
 import { CategoryAdminSection } from "./category-admin-section";
-import { CategoryDialog } from "./category-dialog";
 import { reorderCategories, reorderProducts } from "@/lib/actions/menu";
 import { notify } from "@/lib/notifications";
 import type { AdminCategory, AdminProduct } from "@/types/staff";
@@ -146,80 +144,59 @@ export function MenuAdminBoard({
   }, [categories, products]);
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="flex items-center gap-2 rounded-lg bg-info-soft px-3 py-2">
-          <UtensilsCrossed className="h-4 w-4 shrink-0 text-info-soft-foreground" aria-hidden="true" />
-          <div>
-            <p className="text-xs text-muted-foreground">Categorías</p>
-            <p className="font-display text-lg font-bold text-foreground">
-              {stats.categories}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2">
-          <CircleCheck className="h-4 w-4 shrink-0 text-success-soft-foreground" aria-hidden="true" />
-          <div>
-            <p className="text-xs text-muted-foreground">Disponibles</p>
-            <p className="font-display text-lg font-bold text-foreground">
-              {stats.available}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2">
-          <CircleSlash className="h-4 w-4 shrink-0 text-warning-soft-foreground" aria-hidden="true" />
-          <div>
-            <p className="text-xs text-muted-foreground">No disponibles</p>
-            <p className="font-display text-lg font-bold text-foreground">
-              {stats.unavailable}
-            </p>
-          </div>
-        </div>
+    <div className="flex flex-col gap-6 px-4 pb-12 md:px-8">
+      <div className="flex flex-wrap gap-2">
+        <span className="inline-flex h-6 items-center rounded-badge bg-success-soft px-2.5 text-meta font-medium text-success-soft-foreground">
+          {stats.available} disponibles
+        </span>
+        <span className="inline-flex h-6 items-center rounded-badge bg-secondary px-2.5 text-meta font-medium text-muted-foreground">
+          {stats.unavailable} no disponibles
+        </span>
       </div>
 
-      <div className="flex justify-end">
-        <CategoryDialog restaurantId={restaurantId} />
+      <div className="overflow-hidden rounded-card border border-border bg-card">
+        <div className="divide-y divide-border">
+          {categories.map((category, index) => (
+            <CategoryAdminSection
+              key={category.id}
+              category={category}
+              products={products.filter((p) => p.category_id === category.id)}
+              allCategories={categories}
+              allProducts={products}
+              restaurantId={restaurantId}
+              isDragging={draggedCategoryId === category.id}
+              onCategoryDragStart={() => setDraggedCategoryId(category.id)}
+              onCategoryDragEnd={() => setDraggedCategoryId(null)}
+              onCategoryDrop={() => handleCategoryDrop(category.id)}
+              onCategoryMoveUp={() => handleCategoryMove(category.id, "up")}
+              onCategoryMoveDown={() => handleCategoryMove(category.id, "down")}
+              isFirstCategory={index === 0}
+              isLastCategory={index === categories.length - 1}
+              draggedProductId={draggedProductId}
+              onProductDragStart={setDraggedProductId}
+              onProductDragEnd={() => setDraggedProductId(null)}
+              onProductDrop={handleProductDrop}
+              onProductMove={handleProductMove}
+            />
+          ))}
+
+          {uncategorized.length > 0 && (
+            <CategoryAdminSection
+              category={null}
+              products={uncategorized}
+              allCategories={categories}
+              allProducts={products}
+              restaurantId={restaurantId}
+              isDragging={false}
+              draggedProductId={draggedProductId}
+              onProductDragStart={setDraggedProductId}
+              onProductDragEnd={() => setDraggedProductId(null)}
+              onProductDrop={handleProductDrop}
+              onProductMove={handleProductMove}
+            />
+          )}
+        </div>
       </div>
-
-      {categories.map((category, index) => (
-        <CategoryAdminSection
-          key={category.id}
-          category={category}
-          products={products.filter((p) => p.category_id === category.id)}
-          allCategories={categories}
-          allProducts={products}
-          restaurantId={restaurantId}
-          isDragging={draggedCategoryId === category.id}
-          onCategoryDragStart={() => setDraggedCategoryId(category.id)}
-          onCategoryDragEnd={() => setDraggedCategoryId(null)}
-          onCategoryDrop={() => handleCategoryDrop(category.id)}
-          onCategoryMoveUp={() => handleCategoryMove(category.id, "up")}
-          onCategoryMoveDown={() => handleCategoryMove(category.id, "down")}
-          isFirstCategory={index === 0}
-          isLastCategory={index === categories.length - 1}
-          draggedProductId={draggedProductId}
-          onProductDragStart={setDraggedProductId}
-          onProductDragEnd={() => setDraggedProductId(null)}
-          onProductDrop={handleProductDrop}
-          onProductMove={handleProductMove}
-        />
-      ))}
-
-      {uncategorized.length > 0 && (
-        <CategoryAdminSection
-          category={null}
-          products={uncategorized}
-          allCategories={categories}
-          allProducts={products}
-          restaurantId={restaurantId}
-          isDragging={false}
-          draggedProductId={draggedProductId}
-          onProductDragStart={setDraggedProductId}
-          onProductDragEnd={() => setDraggedProductId(null)}
-          onProductDrop={handleProductDrop}
-          onProductMove={handleProductMove}
-        />
-      )}
     </div>
   );
 }
