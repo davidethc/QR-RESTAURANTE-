@@ -4,7 +4,7 @@ type: "concept"
 created: "2026-09-28"
 updated: "2026-09-28"
 sources: ["raw/assets/MAPA DE PANTALLAS — MVP.md", "raw/assets/Roles y flujo operativo — MVP.md"]
-tags: ["admin", "personal", "ventas", "cobro", "navegacion"]
+tags: ["admin", "personal", "ventas", "cobro", "navegacion", "diseño"]
 aliases: ["panel-del-admin"]
 ---
 
@@ -46,6 +46,23 @@ Solo el dueño: activar el cobro, tope de descuento del mesero (%) y hora de cor
 ## Pendiente
 
 - Unir Mesas y Pedidos en una sola vista de salón (acordado para otra ronda).
+
+## Sistema de diseño del panel (2026-09-28)
+
+Los tokens y temas viven en **`app/src/styles/tokens.css`** (única fuente de verdad) y **`app/src/styles/themes/admin.css`** (selectores por rol: `data-theme="admin"` en el layout de `(dashboard)`, también cubre portales por `body:has`).
+
+**Para cambiar el tema**: editar solo los controles CSS custom de `admin.css` (nunca agregar hex, `text-[Npx]` ni colores de paleta cruda en el panel):
+- `--primary`: acento principal (verde #2E6B23 en el diseño actual)
+- `--background`: fondo de pantalla (#F8F7F2)
+- `--card`: superficie de tarjetas (#FFFFFF)
+- `--foreground`: texto principal (#182016)
+- `--muted-foreground`: texto secundario (#756B5F)
+- `--border`: borde de controles (#948D7E, proporción 3:1 con fondo)
+- `--input`: fondo de inputs
+- `--radius`: esquinas redondeadas (controles, botones, tarjetas, badges)
+- `--font-sans`: tipografía (Geist en dashboard, ~29 KB; 0 en la carta)
+
+**Patrones del panel**: [[PageHeader]] con título + acciones, métricas en una superficie dividida, listas en superficie con `divide-y`, crear/editar en Sheet derecho con header y footer fijos, [[EmptyState]] con action. Todos los botones ≥44px en caja/mesas/pedidos. Menú lateral agrupado (Operación/Negocio/Configuración): 240px escritorio, iconos en tablet, cajón en móvil.
 
 ## Véase También
 

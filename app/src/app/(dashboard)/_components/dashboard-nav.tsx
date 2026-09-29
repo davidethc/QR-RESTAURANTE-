@@ -30,6 +30,7 @@ import {
   Sheet,
   SheetContent,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -133,7 +134,7 @@ function NavList({
         <nav key={group.label} aria-label={group.label} className="flex flex-col gap-0.5">
           <p
             className={cn(
-              "px-2.5 pb-1.5 text-tiny font-medium uppercase tracking-wider text-muted-foreground/70",
+              "px-2.5 pb-1.5 text-tiny font-medium uppercase tracking-wider text-muted-foreground",
               compact && "hidden lg:block"
             )}
           >
@@ -188,6 +189,12 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
 
   return (
     <>
+      <a
+        href="#contenido"
+        className="sr-only z-50 rounded-control bg-primary px-4 py-2 text-body-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-3"
+      >
+        Saltar al contenido
+      </a>
       {/* Escritorio: barra completa. Tablet: solo iconos. Móvil: cajón. */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col gap-6 border-r border-border bg-card px-3 py-4 md:flex lg:w-60 print:hidden">
         <Brand session={session} compact />
@@ -196,14 +203,22 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
 
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-card px-4 md:px-7 print:hidden">
         <div className="flex min-w-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="-ml-1.5 grid size-9 place-items-center rounded-control text-muted-foreground hover:bg-secondary hover:text-foreground md:hidden"
-            aria-label="Abrir menú"
-          >
-            <Menu className="size-5" strokeWidth={1.75} />
-          </button>
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                className="-ml-1.5 grid size-9 place-items-center rounded-control text-muted-foreground hover:bg-secondary hover:text-foreground md:hidden"
+                aria-label="Abrir menú"
+              >
+                <Menu className="size-5" strokeWidth={1.75} />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 gap-6 px-3 py-4" showCloseButton={false}>
+              <SheetTitle className="sr-only">Menú del panel</SheetTitle>
+              <Brand session={session} />
+              <NavList role={session.role} pathname={pathname} onNavigate={() => setOpen(false)} />
+            </SheetContent>
+          </Sheet>
           <p className="truncate text-meta text-muted-foreground">
             <span className="hidden sm:inline">{session.restaurant.name} / </span>
             <span className="font-medium text-foreground">{current?.label ?? "Panel"}</span>
@@ -239,13 +254,6 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
         </DropdownMenu>
       </header>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-72 gap-6 px-3 py-4" showCloseButton={false}>
-          <SheetTitle className="sr-only">Menú del panel</SheetTitle>
-          <Brand session={session} />
-          <NavList role={session.role} pathname={pathname} onNavigate={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
     </>
   );
 }
