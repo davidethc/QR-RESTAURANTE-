@@ -2147,3 +2147,54 @@ queda `20260928100342_kitchen_flow_simplification`, que es la versión aplicada.
 `tsc`, `lint`, 53 tests y `next build` limpio en verde. **Sin QA en navegador** (sin
 credenciales en la sesión): probar en Omm Siri que la cocina ya no ve "Listo" y que el
 mesero entrega desde "En cocina"; y en Caja → Cobrar → Cuenta → "Agregar producto".
+
+---
+
+## 2026-09-28 — Rediseño visual del admin (QA de diseño)
+
+Restaurante aislado de QA: `monky-qa`. Credenciales de `app/.env.qa.local`: `QA_MONKY_OWNER_EMAIL`, `QA_MONKY_PASSWORD` (ver archivo en el proyecto, nunca escribir valores aquí). Cubre las etapas del rediseño (PRs #3, #5, #6 y pulido 2).
+
+### (a) Etapa 1: Comparación píxel a píxel antes/después (pixelmatch)
+
+Verificado 0 px de diferencia en 9 pantallas + carta del cliente entre la versión base y la versión con `app/src/styles/tokens.css` aplicado:
+- `/today` (dashboard del dueño)
+- `/orders` (panel de pedidos del mesero)
+- `/tables` (mesas)
+- `/menu` (carta del admin)
+- `/cash` (hoja de cobro)
+- `/sales` (ventas del día)
+- `/staff` (personal)
+- `/settings` (configuración)
+- `/reports` (reportes)
+- `/r/monky-qa/[mesa]` (carta pública del cliente)
+
+### (b) Etapa 2: Capturas antes/después a múltiples resoluciones
+
+Capturas verificadas a 1440px (escritorio) y 768px (tablet):
+"Antes" = `origin/main` sin rediseño, "después" = rama de la etapa 2, mismos datos:
+- `/today`, `/menu`, `/menu` con el panel "Nuevo producto" abierto, `/cash` y `/kitchen`.
+- Cocina solo hereda colores y tipografía (sin rediseño, a propósito).
+
+### (c) Pulido 2: QA responsivo a 390px + accesibilidad + teclado
+
+**Responsive a 390px (móvil):** sin scroll horizontal (`scrollWidth - innerWidth = 0`) en `/today /orders /menu /tables /cash /sales /reports /staff /settings /kitchen`, tras hacer que las acciones de la cabecera de Mesas pasen a la línea siguiente (antes desbordaban 22 px). Todas las pantallas del admin verificadas en este viewport.
+
+**axe-core** (etiquetas `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`) en:
+- `/today`
+- `/menu` + panel "Nuevo producto"
+- `/cash` + hoja de cobro
+- `/tables`
+- `/orders`
+- `/staff`
+- Cajón del menú en móvil (390 px)
+
+**Teclado en los 3 contextos principales:**
+- **Menú lateral escritorio**: Tab recorre links, Enter activa, no hay trampa de foco
+- **Cajón móvil**: Escape cierra, foco vuelve al botón que abrió el cajón
+- **Panel de producto** (crear/editar): Tab recorre inputs → botones de acción → Close, foco atrapado dentro del Sheet, Escape cierra
+
+**Resultado final axe**: 0 violaciones (Critical/Serious/Moderate/Minor) en todas las vistas auditadas, tras corregir el contraste de las etiquetas del menú lateral y de las pestañas inactivas de la hoja de cobro. Teclado: "Saltar al contenido" es el primer foco; el cajón móvil atrapa el foco y lo devuelve a "Abrir menú" al cerrar; el panel de producto atrapa el foco (25 Tab siguen dentro), Escape cierra y el foco vuelve al disparador.
+
+### Datos de prueba
+
+Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (`_capturas/` está en `.gitignore`). El script abre la hoja de cobro solo para mirarla, sin cobrar.

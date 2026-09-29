@@ -354,4 +354,19 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 
 ---
 
+## [2026-09-28] diseño | Rediseño visual del panel admin (etapas 1, 2, pulido 1 y 2)
+
+- **Resumen**: sistema central de design tokens y rediseño visual del admin según la maqueta aprobada; sin cambios de lógica.
+- **Detalle por PR**:
+  - PR #3 etapa 1: app/src/styles/tokens.css (única fuente de verdad) + app/src/styles/themes/admin.css (data-theme="admin" en el layout de (dashboard), también cubre portales por body:has). Escala tipográfica semántica (text-caption/meta/body…), radios por rol (rounded-control/button/card/badge), tokens de estado -soft. cn() registra los tokens en tailwind-merge. Verificado píxel a píxel: 0 diferencias en 9 pantallas + carta del cliente.
+  - PR #5 etapa 2: paleta #F8F7F2 / #FFFFFF / #182016 / #756B5F / verde #2E6B23 solo como acento; bordes de controles #948D7E (3:1). Geist vía next/font solo en (dashboard)/layout (~29 KB, 0 en la carta). Menú lateral agrupado (Operación/Negocio/Configuración): 240px escritorio, iconos en tablet, cajón en móvil. Crear/editar en panel lateral (Sheet). Botones ≥44px en caja/mesas/pedidos. Cocina y ticket no se rediseñaron.
+  - PR #6 pulido 1: selector de foto en español (components/shared/image-file-input.tsx), una sola acción primaria por mesa, pestañas de Pedidos alineadas, overlays sin blur.
+  - PR pulido 2 (este): Crear mesas en panel lateral; QA a 390px; auditoría axe + teclado; enlace "Saltar al contenido"; foco vuelve al botón al cerrar el menú móvil; contraste de etiquetas del menú y pestañas inactivas.
+- **Páginas actualizadas**: [[Panel del Admin]]
+- **Pendientes (no hechos, fuera del alcance)**: rediseño de Cocina, Login, not-found/global-error de la raíz, ticket impreso; diálogos pequeños siguen como modales a propósito; promover el control segmentado a componente compartido.
+- **Contradicciones detectadas**: ninguna
+- **Duración**: sesión completa
+
+---
+
 *Este log usa formato consistente `## [FECHA] operacion | descripcion` para ser parseable.*

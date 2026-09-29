@@ -177,3 +177,10 @@ body:has([data-theme="admin"]) :is([data-slot="dialog-overlay"], [data-slot="she
        que compone la utilidad tiene el mismo efecto. */
     --tw-backdrop-blur: blur(0);
 }
+
+/* Pestañas inactivas: text-foreground/60 de components/ui/tabs no llega a
+   4,5:1 sobre el gris del contenedor. Fuera de capa para ganarle a la
+   utilidad. */
+body:has([data-theme="admin"]) [data-slot="tabs-trigger"]:not([data-state="active"]) {
+    color: var(--muted-foreground);
+}

@@ -70,7 +70,9 @@ export default async function DashboardLayout({
       />
       <DashboardNav session={session} />
       <ChargeSheetProvider role={session.role}>
-        {children}
+        <div id="contenido" tabIndex={-1} className="outline-none">
+          {children}
+        </div>
       </ChargeSheetProvider>
       {/* Solo el panel monta goey-toast (y con él framer-motion): es
           donde los avisos tienen que verse desde el otro lado del
