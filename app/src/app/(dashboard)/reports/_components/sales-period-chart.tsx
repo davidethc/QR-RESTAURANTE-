@@ -9,7 +9,10 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  SegmentedControl,
+  type SegmentedControlOption,
+} from "@/components/shared/segmented-control";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { ReportGranularity, SalesByPeriodRow } from "@/types/reports";
@@ -20,6 +23,10 @@ const GRANULARITY_LABEL: Record<ReportGranularity, string> = {
   week: "Semana",
   month: "Mes",
 };
+
+const GRANULARITY_OPTIONS: SegmentedControlOption<ReportGranularity>[] = (
+  ["day", "week", "month"] as ReportGranularity[]
+).map((g) => ({ value: g, label: GRANULARITY_LABEL[g] }));
 
 // Orden categórico fijo (slot 1 = neto, slot 2 = bruto) — nunca se ciclan
 // ni se reasignan por el filtro activo (skill dataviz, color-formula.md).
@@ -60,26 +67,14 @@ export function SalesPeriodChart({
     <div className="rounded-card border border-border bg-card p-5">
       <div className="mb-3 flex flex-row items-center justify-between gap-3">
         <h3 className="text-body font-semibold text-foreground">Ventas por periodo</h3>
-        <ToggleGroup
-          type="single"
-          variant="default"
-          spacing={1}
+        <SegmentedControl
+          aria-label="Granularidad"
           size="sm"
+          options={GRANULARITY_OPTIONS}
           value={granularity}
+          onValueChange={onGranularityChange}
           disabled={disabled}
-          onValueChange={(v) => v && onGranularityChange(v as ReportGranularity)}
-          className="rounded-control border border-border bg-secondary p-1"
-        >
-          {(["day", "week", "month"] as ReportGranularity[]).map((g) => (
-            <ToggleGroupItem
-              key={g}
-              value={g}
-              className="rounded-control px-2.5 text-caption font-medium text-muted-foreground transition-colors duration-150 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
-            >
-              {GRANULARITY_LABEL[g]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        />
       </div>
       <div>
         {data.length === 0 ? (

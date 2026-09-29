@@ -7,6 +7,10 @@ import { Inbox, ChefHat, Bell as BellIcon, PackageCheck, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
+import {
+  segmentedItemClass,
+  segmentedListClass,
+} from "@/components/shared/segmented-control";
 import { OrderCard } from "./order-card";
 import { CallCard } from "./call-card";
 import { ConnectionStatus } from "@/components/shared/connection-status";
@@ -192,11 +196,11 @@ export function OrdersBoard({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 py-4 md:px-8">
-        {/* Control segmentado limpio: contenedor neutro (bg-muted) y la
-            pestaña activa se despega con una superficie blanca y un
-            borde sutil, sin volumen ni color de marca — el resto queda
-            plano para que no compita. */}
-        <TabsList className="no-scrollbar h-auto w-full justify-start gap-1 overflow-x-auto rounded-control bg-muted p-1">
+        {/* Mismo aspecto que SegmentedControl (bg-muted + superficie
+            activa con shadow-sm), vía las clases compartidas de
+            @/components/shared/segmented-control — Tabs de Radix ya
+            trae tablist y flechas accesibles, así que solo se reestila. */}
+        <TabsList className={segmentedListClass("no-scrollbar h-auto w-full justify-start overflow-x-auto")}>
           {[
             { value: "pending", label: "Nuevos", count: pending.length },
             { value: "progress", label: "En cocina", count: inProgress.length },
@@ -208,11 +212,10 @@ export function OrdersBoard({
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className={cn(
-                "h-10 shrink-0 flex-none gap-1.5 whitespace-nowrap rounded-control px-3.5 text-meta font-semibold transition-colors duration-150",
-                activeTab === tab.value
-                  ? "data-active:bg-card data-active:text-foreground data-active:shadow-sm dark:data-active:bg-card dark:data-active:text-foreground"
-                  : "text-muted-foreground"
+              className={segmentedItemClass(
+                activeTab === tab.value,
+                "md",
+                "h-10 px-3.5 text-meta font-semibold"
               )}
             >
               {tab.label}

@@ -4,11 +4,19 @@ import { useState } from "react";
 import { CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  SegmentedControl,
+  type SegmentedControlOption,
+} from "@/components/shared/segmented-control";
 import { RANGE_PRESET_LABEL, rangeForPreset, type RangePresetKey } from "@/lib/reports-dates";
 import type { ReportRange } from "@/types/reports";
 
 const PRESETS: Exclude<RangePresetKey, "custom">[] = ["today", "yesterday", "last7", "thisMonth"];
+
+const PRESET_OPTIONS: SegmentedControlOption<RangePresetKey>[] = [
+  ...PRESETS.map((key) => ({ value: key, label: RANGE_PRESET_LABEL[key] })),
+  { value: "custom", label: RANGE_PRESET_LABEL.custom, icon: CalendarRange },
+];
 
 /**
  * Selector de rango: presets calculados en el día comercial del restaurante
@@ -51,32 +59,14 @@ export function RangeSelector({
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-      <ToggleGroup
-        type="single"
-        variant="default"
-        spacing={1}
+      <SegmentedControl
+        aria-label="Rango de fechas"
+        options={PRESET_OPTIONS}
         value={preset}
         onValueChange={selectPreset}
         disabled={disabled}
-        className="flex-wrap justify-start rounded-control border border-border bg-secondary p-1"
-      >
-        {PRESETS.map((key) => (
-          <ToggleGroupItem
-            key={key}
-            value={key}
-            className="h-8 rounded-control px-3 text-meta font-medium text-muted-foreground transition-colors duration-150 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
-          >
-            {RANGE_PRESET_LABEL[key]}
-          </ToggleGroupItem>
-        ))}
-        <ToggleGroupItem
-          value="custom"
-          className="h-8 rounded-control px-3 text-meta font-medium text-muted-foreground transition-colors duration-150 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
-        >
-          <CalendarRange className="h-4 w-4" />
-          {RANGE_PRESET_LABEL.custom}
-        </ToggleGroupItem>
-      </ToggleGroup>
+        className="flex-wrap justify-start"
+      />
 
       {preset === "custom" && (
         <div className="flex items-center gap-2">
