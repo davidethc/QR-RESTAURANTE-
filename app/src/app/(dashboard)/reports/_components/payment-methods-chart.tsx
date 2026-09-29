@@ -1,7 +1,6 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
@@ -36,11 +35,9 @@ export function PaymentMethodsChart({ rows }: { rows: PaymentsByMethodRow[] }) {
   }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-body">Formas de pago</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-card border border-border bg-card p-5">
+      <h3 className="mb-3 text-body font-semibold text-foreground">Formas de pago</h3>
+      <div>
         {!hasData ? (
           <EmptyState icon={CreditCard} title="Sin pagos registrados en este rango" />
         ) : (
@@ -67,7 +64,7 @@ export function PaymentMethodsChart({ rows }: { rows: PaymentsByMethodRow[] }) {
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
