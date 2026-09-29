@@ -29,14 +29,11 @@ export function ConnectionStatus({
     return (
       <span
         className={cn(
-          "flex shrink-0 items-center gap-1.5 text-tiny font-semibold text-muted-foreground",
+          "flex shrink-0 items-center gap-1.5 text-caption font-medium text-muted-foreground",
           className
         )}
       >
-        <span
-          aria-hidden
-          className="size-1.5 rounded-full bg-success"
-        />
+        <span aria-hidden className="size-1.5 rounded-full bg-success-indicator" />
         en vivo
       </span>
     );
@@ -46,11 +43,11 @@ export function ConnectionStatus({
     <span
       role="status"
       className={cn(
-        "flex shrink-0 items-center gap-1.5 rounded-full bg-honey-soft px-2.5 py-1 text-tiny font-semibold text-honey-soft-foreground",
+        "flex shrink-0 items-center gap-1.5 rounded-badge bg-warning-soft px-2.5 py-1 text-caption font-medium text-warning-soft-foreground",
         className
       )}
     >
-      <WifiOff className="size-3.5" strokeWidth={2.5} />
+      <WifiOff className="size-3.5" strokeWidth={1.75} />
       Sin conexión — reintentando…
     </span>
   );

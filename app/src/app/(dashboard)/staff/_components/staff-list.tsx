@@ -53,13 +53,13 @@ function StaffRow({
   return (
     <li
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center",
+        "flex flex-col gap-3 px-4 py-3.5 transition-colors duration-150 sm:flex-row sm:items-center sm:gap-4 sm:px-5",
         !active && "opacity-60",
         isPending && "pointer-events-none opacity-70"
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-body font-semibold text-foreground">
+        <p className="truncate text-body-sm font-medium text-foreground">
           {name}
           {member.is_me && <span className="font-normal text-muted-foreground"> (tú)</span>}
         </p>
@@ -67,14 +67,14 @@ function StaffRow({
       </div>
 
       {member.can_manage && member.role !== "OWNER" ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Select
             value={member.role}
             onValueChange={(v) =>
               save(v as AssignableRole, active, `${name} ahora es ${ROLE_LABEL[v as AssignableRole]}`)
             }
           >
-            <SelectTrigger className="h-9 w-40" aria-label={`Rol de ${name}`}>
+            <SelectTrigger className="h-9 w-36" aria-label={`Rol de ${name}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -104,7 +104,9 @@ function StaffRow({
           )}
         </div>
       ) : (
-        <Badge variant="secondary">{ROLE_LABEL[member.role]}</Badge>
+        <Badge variant="secondary" className="w-fit">
+          {ROLE_LABEL[member.role]}
+        </Badge>
       )}
     </li>
   );
@@ -124,7 +126,7 @@ export function StaffList({
   }
 
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="divide-y divide-border rounded-card border border-border bg-card">
       {staff.map((member) => (
         <StaffRow
           key={member.member_id}

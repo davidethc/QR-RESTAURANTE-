@@ -45,63 +45,76 @@ export function BillingSettingsForm({ restaurant }: { restaurant: RestaurantSett
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="max-w-lg">
-      <FieldGroup>
-        <Field orientation="horizontal">
-          <Switch
-            id="billing-enabled"
-            checked={billingEnabled}
-            onCheckedChange={setBillingEnabled}
-          />
-          <div>
-            <FieldLabel htmlFor="billing-enabled">Cobrar desde Monky</FieldLabel>
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="grid gap-6 lg:grid-cols-[240px_1fr] lg:gap-12"
+    >
+      <div>
+        <h2 className="text-body font-semibold text-foreground">Cobro y caja</h2>
+        <p className="mt-1 text-body-sm text-muted-foreground">
+          Solo lo ve el dueño. Controla cómo se cobra en el local.
+        </p>
+      </div>
+
+      <div className="flex max-w-lg flex-col gap-6">
+        <FieldGroup>
+          <Field orientation="horizontal">
+            <Switch
+              id="billing-enabled"
+              checked={billingEnabled}
+              onCheckedChange={setBillingEnabled}
+            />
+            <div>
+              <FieldLabel htmlFor="billing-enabled">Cobrar desde Monky</FieldLabel>
+              <FieldDescription>
+                Activa la pantalla de Caja: abrir turno, cobrar cuentas e imprimir tickets.
+              </FieldDescription>
+            </div>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="max-discount">Descuento máximo del mesero (%)</FieldLabel>
+            <Input
+              id="max-discount"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={100}
+              value={maxDiscount}
+              onChange={(e) => setMaxDiscount(e.target.value)}
+              className="w-32"
+            />
+            <FieldDescription>0 = solo tú o un administrador pueden hacer descuentos.</FieldDescription>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="day-cutoff">El día termina a las</FieldLabel>
+            <Input
+              id="day-cutoff"
+              type="time"
+              value={cutoff}
+              onChange={(e) => setCutoff(e.target.value)}
+              className="w-32"
+            />
             <FieldDescription>
-              Activa la pantalla de Caja: abrir turno, cobrar cuentas e imprimir tickets.
+              Lo vendido antes de esta hora cuenta para el día anterior (útil si cierras
+              después de medianoche).
             </FieldDescription>
-          </div>
-        </Field>
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="max-discount">Descuento máximo del mesero (%)</FieldLabel>
-          <Input
-            id="max-discount"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={100}
-            value={maxDiscount}
-            onChange={(e) => setMaxDiscount(e.target.value)}
-            className="w-32"
-          />
-          <FieldDescription>0 = solo tú o un administrador pueden hacer descuentos.</FieldDescription>
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="day-cutoff">El día termina a las</FieldLabel>
-          <Input
-            id="day-cutoff"
-            type="time"
-            value={cutoff}
-            onChange={(e) => setCutoff(e.target.value)}
-            className="w-32"
-          />
-          <FieldDescription>
-            Lo vendido antes de esta hora cuenta para el día anterior (útil si cierras
-            después de medianoche).
-          </FieldDescription>
-        </Field>
-
-        {error && (
-          <p role="alert" className="text-meta text-destructive">
-            {error}
-          </p>
-        )}
+          {error && (
+            <p role="alert" className="text-meta text-destructive">
+              {error}
+            </p>
+          )}
+        </FieldGroup>
 
         <Button type="submit" disabled={isPending} className="w-fit">
           {isPending && <Loader2 className="animate-spin" />}
           Guardar cobro
         </Button>
-      </FieldGroup>
+      </div>
     </form>
   );
 }

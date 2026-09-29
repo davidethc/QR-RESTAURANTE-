@@ -6,14 +6,14 @@ import { Loader2, RefreshCw, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Select,
@@ -81,103 +81,116 @@ export function AddStaffDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetTrigger asChild>
         <Button className="h-10">
           <UserPlus /> Agregar
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{created ? "Cuenta creada" : "Agregar persona"}</DialogTitle>
-          <DialogDescription>
+      </SheetTrigger>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+        <SheetHeader className="border-b border-border px-6 py-5">
+          <SheetTitle className="text-title-sm font-semibold">
+            {created ? "Cuenta creada" : "Agregar persona"}
+          </SheetTitle>
+          <SheetDescription>
             {created
               ? "Ya puede iniciar sesión con estos datos."
               : "Crea su cuenta con una clave temporal y dísela en persona."}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         {created ? (
           <>
-            <CredentialsCard email={created.email} password={created.password} />
-            <DialogFooter>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <CredentialsCard email={created.email} password={created.password} />
+            </div>
+            <SheetFooter className="flex-row justify-end border-t border-border px-6 py-4">
               <Button onClick={() => handleOpenChange(false)}>Listo</Button>
-            </DialogFooter>
+            </SheetFooter>
           </>
         ) : (
-          <form onSubmit={handleSubmit} noValidate>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="staff-name">Nombre</FieldLabel>
-                <Input
-                  id="staff-name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  autoComplete="off"
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="staff-email">Correo</FieldLabel>
-                <Input
-                  id="staff-email"
-                  type="email"
-                  inputMode="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="off"
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="staff-role">Rol</FieldLabel>
-                <Select value={role} onValueChange={(v) => setRole(v as AssignableRole)}>
-                  <SelectTrigger id="staff-role" className="h-10 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {ROLE_LABEL[r]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldDescription>{ROLE_HINT[role]}</FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="staff-password">Clave temporal</FieldLabel>
-                <div className="flex gap-2">
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+            className="flex flex-1 flex-col overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="staff-name">Nombre</FieldLabel>
                   <Input
-                    id="staff-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    className="font-mono"
+                    id="staff-name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    autoComplete="off"
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setPassword(generateTempPassword())}
-                    aria-label="Generar otra clave"
-                  >
-                    <RefreshCw />
-                  </Button>
-                </div>
-              </Field>
-              {error && (
-                <p role="alert" className="text-meta text-destructive">
-                  {error}
-                </p>
-              )}
-            </FieldGroup>
-            <DialogFooter className="mt-4">
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="staff-email">Correo</FieldLabel>
+                  <Input
+                    id="staff-email"
+                    type="email"
+                    inputMode="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="off"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="staff-role">Rol</FieldLabel>
+                  <Select value={role} onValueChange={(v) => setRole(v as AssignableRole)}>
+                    <SelectTrigger id="staff-role" className="h-10 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {ROLE_LABEL[r]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FieldDescription>{ROLE_HINT[role]}</FieldDescription>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="staff-password">Clave temporal</FieldLabel>
+                  <div className="flex gap-2">
+                    <Input
+                      id="staff-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
+                      className="font-mono"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setPassword(generateTempPassword())}
+                      aria-label="Generar otra clave"
+                    >
+                      <RefreshCw />
+                    </Button>
+                  </div>
+                </Field>
+                {error && (
+                  <p role="alert" className="text-meta text-destructive">
+                    {error}
+                  </p>
+                )}
+              </FieldGroup>
+            </div>
+            <SheetFooter className="flex-row justify-end border-t border-border px-6 py-4">
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+                Cancelar
+              </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="animate-spin" />}
                 Crear cuenta
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
