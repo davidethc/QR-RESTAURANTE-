@@ -1,11 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import type { SalesSummary } from "@/types/reports";
 
 /**
  * Fila de KPIs (stat tiles, ver skill dataviz): un número grande por
- * tarjeta, sin gráfico — la tendencia vive en el gráfico de ventas por
- * periodo, no aquí.
+ * celda, sin gráfico — la tendencia vive en el gráfico de ventas por
+ * periodo, no aquí. Una sola superficie dividida por líneas finas.
  */
 export function KpiCards({ summary }: { summary: SalesSummary }) {
   const tiles: { label: string; value: string; hint?: string }[] = [
@@ -22,23 +21,15 @@ export function KpiCards({ summary }: { summary: SalesSummary }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-card border border-border bg-card sm:grid-cols-3 lg:grid-cols-6">
       {tiles.map((tile) => (
-        <Card key={tile.label} className="gap-1.5 py-4">
-          <CardHeader className="px-4 pb-0">
-            <CardTitle className="text-caption font-medium text-muted-foreground">
-              {tile.label}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4">
-            <p className="font-display text-title-lg font-semibold leading-tight text-foreground">
-              {tile.value}
-            </p>
-            {tile.hint && (
-              <p className="mt-0.5 text-tiny text-muted-foreground">{tile.hint}</p>
-            )}
-          </CardContent>
-        </Card>
+        <div key={tile.label} className="flex flex-col gap-1.5 p-5">
+          <p className="text-meta text-muted-foreground">{tile.label}</p>
+          <p className="text-2xl font-semibold leading-tight tabular-nums text-foreground">
+            {tile.value}
+          </p>
+          {tile.hint && <p className="text-caption text-muted-foreground">{tile.hint}</p>}
+        </div>
       ))}
     </div>
   );

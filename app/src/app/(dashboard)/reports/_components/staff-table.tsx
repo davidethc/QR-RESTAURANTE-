@@ -6,7 +6,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { SalesByStaffRow } from "@/types/reports";
@@ -21,11 +20,9 @@ const ROLE_LABEL: Record<string, string> = {
 
 export function StaffTable({ rows }: { rows: SalesByStaffRow[] }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-body">Ventas por mesero</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-card border border-border bg-card p-5">
+      <h3 className="mb-3 text-body font-semibold text-foreground">Ventas por mesero</h3>
+      <div>
         {rows.length === 0 ? (
           <EmptyState icon={Users} title="Sin actividad de personal en este rango" />
         ) : (
@@ -66,7 +63,7 @@ export function StaffTable({ rows }: { rows: SalesByStaffRow[] }) {
             </Table>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

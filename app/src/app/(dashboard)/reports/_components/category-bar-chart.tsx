@@ -1,7 +1,6 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
@@ -39,11 +38,9 @@ export function CategoryBarChart({ rows }: { rows: SalesByCategoryRow[] }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-body">Ventas por categoría</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-card border border-border bg-card p-5">
+      <h3 className="mb-3 text-body font-semibold text-foreground">Ventas por categoría</h3>
+      <div>
         {data.length === 0 ? (
           <EmptyState icon={PieChart} title="Sin ventas por categoría en este rango" />
         ) : (
@@ -70,7 +67,7 @@ export function CategoryBarChart({ rows }: { rows: SalesByCategoryRow[] }) {
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

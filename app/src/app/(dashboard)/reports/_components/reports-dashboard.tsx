@@ -89,7 +89,7 @@ export function ReportsDashboard({
   }
 
   return (
-    <div className="flex flex-col gap-4 py-4">
+    <div className="flex flex-col gap-6 py-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <RangeSelector
           timezone={timezone}
@@ -138,7 +138,7 @@ export function ReportsDashboard({
       {isPending && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
+            <Skeleton key={i} className="h-24 rounded-card" />
           ))}
         </div>
       )}
