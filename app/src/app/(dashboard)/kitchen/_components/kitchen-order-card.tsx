@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
 import { ActionButton } from "@/components/shared/action-button";
+import { OrderStatusBadge } from "@/components/shared/status-badge";
 import { markReady } from "@/lib/actions/orders";
 import type { StaffOrder } from "@/types/staff";
 import { sentToKitchenAt } from "./kitchen-statuses";
@@ -28,28 +29,31 @@ export function KitchenOrderCard({
   const isReady = order.status === "READY";
 
   return (
-    <div className="shadow-card flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-5">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <p className="font-display text-display font-semibold leading-tight text-foreground">
+    <div className="flex flex-col gap-3 rounded-card border border-border bg-background p-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <p className="text-display font-semibold leading-tight text-foreground">
           {order.place_label ?? order.table_name ?? `Mesa ${order.table_number}`}
         </p>
-        <ElapsedTimer
-          since={isReady && order.ready_at ? order.ready_at : sentToKitchenAt(order)}
-          prefix={isReady ? "Listo hace" : "Enviado hace"}
-          warnAfterMinutes={isReady ? 5 : 15}
-          className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-base font-semibold"
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          <OrderStatusBadge status={order.status} />
+          <ElapsedTimer
+            since={isReady && order.ready_at ? order.ready_at : sentToKitchenAt(order)}
+            prefix={isReady ? "Listo hace" : "Enviado hace"}
+            warnAfterMinutes={isReady ? 5 : 15}
+            className="rounded-full bg-secondary px-2.5 py-1 text-body-lg font-semibold text-foreground"
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5 border-t border-border/60 pt-3">
+      <div className="flex flex-col gap-1.5 border-t border-border pt-3">
         {order.items.map((item) => (
           <p key={item.id} className="text-xl leading-snug text-foreground">
-            <span className="font-display font-semibold tabular-nums text-primary">
+            <span className="font-semibold tabular-nums text-primary">
               {item.quantity}×
             </span>{" "}
             {item.product_name}
             {item.notes && (
-              <span className="block text-lg italic leading-snug text-muted-foreground">
+              <span className="block text-lg italic leading-snug text-foreground">
                 {item.notes}
               </span>
             )}
@@ -58,7 +62,7 @@ export function KitchenOrderCard({
       </div>
 
       {order.notes && (
-        <p className="rounded-xl bg-secondary/70 px-3 py-2 text-lg italic leading-snug text-muted-foreground">
+        <p className="rounded-card bg-muted px-3 py-2 text-lg italic leading-snug text-foreground">
           Nota: {order.notes}
         </p>
       )}
@@ -68,15 +72,15 @@ export function KitchenOrderCard({
           onSuccess={onDone}
           action={() => markReady(order.id)}
           size="lg"
-          className="clay clay-primary h-16 rounded-full text-xl font-semibold"
+          className="h-12 text-lg font-semibold"
         >
-          <Check data-icon="inline-start" aria-hidden />
+          <Check data-icon="inline-start" aria-hidden className="size-5" />
           Listo
         </ActionButton>
       )}
 
       {isReady && (
-        <p className="font-display rounded-full bg-success/10 py-3.5 text-center text-lg font-semibold text-success">
+        <p className="rounded-badge bg-success-soft py-3.5 text-center text-lg font-semibold text-success-soft-foreground">
           Esperando al mesero
         </p>
       )}

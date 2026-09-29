@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { ChefHat, PackageCheck, Clock } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { KitchenOrderCard } from "./kitchen-order-card";
@@ -15,14 +14,14 @@ import type { StaffOrder } from "@/types/staff";
 
 type ColumnTone = "cooking" | "ready";
 
-const TONE: Record<ColumnTone, { panel: string; badge: string }> = {
+const TONE: Record<ColumnTone, { badge: string; count: string }> = {
   cooking: {
-    panel: "border-primary/20 bg-primary-soft/40",
     badge: "bg-primary-soft text-primary",
+    count: "bg-primary-soft text-primary",
   },
   ready: {
-    panel: "border-success/25 bg-success/5",
-    badge: "bg-success/15 text-success",
+    badge: "bg-success-soft text-success-soft-foreground",
+    count: "bg-success-soft text-success-soft-foreground",
   },
 };
 
@@ -52,34 +51,33 @@ function Column({
   const colors = TONE[tone];
 
   return (
-    <motion.section
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+    <section
       aria-label={title}
       className={cn(
-        "flex min-w-0 flex-col gap-4 rounded-3xl border-2 p-5 lg:p-6",
-        colors.panel,
+        "flex min-w-0 flex-col gap-4 rounded-card border border-border bg-card p-5 lg:p-6",
         className
       )}
     >
       <div className="flex items-center gap-3">
         <div
           className={cn(
-            "flex size-10 items-center justify-center rounded-xl",
+            "flex size-10 items-center justify-center rounded-control",
             colors.badge
           )}
         >
-          <Icon aria-hidden className="size-5" />
+          <Icon aria-hidden className="size-5" strokeWidth={1.75} />
         </div>
-        <div>
-          <h2 className="font-display text-lg font-bold text-foreground">
-            {title}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {orders.length} {orders.length === 1 ? "pedido" : "pedidos"}
-          </p>
-        </div>
+        <h2 className="text-title-sm font-semibold text-foreground">
+          {title}
+        </h2>
+        <span
+          className={cn(
+            "ml-auto flex h-6 min-w-6 items-center justify-center rounded-badge px-2 text-meta font-semibold tabular-nums",
+            colors.count
+          )}
+        >
+          {orders.length}
+        </span>
       </div>
 
       {orders.length === 0 ? (
@@ -100,7 +98,7 @@ function Column({
           ))}
         </div>
       )}
-    </motion.section>
+    </section>
   );
 }
 
@@ -166,14 +164,14 @@ export function KitchenBoard({
 
   return (
     <>
-      <div className="border-b bg-gradient-to-b from-background to-muted/30 px-4 py-6 lg:px-6">
+      <div className="border-b border-border bg-card px-4 py-6 md:px-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
-            <h1 className="font-display text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-semibold text-foreground">
               Cocina
             </h1>
-            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock aria-hidden className="size-4" />
+            <p className="mt-1 flex items-center gap-2 text-body-sm text-muted-foreground">
+              <Clock aria-hidden className="size-4" strokeWidth={1.75} />
               {cooking.length} en cocina
               {readyStep && ` · ${ready.length} para recoger`}
             </p>
@@ -186,7 +184,7 @@ export function KitchenBoard({
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 px-4 py-4 lg:flex-row lg:items-start lg:px-6">
+      <div className="flex flex-1 flex-col gap-4 px-4 py-4 md:px-8 lg:flex-row lg:items-start">
         <Column
           tone="cooking"
           title="En cocina"

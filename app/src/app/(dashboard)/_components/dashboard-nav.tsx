@@ -99,14 +99,14 @@ function NavItem({
       title={compact ? link.label : undefined}
       className={cn(
         "relative flex h-9 items-center gap-2.5 rounded-control px-2.5 text-body-sm font-medium transition-colors duration-150",
-        compact && "lg:justify-start justify-center",
+        compact && "xl:justify-start justify-center",
         active
           ? "bg-primary-soft text-primary before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-primary"
           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
       )}
     >
       <link.icon className="size-[17px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-      <span className={cn(compact && "hidden lg:inline")}>{link.label}</span>
+      <span className={cn(compact && "hidden xl:inline")}>{link.label}</span>
     </Link>
   );
 }
@@ -135,7 +135,7 @@ function NavList({
           <p
             className={cn(
               "px-2.5 pb-1.5 text-tiny font-medium uppercase tracking-wider text-muted-foreground",
-              compact && "hidden lg:block"
+              compact && "hidden xl:block"
             )}
           >
             {group.label}
@@ -167,11 +167,11 @@ function NavList({
 
 function Brand({ session, compact }: { session: MyRestaurant; compact?: boolean }) {
   return (
-    <div className={cn("flex items-center gap-2.5 px-1.5", compact && "justify-center lg:justify-start")}>
+    <div className={cn("flex items-center gap-2.5 px-1.5", compact && "justify-center xl:justify-start")}>
       <span className="grid size-8 shrink-0 place-items-center rounded-control bg-primary text-body-sm font-semibold text-primary-foreground">
         {session.restaurant.name.slice(0, 1).toUpperCase()}
       </span>
-      <div className={cn("min-w-0", compact && "hidden lg:block")}>
+      <div className={cn("min-w-0", compact && "hidden xl:block")}>
         <p className="truncate text-body-sm font-semibold leading-tight text-foreground">
           {session.restaurant.name}
         </p>
@@ -196,7 +196,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
         Saltar al contenido
       </a>
       {/* Escritorio: barra completa. Tablet: solo iconos. Móvil: cajón. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col gap-6 border-r border-border bg-card px-3 py-4 md:flex lg:w-60 print:hidden">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col gap-6 border-r border-border bg-card px-3 py-4 md:flex xl:w-60 print:hidden">
         <Brand session={session} compact />
         <NavList role={session.role} pathname={pathname} compact />
       </aside>

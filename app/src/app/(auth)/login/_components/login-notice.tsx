@@ -17,7 +17,7 @@ export function LoginNotice() {
   return (
     <p
       role="status"
-      className="mb-6 rounded-2xl bg-honey-soft px-4 py-3 text-center text-[13px] text-honey-soft-foreground"
+      className="mb-6 rounded-card bg-warning-soft px-4 py-3 text-center text-meta text-warning-soft-foreground"
     >
       {notice}
     </p>

@@ -59,7 +59,7 @@ export function PeakHoursHeatmap({ rows }: { rows: PeakHoursRow[] }) {
                       return (
                         <div
                           key={hour}
-                          role="gridcell"
+                          role="img"
                           tabIndex={count > 0 ? 0 : -1}
                           aria-label={
                             count > 0
