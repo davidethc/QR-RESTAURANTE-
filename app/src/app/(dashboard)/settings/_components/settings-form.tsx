@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ImageFileInput } from "@/components/shared/image-file-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { notify } from "@/lib/notifications";
@@ -115,11 +116,9 @@ export function SettingsForm({
                   <Store className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
                 )}
               </div>
-              <Input
+              <ImageFileInput
                 id="rest-logo"
                 ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
                 aria-describedby="rest-logo-hint"
               />
             </div>

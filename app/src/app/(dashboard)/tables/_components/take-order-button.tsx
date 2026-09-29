@@ -13,7 +13,14 @@ import { Button } from "@/components/ui/button";
  * desde acá con frecuencia — el resto (QR, liberar) es mantenimiento
  * ocasional.
  */
-export function TakeOrderButton({ tableId }: { tableId: string }) {
+export function TakeOrderButton({
+  tableId,
+  secondary = false,
+}: {
+  tableId: string;
+  /** Cuando la mesa tiene cuenta por cobrar, el cobro es la acción principal. */
+  secondary?: boolean;
+}) {
   const router = useRouter();
 
   return (
@@ -21,6 +28,7 @@ export function TakeOrderButton({ tableId }: { tableId: string }) {
     // <Link> a /orders, así que hay que impedir que ese enlace se dispare.
     <div onClick={(e) => e.preventDefault()}>
       <Button
+        variant={secondary ? "outline" : "default"}
         onClick={() => router.push(`/tables/${tableId}/order`)}
         className="h-11 w-full rounded-control text-body-sm font-semibold"
       >

@@ -171,12 +171,12 @@ export function OrdersBoard({
 
   return (
     <>
-      <div className="flex justify-end px-4 pt-2">
+      <div className="flex justify-end px-4 pt-2 md:px-8">
         <ConnectionStatus connected={connected} />
       </div>
 
       {tableFilter !== null && (
-        <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-control border border-border bg-card py-1.5 pl-4 pr-1.5">
+        <div className="mx-4 mt-4 flex items-center md:mx-8 justify-between gap-2 rounded-control border border-border bg-card py-1.5 pl-4 pr-1.5">
           <span className="text-body font-semibold text-foreground">
             Viendo solo Mesa {tableFilter}
           </span>
@@ -191,7 +191,7 @@ export function OrdersBoard({
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 py-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 py-4 md:px-8">
         {/* Control segmentado limpio: contenedor neutro (bg-muted) y la
             pestaña activa se despega con una superficie blanca y un
             borde sutil, sin volumen ni color de marca — el resto queda

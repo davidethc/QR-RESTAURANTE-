@@ -80,11 +80,6 @@ body:has([data-theme="admin"]) .clay {
 body:has([data-theme="admin"]) .clay:active {
     transform: none;
 }
-[data-theme="admin"] .glass {
-    background-color: var(--card);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-}
 
 /*
   Métricas de componentes en el panel. En @layer components para que
@@ -158,10 +153,6 @@ body:has([data-theme="admin"]) .clay:active {
     & [data-slot="table-row"] { border-color: var(--border); }
     & [data-slot="table-body"] [data-slot="table-row"]:hover { background-color: color-mix(in oklch, var(--secondary), var(--card) 50%); }
 
-    & [data-slot="dialog-overlay"], & [data-slot="sheet-overlay"] {
-      background-color: rgb(24 32 22 / 0.16);
-      backdrop-filter: none;
-    }
     & [data-slot="dialog-content"] {
       --tw-ring-color: var(--border);
       box-shadow: var(--shadow-lg);
@@ -175,4 +166,14 @@ body:has([data-theme="admin"]) .clay:active {
       max-width: 100%;
     }
   }
+}
+
+/* Fuera de @layer a propósito: la utilidad backdrop-blur-xs del
+   componente ganaría a cualquier regla en capa. En el panel el fondo
+   solo se atenúa, sin desenfoque. */
+body:has([data-theme="admin"]) :is([data-slot="dialog-overlay"], [data-slot="sheet-overlay"]) {
+    background-color: rgb(24 32 22 / 0.16);
+    /* El compilador descarta "backdrop-filter: none"; anular la variable
+       que compone la utilidad tiene el mismo efecto. */
+    --tw-backdrop-blur: blur(0);
 }

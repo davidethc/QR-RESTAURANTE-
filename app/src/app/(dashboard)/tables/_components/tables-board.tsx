@@ -102,7 +102,15 @@ function TableCard({
 
       {canServeTable && (
         <div className="border-t border-border pt-3">
-          <TakeOrderButton tableId={table.id} />
+          <TakeOrderButton
+            tableId={table.id}
+            secondary={
+              billingEnabled &&
+              !!tableSessionId &&
+              table.status !== "AVAILABLE" &&
+              (role === "OWNER" || role === "ADMIN")
+            }
+          />
         </div>
       )}
 
