@@ -59,14 +59,14 @@ export function RejectDialog({
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          className="h-12 flex-1 rounded-full border-border/70 text-body font-semibold"
+          className="h-11 flex-1 rounded-control text-body font-semibold"
         >
           Rechazar
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="font-display">Rechazar pedido</DialogTitle>
+          <DialogTitle>Rechazar pedido</DialogTitle>
           <DialogDescription>
             Selecciona un motivo. El cliente lo verá.
           </DialogDescription>

@@ -16,10 +16,9 @@ import type { StaffOrder } from "@/types/staff";
  * Tarjeta de pedido del panel.
  *
  * Jerarquía pensada para leerse de lejos y con prisa: primero DE QUÉ
- * MESA es (serif de display, el dato con el que el mesero camina),
- * luego qué lleva, y al final el precio en granate. El volumen (clay)
- * queda reservado al botón que hace avanzar el pedido — uno solo por
- * tarjeta — para que sea obvio dónde tocar sin leer.
+ * MESA es, luego qué lleva, y al final el total. Una sola acción
+ * primaria por tarjeta — el botón que hace avanzar el pedido — para
+ * que sea obvio dónde tocar sin leer.
  *
  * El mesero solo acepta/rechaza (PENDING) y entrega (ACCEPTED, PREPARING
  * o READY). "Preparar" y "Marcar listo" son de la cocina.
@@ -44,8 +43,7 @@ export function OrderCard({
     order.status === "ACCEPTED" ||
     order.status === "PREPARING" ||
     order.status === "READY";
-  const deliverClassName =
-    "clay clay-primary mt-3 h-12 w-full rounded-full text-body font-semibold";
+  const deliverClassName = "mt-3 h-11 w-full rounded-control text-body font-semibold";
 
   return (
     <motion.div
@@ -54,15 +52,15 @@ export function OrderCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.2 }}
-      className="shadow-card rounded-2xl border border-border/70 bg-card p-4"
+      className="rounded-card border border-border bg-card p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display truncate text-lead font-semibold leading-tight text-foreground">
+          <p className="truncate text-lead font-semibold leading-tight text-foreground">
             {order.place_label ?? order.table_name ?? `Mesa ${order.table_number}`}
           </p>
           <div className="mt-1 flex items-center gap-2">
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-tiny font-semibold tabular-nums leading-tight text-muted-foreground">
+            <span className="rounded-badge bg-secondary px-2 py-0.5 text-tiny font-semibold tabular-nums leading-tight text-muted-foreground">
               #{order.order_number}
             </span>
             <ElapsedTimer since={order.created_at} warnAfterMinutes={10} />
@@ -71,13 +69,13 @@ export function OrderCard({
         <OrderStatusBadge status={order.status} />
       </div>
 
-      <div className="mt-3 flex flex-col gap-1.5 border-t border-border/60 pt-3">
+      <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
         {order.items.map((item) => (
           <p
             key={item.id}
             className="text-body leading-snug text-foreground"
           >
-            <span className="font-display font-semibold tabular-nums text-primary">
+            <span className="font-semibold tabular-nums text-primary">
               {item.quantity}×
             </span>{" "}
             {item.product_name}
@@ -91,12 +89,12 @@ export function OrderCard({
       </div>
 
       {order.notes && (
-        <p className="mt-2.5 rounded-xl bg-secondary/70 px-3 py-2 text-meta italic leading-snug text-muted-foreground">
+        <p className="mt-2.5 rounded-control bg-secondary/70 px-3 py-2 text-meta italic leading-snug text-muted-foreground">
           Nota: {order.notes}
         </p>
       )}
 
-      <p className="font-display mt-3 text-lg font-semibold tabular-nums text-wine">
+      <p className="mt-3 text-lg font-semibold tabular-nums text-wine">
         {formatPrice(order.total)}
       </p>
 
@@ -106,7 +104,7 @@ export function OrderCard({
             onSuccess={onDone}
             action={() => acceptOrder(order.id)}
             successMessage="Pedido aceptado — en preparación"
-            className="clay clay-primary h-12 flex-1 rounded-full text-body font-semibold"
+            className="h-11 flex-1 rounded-control text-body font-semibold"
           >
             Aceptar
           </ActionButton>

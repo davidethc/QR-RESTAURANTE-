@@ -97,14 +97,14 @@ export function StaffOrderBuilder({
 
   return (
     <div className="pb-44">
-      <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur">
+      <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
         <div className="relative">
           <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar plato…"
-            className="h-11 rounded-full pl-9 pr-9 text-body"
+            className="h-11 rounded-control pl-9 pr-9 text-body"
           />
           {query && (
             <button
@@ -130,7 +130,7 @@ export function StaffOrderBuilder({
                 key={product.id}
                 type="button"
                 onClick={() => cart.addItem(product)}
-                className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-body-sm font-semibold active:scale-[0.97]"
+                className="flex min-h-11 items-center gap-2 rounded-control border border-border bg-card px-3.5 text-body-sm font-semibold transition-colors duration-150 active:scale-[0.97]"
               >
                 {product.name}
                 <span className="tabular-nums text-wine">
@@ -173,13 +173,12 @@ export function StaffOrderBuilder({
                   type="button"
                   onClick={() => toggleCategory(category.id)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left active:bg-muted"
+                  className="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left transition-colors duration-150 active:bg-muted"
                 >
                   <span
                     aria-hidden
                     className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-title leading-none transition-transform duration-200",
-                      isOpen && "scale-105",
+                      "flex size-10 shrink-0 items-center justify-center rounded-control bg-secondary text-title leading-none",
                     )}
                   >
                     {getCategoryIcon(category.name)}
@@ -187,7 +186,7 @@ export function StaffOrderBuilder({
 
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="font-display truncate text-lead font-bold leading-tight text-foreground">
+                      <span className="truncate text-lead font-semibold leading-tight text-foreground">
                         {category.name}
                       </span>
                       <span className="shrink-0 text-meta tabular-nums text-muted-foreground">
@@ -273,7 +272,7 @@ export function StaffOrderBuilder({
                         placeholder="Ej: sin cebolla, término medio…"
                         rows={2}
                         autoFocus
-                        className="rounded-xl text-body-sm"
+                        className="rounded-control text-body-sm"
                       />
                       <Button
                         type="button"
@@ -295,13 +294,13 @@ export function StaffOrderBuilder({
               trigger={
                 <Button
                   size="lg"
-                  className="clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-body"
+                  className="h-13 w-full justify-between rounded-control px-5 text-body"
                 >
                   <span>
                     Enviar pedido · {cart.count}{" "}
                     {cart.count === 1 ? "plato" : "platos"}
                   </span>
-                  <span className="font-display text-title font-bold tabular-nums">
+                  <span className="text-title font-semibold tabular-nums">
                     {formatPrice(cart.total)}
                   </span>
                 </Button>
@@ -332,7 +331,7 @@ function ProductList({
   quantityOf: (productId: string) => number;
 }) {
   return (
-    <ul className="divide-y divide-border/60 overflow-hidden bg-card mx-4 mb-3 rounded-2xl">
+    <ul className="mx-4 mb-3 divide-y divide-border overflow-hidden rounded-card border border-border bg-card">
       {products.map((product) => {
         const inCart = quantityOf(product.id);
 
@@ -341,7 +340,7 @@ function ProductList({
             <button
               type="button"
               onClick={() => onAdd(product)}
-              className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left active:bg-secondary"
+              className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 active:bg-secondary"
             >
               <span className="min-w-0 flex-1 truncate text-body font-semibold">
                 {product.name}

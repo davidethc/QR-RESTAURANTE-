@@ -21,34 +21,21 @@ interface TablesBoardProps {
   tableSessionMap: Record<string, string>;
 }
 
-function getStatusColors(status: TableStatusRow["status"]) {
+/**
+ * Cada mesa es una superficie blanca neutra: el color vive solo en la
+ * píldora de estado (`TableStatusBadge`), no en toda la tarjeta. Las
+ * mesas que necesitan atención llevan además un borde sutil del color
+ * de su estado, para que se puedan detectar en la rejilla sin tener
+ * que leer cada píldora una por una.
+ */
+function getStatusBorder(status: TableStatusRow["status"]) {
   switch (status) {
-    case "AVAILABLE":
-      return {
-        bg: "bg-success-soft",
-        border: "border-success-border",
-      };
     case "BILL_REQUESTED":
-      return {
-        bg: "bg-warning-soft",
-        border: "border-warning-border",
-      };
+      return "border-warning-border";
     case "ATTENTION":
-      return {
-        bg: "bg-primary/5",
-        border: "border-primary/30",
-      };
-    case "INACTIVE":
-      return {
-        bg: "bg-muted/40",
-        border: "border-border",
-      };
-    case "OCCUPIED":
+      return "border-primary/40";
     default:
-      return {
-        bg: "bg-info-soft",
-        border: "border-info-border",
-      };
+      return "border-border";
   }
 }
 
@@ -69,7 +56,7 @@ function TableCard({
   maxWaiterDiscountPct: number;
   tableSessionId?: string;
 }) {
-  const { bg, border } = getStatusColors(table.status);
+  const border = getStatusBorder(table.status);
 
   return (
     <motion.div
@@ -78,11 +65,11 @@ function TableCard({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.2 }}
-      className={`flex flex-col gap-3 rounded-2xl border-2 ${border} ${bg} p-4`}
+      className={`flex flex-col gap-3 rounded-card border bg-card p-4 ${border}`}
     >
       <Link href={`/orders?table=${table.number}`} className="flex flex-col gap-2">
         <div className="flex min-h-7 items-center">
-          <p className="font-display text-lg font-bold leading-tight text-balance text-foreground">
+          <p className="text-title font-semibold leading-tight text-balance text-foreground">
             {table.name ?? `Mesa ${table.number}`}
           </p>
         </div>
@@ -107,22 +94,25 @@ function TableCard({
         )}
 
         {table.active_total > 0 && (
-          <p className="font-display text-lg font-semibold tabular-nums text-wine">
+          <p className="text-lg font-semibold tabular-nums text-wine">
             {formatPrice(table.active_total)}
           </p>
         )}
       </Link>
 
       {canServeTable && (
-        <div className="border-t border-border/60 pt-3">
+        <div className="border-t border-border pt-3">
           <TakeOrderButton tableId={table.id} />
         </div>
       )}
 
       {(canManage || (canServeTable && table.status !== "AVAILABLE")) && (
-        <div className="flex w-full flex-col gap-2 sm:flex-row">
+        // Siempre en columna: con la rejilla en 3-4 columnas, la tarjeta
+        // es angosta incluso a 1440 — dos botones lado a lado se
+        // truncaban antes de llegar al breakpoint que los ponía en fila.
+        <div className="flex w-full flex-col gap-2">
           {canManage && (
-            <div className="w-full sm:flex-1">
+            <div className="w-full">
               <TableQrDialog
                 tableLabel={table.name ?? `Mesa ${table.number}`}
                 qrToken={table.qr_token}
@@ -130,7 +120,7 @@ function TableCard({
             </div>
           )}
           {canServeTable && table.status !== "AVAILABLE" && (
-            <div className="w-full sm:flex-1">
+            <div className="w-full">
               <ReleaseTableButton
                 tableId={table.id}
                 tableLabel={table.name ?? `Mesa ${table.number}`}
@@ -164,28 +154,22 @@ export function TablesBoard({
   return (
     <div className="flex min-h-full flex-col">
       <div className="px-4 pb-3 lg:px-6">
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-info-soft px-2.5 py-2 sm:px-3 sm:py-2.5">
-            <p className="truncate text-tiny font-medium uppercase tracking-wide text-muted-foreground">
-              Ocupadas
-            </p>
-            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
+        <div className="grid grid-cols-3 divide-x divide-border rounded-card border border-border bg-card">
+          <div className="flex min-w-0 flex-col justify-center gap-0.5 px-3 py-2.5 sm:px-4 sm:py-3">
+            <p className="truncate text-meta text-muted-foreground">Ocupadas</p>
+            <p className="text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
               {occupiedCount}/{totalTables}
             </p>
           </div>
-          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-warning-soft px-2.5 py-2 sm:px-3 sm:py-2.5">
-            <p className="truncate text-tiny font-medium uppercase tracking-wide text-muted-foreground">
-              Por cobrar
-            </p>
-            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
+          <div className="flex min-w-0 flex-col justify-center gap-0.5 px-3 py-2.5 sm:px-4 sm:py-3">
+            <p className="truncate text-meta text-muted-foreground">Por cobrar</p>
+            <p className="text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
               {billRequested}
             </p>
           </div>
-          <div className="flex min-w-0 flex-col justify-center rounded-xl bg-success-soft px-2.5 py-2 sm:px-3 sm:py-2.5">
-            <p className="truncate text-tiny font-medium uppercase tracking-wide text-muted-foreground">
-              Libres
-            </p>
-            <p className="font-display text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
+          <div className="flex min-w-0 flex-col justify-center gap-0.5 px-3 py-2.5 sm:px-4 sm:py-3">
+            <p className="truncate text-meta text-muted-foreground">Libres</p>
+            <p className="text-lg font-semibold leading-tight tabular-nums text-foreground sm:text-title">
               {availableCount}
             </p>
           </div>

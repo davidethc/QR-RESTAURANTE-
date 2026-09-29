@@ -44,7 +44,7 @@ export function QuickTakeOrder({ tables }: { tables: TableStatusRow[] }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <Button
         onClick={() => setOpen(true)}
-        className="clay clay-primary fixed bottom-5 right-4 z-20 h-14 gap-2 rounded-full px-5 text-body-sm font-semibold shadow-lg"
+        className="fixed bottom-5 right-4 z-20 h-14 gap-2 rounded-control px-5 text-body-sm font-semibold shadow-md"
         style={{
           marginBottom: "env(safe-area-inset-bottom, 0px)",
         }}
@@ -69,11 +69,11 @@ export function QuickTakeOrder({ tables }: { tables: TableStatusRow[] }) {
                 type="button"
                 onClick={() => goToTable(table.id)}
                 className={cn(
-                  "flex flex-col items-start gap-1.5 rounded-xl border border-border/70 bg-card p-3 text-left active:scale-[0.97]",
+                  "flex min-h-11 flex-col items-start gap-1.5 rounded-control border border-border bg-card p-3 text-left transition-colors duration-150 active:scale-[0.97]",
                   table.status !== "AVAILABLE" && "border-primary/30 bg-primary-soft"
                 )}
               >
-                <span className="font-display truncate text-body font-semibold text-foreground">
+                <span className="truncate text-body font-semibold text-foreground">
                   {table.name ?? `Mesa ${table.number}`}
                 </span>
                 <TableStatusBadge status={table.status} />
