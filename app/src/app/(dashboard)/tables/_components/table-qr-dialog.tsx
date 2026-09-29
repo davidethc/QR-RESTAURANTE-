@@ -58,7 +58,7 @@ export function TableQrDialog({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 w-full rounded-full border-border/70 text-meta font-semibold"
+            className="h-9 w-full rounded-control text-meta font-semibold"
           >
             <QrCode className="h-4 w-4" /> Ver QR
           </Button>
@@ -91,7 +91,7 @@ export function TableQrDialog({
             {/* Un QR impreso con el dominio equivocado es papel tirado:
                 el aviso tiene que salir ANTES de imprimir. */}
             {warning && (
-              <p className="flex items-start gap-2 rounded-lg bg-honey-soft px-3 py-2 text-meta text-honey-soft-foreground">
+              <p className="flex items-start gap-2 rounded-control bg-warning-soft px-3 py-2 text-meta text-warning-soft-foreground">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 {warning}
               </p>

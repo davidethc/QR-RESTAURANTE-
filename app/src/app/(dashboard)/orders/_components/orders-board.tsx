@@ -176,15 +176,15 @@ export function OrdersBoard({
       </div>
 
       {tableFilter !== null && (
-        <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-2xl bg-primary-soft py-1.5 pl-4 pr-1.5">
-          <span className="font-display text-body font-semibold text-foreground">
+        <div className="mx-4 mt-4 flex items-center justify-between gap-2 rounded-control border border-border bg-card py-1.5 pl-4 pr-1.5">
+          <span className="text-body font-semibold text-foreground">
             Viendo solo Mesa {tableFilter}
           </span>
           <Button
             variant="ghost"
             size="sm"
             onClick={clearTableFilter}
-            className="h-9 rounded-full px-3 text-meta font-semibold text-primary hover:bg-primary/10"
+            className="h-9 rounded-control px-3 text-meta font-semibold text-primary hover:bg-primary/10"
           >
             <X aria-hidden className="h-4 w-4" /> Ver todas
           </Button>
@@ -192,11 +192,11 @@ export function OrdersBoard({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 py-4">
-        {/* Píldoras deslizables en vez de una rejilla de 4: con
-            "En cocina (12)" la rejilla parte las etiquetas en dos
-            líneas en un celular. La activa es la única con volumen
-            (clay) — el resto queda plano para que no compita. */}
-        <TabsList className="no-scrollbar h-auto w-full justify-start gap-1.5 overflow-x-auto rounded-full bg-secondary/70 p-1">
+        {/* Control segmentado limpio: contenedor neutro (bg-muted) y la
+            pestaña activa se despega con una superficie blanca y un
+            borde sutil, sin volumen ni color de marca — el resto queda
+            plano para que no compita. */}
+        <TabsList className="no-scrollbar h-auto w-full justify-start gap-1 overflow-x-auto rounded-control bg-muted p-1">
           {[
             { value: "pending", label: "Nuevos", count: pending.length },
             { value: "progress", label: "En cocina", count: inProgress.length },
@@ -209,19 +209,19 @@ export function OrdersBoard({
               key={tab.value}
               value={tab.value}
               className={cn(
-                "h-10 shrink-0 flex-none gap-1.5 whitespace-nowrap rounded-full px-3.5 text-meta font-semibold",
+                "h-10 shrink-0 flex-none gap-1.5 whitespace-nowrap rounded-control px-3.5 text-meta font-semibold transition-colors duration-150",
                 activeTab === tab.value
-                  ? "clay clay-primary data-active:bg-primary data-active:text-primary-foreground dark:data-active:bg-primary dark:data-active:text-primary-foreground"
+                  ? "data-active:bg-card data-active:text-foreground data-active:shadow-sm dark:data-active:bg-card dark:data-active:text-foreground"
                   : "text-muted-foreground"
               )}
             >
               {tab.label}
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-tiny leading-tight tabular-nums",
+                  "rounded-badge px-1.5 py-0.5 text-tiny leading-tight tabular-nums",
                   activeTab === tab.value
-                    ? "bg-primary-foreground/20"
-                    : "bg-foreground/10"
+                    ? "bg-primary-soft text-primary"
+                    : "bg-foreground/10 text-muted-foreground"
                 )}
               >
                 {tab.count}

@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
  * Abre la carta de esta mesa para que el mesero tome el pedido él mismo,
  * cuando el cliente prefiere dictárselo en vez de usar su teléfono.
  *
- * Es la acción primaria de la tarjeta de mesa (por eso lleva `clay`): sin
- * "Pidió la cuenta" de por medio, tomar el pedido es lo único que el
- * mesero hace realmente desde acá con frecuencia — el resto (QR, liberar)
- * es mantenimiento ocasional.
+ * Es la acción primaria de la tarjeta de mesa: sin "Pidió la cuenta" de
+ * por medio, tomar el pedido es lo único que el mesero hace realmente
+ * desde acá con frecuencia — el resto (QR, liberar) es mantenimiento
+ * ocasional.
  */
 export function TakeOrderButton({ tableId }: { tableId: string }) {
   const router = useRouter();
@@ -22,7 +22,7 @@ export function TakeOrderButton({ tableId }: { tableId: string }) {
     <div onClick={(e) => e.preventDefault()}>
       <Button
         onClick={() => router.push(`/tables/${tableId}/order`)}
-        className="clay clay-primary h-11 w-full rounded-full text-body-sm font-semibold"
+        className="h-11 w-full rounded-control text-body-sm font-semibold"
       >
         <ClipboardList className="h-4 w-4" /> Tomar pedido
       </Button>
