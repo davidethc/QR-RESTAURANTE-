@@ -48,6 +48,8 @@
     --muted: oklch(0.955 0.012 86);
     --muted-foreground: oklch(0.530 0.022 72);
     --border: oklch(0.908 0.016 83);
+    /* Borde de controles (inputs, botón secundario). */
+    --border-strong: oklch(0.908 0.016 83);
 
     /* ── Color: acentos de marca ────────────────────────────────── */
     /* Ámbar: solo rellenos escasos (chapa de MESA, etiqueta COMBOS). */
@@ -147,6 +149,10 @@ body:has([data-theme]) {
     --chart-5: var(--muted-foreground);
     --glass-bg: oklch(from var(--background) l c h / 0.72);
     --glass-border: oklch(1 0 0 / 0.15);
+    --radius-role-control: var(--radius);
+    --radius-role-button: calc(var(--radius) * 1.25);
+    --radius-role-card: calc(var(--radius) * 1.4);
+    --radius-role-badge: calc(var(--radius) * 2.6);
     --sidebar: var(--card);
     --sidebar-foreground: var(--foreground);
     --sidebar-primary: var(--primary);

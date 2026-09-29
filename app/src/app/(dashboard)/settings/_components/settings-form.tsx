@@ -3,7 +3,6 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Store } from "lucide-react";
@@ -81,10 +80,7 @@ export function SettingsForm({
   }
 
   return (
-    <motion.form
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+    <form
       // React Hook Form lee un ref al invocar `handleSubmit` — el eslint
       // plugin del React Compiler no reconoce la directiva "use no memo"
       // de arriba para esta regla puntual; es un falso positivo conocido
@@ -92,69 +88,78 @@ export function SettingsForm({
       // eslint-disable-next-line react-hooks/refs
       onSubmit={handleSubmit(onSubmit)}
       noValidate
-      className="max-w-lg"
+      className="grid gap-6 border-b border-border pb-8 lg:grid-cols-[240px_1fr] lg:gap-12"
     >
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="rest-logo">Logo</FieldLabel>
-          <div className="flex items-center gap-3">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-muted">
-              {logoUrl ? (
-                <Image
-                  src={logoUrl}
-                  alt="Logo del restaurante"
-                  width={64}
-                  height={64}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <Store className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-              )}
+      <div>
+        <h2 className="text-body font-semibold text-foreground">Datos del restaurante</h2>
+        <p className="mt-1 text-body-sm text-muted-foreground">
+          Lo que ven tus clientes en la carta.
+        </p>
+      </div>
+
+      <div className="flex max-w-lg flex-col gap-6">
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="rest-logo">Logo</FieldLabel>
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-card border border-border bg-muted">
+                {logoUrl ? (
+                  <Image
+                    src={logoUrl}
+                    alt="Logo del restaurante"
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Store className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+                )}
+              </div>
+              <Input
+                id="rest-logo"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                aria-describedby="rest-logo-hint"
+              />
             </div>
-            <Input
-              id="rest-logo"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              aria-describedby="rest-logo-hint"
-            />
-          </div>
-          <p id="rest-logo-hint" className="text-xs text-muted-foreground">
-            JPEG, PNG o WebP.
-          </p>
-        </Field>
+            <p id="rest-logo-hint" className="text-caption text-muted-foreground">
+              JPEG, PNG o WebP.
+            </p>
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="rest-name">Nombre</FieldLabel>
-          <Input id="rest-name" {...register("name")} />
-          <FieldError errors={[errors.name]} />
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="rest-name">Nombre</FieldLabel>
+            <Input id="rest-name" {...register("name")} />
+            <FieldError errors={[errors.name]} />
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="rest-description">Descripción</FieldLabel>
-          <Textarea id="rest-description" rows={3} {...register("description")} />
-          <FieldError errors={[errors.description]} />
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="rest-description">Descripción</FieldLabel>
+            <Textarea id="rest-description" rows={3} {...register("description")} />
+            <FieldError errors={[errors.description]} />
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="rest-phone">Teléfono</FieldLabel>
-          <Input id="rest-phone" type="tel" {...register("phone")} />
-          <FieldError errors={[errors.phone]} />
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="rest-phone">Teléfono</FieldLabel>
+            <Input id="rest-phone" type="tel" {...register("phone")} />
+            <FieldError errors={[errors.phone]} />
+          </Field>
 
-        <Field>
-          <FieldLabel htmlFor="rest-address">Dirección</FieldLabel>
-          <Input id="rest-address" {...register("address")} />
-          <FieldError errors={[errors.address]} />
-        </Field>
+          <Field>
+            <FieldLabel htmlFor="rest-address">Dirección</FieldLabel>
+            <Input id="rest-address" {...register("address")} />
+            <FieldError errors={[errors.address]} />
+          </Field>
 
-        <FieldError errors={[errors.root]} />
+          <FieldError errors={[errors.root]} />
+        </FieldGroup>
 
         <Button type="submit" disabled={isPending} className="w-fit">
           {isPending && <Loader2 className="animate-spin" />}
           Guardar cambios
         </Button>
-      </FieldGroup>
-    </motion.form>
+      </div>
+    </form>
   );
 }

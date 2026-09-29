@@ -29,16 +29,9 @@ export default async function SettingsPage() {
         title="Configuración"
         description="Datos del restaurante que ven tus clientes en la carta."
       />
-      <div className="flex flex-col gap-8 px-4 py-4 pb-10">
+      <div className="flex flex-col gap-8 px-4 pb-10 md:px-8">
         <SettingsForm restaurant={restaurant} />
-        {session.role === "OWNER" && (
-          <section className="flex flex-col gap-3 border-t border-border pt-6">
-            <h2 className="font-display text-title-sm font-semibold text-foreground">
-              Cobro y caja
-            </h2>
-            <BillingSettingsForm restaurant={restaurant} />
-          </section>
-        )}
+        {session.role === "OWNER" && <BillingSettingsForm restaurant={restaurant} />}
       </div>
     </main>
   );

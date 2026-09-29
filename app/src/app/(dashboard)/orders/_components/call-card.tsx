@@ -62,12 +62,12 @@ export function CallCard({
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "shadow-card rounded-2xl border bg-card p-4",
+        "rounded-card border bg-card p-4",
         pending
           ? isBill
-            ? "border-wine/30 ring-1 ring-wine/15"
-            : "border-primary/30 ring-1 ring-primary/15"
-          : "border-border/70"
+            ? "border-wine/30"
+            : "border-primary/30"
+          : "border-border"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -75,7 +75,7 @@ export function CallCard({
           <span
             aria-hidden
             className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-control",
               isBill
                 ? "bg-wine/12 text-wine"
                 : "bg-primary/12 text-primary"
@@ -84,7 +84,7 @@ export function CallCard({
             <Icon className="h-[22px] w-[22px]" strokeWidth={2.25} />
           </span>
           <div className="min-w-0">
-            <p className="font-display truncate text-lead font-semibold leading-tight text-foreground">
+            <p className="truncate text-lead font-semibold leading-tight text-foreground">
               {call.table_name ?? `Mesa ${call.table_number}`}
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-meta leading-tight text-muted-foreground">
@@ -97,7 +97,7 @@ export function CallCard({
       </div>
 
       {isBill && (
-        <div className="mt-3 rounded-xl border border-border/60 bg-secondary/50 p-3">
+        <div className="mt-3 rounded-control border border-border bg-secondary/50 p-3">
           {call.session_orders.length === 0 ? (
             <p className="text-meta text-muted-foreground">
               No hay pedidos registrados en esta mesa.
@@ -138,15 +138,15 @@ export function CallCard({
                   ))}
                   {call.session_orders.length > 1 &&
                     oi < call.session_orders.length - 1 && (
-                      <div className="mt-1 border-t border-border/60" />
+                      <div className="mt-1 border-t border-border" />
                     )}
                 </div>
               ))}
-              <div className="mt-1 flex items-baseline justify-between border-t border-border/60 pt-2">
+              <div className="mt-1 flex items-baseline justify-between border-t border-border pt-2">
                 <span className="text-tiny font-semibold uppercase tracking-wider text-muted-foreground">
                   Total
                 </span>
-                <span className="font-display text-xl font-semibold tabular-nums text-wine">
+                <span className="text-xl font-semibold tabular-nums text-wine">
                   {formatPrice(call.session_total)}
                 </span>
               </div>
@@ -163,7 +163,7 @@ export function CallCard({
       {canCharge ? (
         <div className="mt-3">
           <Button
-            className="clay clay-primary h-12 w-full rounded-full text-body font-semibold"
+            className="h-11 w-full rounded-control text-body font-semibold"
             onClick={() =>
               openCharge({
                 tableSessionId: tableSessionId!,
@@ -178,7 +178,7 @@ export function CallCard({
       ) : (
         <>
           {chargedByAdmin && call.status !== "ATTENDED" && (
-            <p className="mt-3 rounded-xl bg-honey-soft px-3 py-2 text-meta font-medium text-honey-soft-foreground">
+            <p className="mt-3 rounded-control bg-warning-soft px-3 py-2 text-meta font-medium text-warning-soft-foreground">
               La cuenta la cobra el administrador.
             </p>
           )}
@@ -188,7 +188,7 @@ export function CallCard({
                 onSuccess={onDone}
                 action={() => handleCall(call.id, "ACCEPTED")}
                 successMessage="En proceso"
-                className="clay clay-primary h-12 flex-1 rounded-full text-body font-semibold"
+                className="h-11 flex-1 rounded-control text-body font-semibold"
               >
                 Atender
               </ActionButton>
@@ -196,7 +196,7 @@ export function CallCard({
                 trigger={
                   <Button
                     variant="outline"
-                    className="h-12 flex-1 rounded-full border-border/70 text-body font-semibold"
+                    className="h-11 flex-1 rounded-control text-body font-semibold"
                   >
                     Rechazar
                   </Button>
@@ -215,7 +215,7 @@ export function CallCard({
                 onSuccess={onDone}
               action={() => handleCall(call.id, "ATTENDED")}
               successMessage="Solicitud atendida"
-              className="clay clay-primary mt-3 h-12 w-full rounded-full text-body font-semibold"
+              className="mt-3 h-11 w-full rounded-control text-body font-semibold"
             >
               Marcar atendida
             </ActionButton>
@@ -231,7 +231,7 @@ export function CallCard({
         <Button
           asChild
           variant="outline"
-          className="mt-2 h-12 w-full rounded-full border-border/70 text-body font-semibold"
+          className="mt-2 h-11 w-full rounded-control text-body font-semibold"
         >
           <Link href={`/tables/${call.table_id}/order`}>
             <ClipboardList aria-hidden className="h-4 w-4" /> Tomar pedido

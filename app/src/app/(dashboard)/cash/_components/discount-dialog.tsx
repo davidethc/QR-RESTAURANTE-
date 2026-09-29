@@ -100,10 +100,10 @@ export function DiscountDialog({
                     onValueChange={(v) => v && field.onChange(v)}
                     className="grid w-full grid-cols-2 gap-2"
                   >
-                    <ToggleGroupItem value={DISCOUNT_KIND.PERCENT} className="h-11 rounded-xl text-body-sm font-semibold">
+                    <ToggleGroupItem value={DISCOUNT_KIND.PERCENT} className="h-11 rounded-control text-body-sm font-semibold">
                       Porcentaje
                     </ToggleGroupItem>
-                    <ToggleGroupItem value={DISCOUNT_KIND.FIXED} className="h-11 rounded-xl text-body-sm font-semibold">
+                    <ToggleGroupItem value={DISCOUNT_KIND.FIXED} className="h-11 rounded-control text-body-sm font-semibold">
                       Monto fijo
                     </ToggleGroupItem>
                   </ToggleGroup>
@@ -119,7 +119,7 @@ export function DiscountDialog({
                 step="0.01"
                 min="0"
                 inputMode="decimal"
-                className="h-12 font-display text-lead tabular-nums"
+                className="h-12 text-lead tabular-nums"
                 {...register("value", { setValueAs: (v: string) => (v === "" ? undefined : Number(v)) })}
               />
               <FieldError errors={[errors.value]} />
@@ -134,7 +134,7 @@ export function DiscountDialog({
             <FieldError errors={[errors.root]} />
           </FieldGroup>
           <DialogFooter className="mt-4">
-            <Button type="submit" disabled={isSubmitting} className="clay clay-primary h-11 rounded-full">
+            <Button type="submit" disabled={isSubmitting} className="h-11">
               {isSubmitting && <Loader2 className="animate-spin" />}
               <Tag className="h-4 w-4" /> Aplicar
             </Button>

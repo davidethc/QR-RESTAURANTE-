@@ -43,7 +43,7 @@ export default async function SalesPage({
           </Button>
         }
       />
-      <div className="flex flex-col gap-6 px-4 pb-10 sm:px-6">
+      <div className="flex flex-col gap-8 px-4 pb-12 md:px-8">
         <RangeTabs active={range} />
         <SalesSummary report={report} />
       </div>

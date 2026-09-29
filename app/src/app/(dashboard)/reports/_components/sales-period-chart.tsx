@@ -2,12 +2,6 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
@@ -63,25 +57,31 @@ export function SalesPeriodChart({
   }));
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-body">Ventas por periodo</CardTitle>
+    <div className="rounded-card border border-border bg-card p-5">
+      <div className="mb-3 flex flex-row items-center justify-between gap-3">
+        <h3 className="text-body font-semibold text-foreground">Ventas por periodo</h3>
         <ToggleGroup
           type="single"
-          variant="outline"
+          variant="default"
+          spacing={1}
           size="sm"
           value={granularity}
           disabled={disabled}
           onValueChange={(v) => v && onGranularityChange(v as ReportGranularity)}
+          className="rounded-control border border-border bg-secondary p-1"
         >
           {(["day", "week", "month"] as ReportGranularity[]).map((g) => (
-            <ToggleGroupItem key={g} value={g} className="text-caption">
+            <ToggleGroupItem
+              key={g}
+              value={g}
+              className="rounded-control px-2.5 text-caption font-medium text-muted-foreground transition-colors duration-150 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
+            >
               {GRANULARITY_LABEL[g]}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div>
         {data.length === 0 ? (
           <EmptyState icon={BarChart3} title="Sin ventas en este rango" />
         ) : (
@@ -110,7 +110,7 @@ export function SalesPeriodChart({
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -60,7 +60,7 @@ export function ChargeAdjustments({
           </ToggleGroup>
 
           {bill.split_mode === SPLIT_MODE.EQUAL && (
-            <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/70 bg-card p-2">
+            <div className="flex items-center justify-between gap-2 rounded-card border border-border bg-card p-2">
               <Button
                 type="button"
                 variant="outline"
@@ -73,7 +73,7 @@ export function ChargeAdjustments({
                 <Minus aria-hidden />
               </Button>
               <p className="text-center text-meta leading-tight text-muted-foreground" aria-live="polite">
-                <span className="block font-display text-title font-semibold text-foreground">
+                <span className="block text-title font-semibold text-foreground">
                   {bill.split_parts} partes
                 </span>
                 {partLabel}
@@ -110,7 +110,7 @@ export function ChargeAdjustments({
             {bill.discounts.map((d) => (
               <li
                 key={d.id}
-                className="flex min-h-12 items-center justify-between gap-2 rounded-xl bg-secondary/60 py-1 pr-1 pl-3 text-body-sm"
+                className="flex min-h-12 items-center justify-between gap-2 rounded-control bg-secondary py-1 pr-1 pl-3 text-body-sm"
               >
                 <span className="min-w-0 text-foreground">
                   {d.kind === "PERCENT" ? `${d.value}%` : formatPrice(d.value)}
@@ -141,7 +141,7 @@ export function ChargeAdjustments({
             billId={bill.id}
             onApplied={onDiscountApplied}
             trigger={
-              <Button variant="outline" className="h-12 w-full rounded-full text-body-sm font-semibold">
+              <Button variant="outline" className="h-12 w-full text-body-sm font-semibold">
                 <Tag data-icon="inline-start" aria-hidden /> Aplicar descuento
               </Button>
             }
@@ -156,14 +156,14 @@ export function ChargeAdjustments({
         ) : (
           <ul className="flex flex-col gap-1.5">
             {payments.map((p) => (
-              <li key={p.id} className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-secondary/40 px-3 text-body-sm">
+              <li key={p.id} className="flex min-h-11 items-center justify-between gap-3 rounded-control bg-secondary px-3 text-body-sm">
                 <span className="text-foreground">
                   {PAYMENT_METHOD_LABEL[p.method]}
                   {p.tip_amount > 0 && (
                     <span className="text-muted-foreground"> · propina {formatPrice(p.tip_amount)}</span>
                   )}
                 </span>
-                <span className="font-display tabular-nums text-foreground">{formatPrice(p.amount)}</span>
+                <span className="tabular-nums text-foreground">{formatPrice(p.amount)}</span>
               </li>
             ))}
           </ul>
@@ -174,7 +174,7 @@ export function ChargeAdjustments({
 }
 
 const toggleClass =
-  "h-12 min-w-0 rounded-xl px-1 text-meta font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary";
+  "h-12 min-w-0 rounded-control px-1 text-meta font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary-soft data-[state=on]:text-primary";
 
 function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return (

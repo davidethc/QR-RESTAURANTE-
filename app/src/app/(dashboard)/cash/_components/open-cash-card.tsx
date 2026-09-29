@@ -54,13 +54,13 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
   }
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-4">
+    <div className="rounded-card border border-border bg-card p-4">
       <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/12 text-primary">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary">
           <Wallet className="h-5 w-5" />
         </span>
         <div>
-          <p className="font-display text-body-lg font-semibold text-foreground">Abrir caja</p>
+          <p className="text-lead font-semibold text-foreground">Abrir caja</p>
           <p className="text-meta text-muted-foreground">Hace falta antes de poder cobrar.</p>
         </div>
       </div>
@@ -99,7 +99,7 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
               step="0.01"
               min="0"
               inputMode="decimal"
-              className="h-12 font-display text-lead tabular-nums"
+              className="h-12 text-lead tabular-nums"
               {...register("openingFloat", {
                 setValueAs: (v: string) => (v === "" ? 0 : Number(v)),
               })}
@@ -114,7 +114,7 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
         <Button
           type="submit"
           disabled={isSubmitting || registers.length === 0}
-          className="clay clay-primary h-12 w-full rounded-full text-body font-semibold"
+          className="h-12 w-full text-body font-semibold"
         >
           {isSubmitting && <Loader2 className="animate-spin" />}
           Abrir caja

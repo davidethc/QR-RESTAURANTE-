@@ -74,7 +74,7 @@ function ForceCloseDialog({ tableId, tableLabel }: { tableId: string; tableLabel
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 w-full rounded-full text-meta font-semibold text-muted-foreground"
+            className="h-9 w-full rounded-control text-meta font-semibold text-muted-foreground"
           >
             <ShieldAlert className="h-4 w-4" /> Forzar cierre
           </Button>
@@ -103,7 +103,7 @@ function ForceCloseDialog({ tableId, tableLabel }: { tableId: string; tableLabel
               type="submit"
               variant="destructive"
               disabled={isSubmitting}
-              className="clay clay-wine h-11 rounded-full"
+              className="h-11 rounded-control"
             >
               {isSubmitting && <Loader2 className="animate-spin" />}
               Forzar cierre
@@ -149,7 +149,7 @@ export function ReleaseTableButton({
   if (billingEnabled && tableSessionId && !canHandleMoney(role)) {
     // Con cobro activo el mesero no libera ni cobra: lo hace el administrador.
     return (
-      <p className="w-full rounded-full bg-muted px-3 py-2 text-center text-meta font-medium text-muted-foreground">
+      <p className="w-full rounded-control bg-muted px-3 py-2 text-center text-meta font-medium text-muted-foreground">
         Cobra el administrador
       </p>
     );
@@ -159,7 +159,7 @@ export function ReleaseTableButton({
     return (
       <div className="flex w-full flex-col gap-1.5">
         <Button
-          className="clay clay-primary h-9 w-full rounded-full text-meta font-semibold"
+          className="h-11 w-full rounded-control text-meta font-semibold"
           onClick={() => openCharge({ tableSessionId, tableLabel, maxWaiterDiscountPct })}
         >
           <Wallet className="h-4 w-4" /> Cobrar y liberar
@@ -179,7 +179,7 @@ export function ReleaseTableButton({
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 w-full rounded-full text-meta font-semibold text-muted-foreground"
+            className="h-9 w-full rounded-control text-meta font-semibold text-muted-foreground"
           >
             <DoorOpen className="h-4 w-4" /> Liberar mesa
           </Button>

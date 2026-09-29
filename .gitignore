@@ -24,3 +24,6 @@ brag-output*/
 
 # Lock de skills instaladas localmente (.claude/skills)
 skills-lock.json
+
+# Capturas locales de QA/diseño (no versionar: repo público)
+_capturas/

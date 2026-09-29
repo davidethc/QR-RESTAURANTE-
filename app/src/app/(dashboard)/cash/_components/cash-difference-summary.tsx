@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import type { CashMethodSummary } from "@/types/billing";
 
 const METHOD_LABEL: Record<string, string> = {
@@ -29,13 +29,18 @@ export function CashDifferenceSummary({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="text-meta font-medium text-muted-foreground">Diferencia total</span>
-        <Badge variant={cuadra ? "secondary" : "destructive"} className="font-display text-meta tabular-nums">
+        <Badge
+          className={cn(
+            "text-meta tabular-nums",
+            cuadra ? "bg-success-soft text-success-soft-foreground" : "bg-destructive-soft text-destructive"
+          )}
+        >
           {cuadra ? "Cuadró exacto" : `${diff > 0 ? "+" : ""}${formatPrice(diff)}`}
         </Badge>
       </div>
 
       {byMethod && byMethod.length > 0 && (
-        <div className="flex flex-col gap-1.5 rounded-xl bg-secondary/40 p-3">
+        <div className="flex flex-col gap-1.5 rounded-control bg-secondary p-3">
           {byMethod.map((m) => {
             const methodDiff = m.difference ?? null;
             const methodMismatch = methodDiff !== null && methodDiff !== 0;
@@ -51,8 +56,8 @@ export function CashDifferenceSummary({
                     <span
                       className={
                         methodMismatch
-                          ? "font-display font-semibold text-destructive"
-                          : "font-display text-muted-foreground"
+                          ? "font-semibold text-destructive"
+                          : "text-muted-foreground"
                       }
                     >
                       {methodDiff > 0 ? "+" : ""}

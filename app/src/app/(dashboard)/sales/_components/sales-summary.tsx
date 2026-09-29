@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PAYMENT_METHOD_LABEL } from "@/lib/payment-method-labels";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import type { SalesReport } from "@/types/staff";
 import { DailyBars } from "./daily-bars";
 import { StatTile } from "./stat-tile";
@@ -13,9 +13,9 @@ export function SalesSummary({ report }: { report: SalesReport }) {
   const methodTotal = report.by_method.reduce((sum, m) => sum + Number(m.total), 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       {byOrders && (
-        <p className="rounded-xl border border-dashed border-border bg-muted/40 p-3 text-meta text-muted-foreground">
+        <p className="rounded-card border border-dashed border-border bg-muted/40 p-3 text-meta text-muted-foreground">
           Sin cobro activo, esto suma los pedidos entregados. Para ver métodos de
           pago, propinas y descuentos, activa el cobro en{" "}
           <Link href="/settings" className="font-semibold text-foreground underline">
@@ -25,7 +25,12 @@ export function SalesSummary({ report }: { report: SalesReport }) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div
+        className={cn(
+          "grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-card border border-border bg-card",
+          byOrders ? "sm:grid-cols-3" : "sm:grid-cols-4"
+        )}
+      >
         <StatTile label="Vendido" value={formatPrice(Number(summary.total_sold))} />
         <StatTile label={byOrders ? "Pedidos" : "Cuentas"} value={String(summary.tickets)} />
         <StatTile label="Ticket promedio" value={formatPrice(Number(summary.avg_ticket))} />
@@ -51,14 +56,12 @@ export function SalesSummary({ report }: { report: SalesReport }) {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {!byOrders && (
-          <section className="flex flex-col gap-2">
-            <h2 className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
-              Cómo te pagaron
-            </h2>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-body font-semibold text-foreground">Cómo te pagaron</h2>
             {report.by_method.length === 0 ? (
               <p className="text-meta text-muted-foreground">Sin pagos en este periodo.</p>
             ) : (
-              <ul className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
+              <ul className="flex flex-col gap-3 rounded-card border border-border bg-card p-4">
                 {report.by_method.map((m) => {
                   const pct = methodTotal > 0 ? (Number(m.total) / methodTotal) * 100 : 0;
                   return (
@@ -81,14 +84,12 @@ export function SalesSummary({ report }: { report: SalesReport }) {
           </section>
         )}
 
-        <section className="flex flex-col gap-2">
-          <h2 className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
-            Lo más pedido
-          </h2>
+        <section className="flex flex-col gap-3">
+          <h2 className="text-body font-semibold text-foreground">Lo más pedido</h2>
           {report.top_products.length === 0 ? (
             <EmptyState icon={Receipt} title="Sin ventas en este periodo" />
           ) : (
-            <table className="w-full overflow-hidden rounded-2xl border border-border bg-card text-body-sm">
+            <table className="w-full overflow-hidden rounded-card border border-border bg-card text-body-sm">
               <thead>
                 <tr className="text-left text-caption text-muted-foreground">
                   <th className="px-4 py-2 font-medium">Plato</th>

@@ -21,7 +21,7 @@ export function CashCloseResultCard({
   onDismiss: () => void;
 }) {
   return (
-    <div className="relative rounded-2xl border border-border/60 bg-card p-4">
+    <div className="relative rounded-card border border-border bg-card p-4">
       <Button
         type="button"
         variant="ghost"
@@ -34,8 +34,8 @@ export function CashCloseResultCard({
       </Button>
 
       <div className="flex items-center gap-2 pr-12">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
-        <p className="font-display text-body-lg font-semibold text-foreground">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-success-soft-foreground" />
+        <p className="text-lead font-semibold text-foreground">
           Caja cerrada · {result.register_name ?? "Caja"}
         </p>
       </div>

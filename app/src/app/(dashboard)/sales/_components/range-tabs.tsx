@@ -11,14 +11,17 @@ const RANGES: { value: SalesRange; label: string }[] = [
 
 export function RangeTabs({ active }: { active: SalesRange }) {
   return (
-    <nav aria-label="Periodo" className="flex w-fit gap-1 rounded-full bg-secondary p-1">
+    <nav
+      aria-label="Periodo"
+      className="flex w-fit gap-1 rounded-control border border-border bg-secondary p-1"
+    >
       {RANGES.map((r) => (
         <Link
           key={r.value}
           href={r.value === "hoy" ? "/sales" : `/sales?range=${r.value}`}
           aria-current={r.value === active ? "page" : undefined}
           className={cn(
-            "flex h-9 items-center rounded-full px-4 text-meta font-semibold transition-colors",
+            "flex h-8 items-center rounded-control px-3 text-meta font-medium transition-colors duration-150",
             r.value === active
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"

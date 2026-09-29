@@ -25,12 +25,10 @@ export function ClosedBillsToday({
   });
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-caption font-semibold uppercase tracking-wide text-muted-foreground">
-        Cobradas hoy
-      </p>
+    <div className="flex flex-col gap-3">
+      <p className="text-body font-semibold text-foreground">Cobradas hoy</p>
       {bills.length === 0 ? (
-        <div className="rounded-2xl border border-border/60 bg-card p-2">
+        <div className="rounded-card border border-border bg-card p-2">
           <EmptyState
             title="Todavía no se cobra ninguna cuenta hoy"
             description="Las cuentas cerradas del día comercial van a aparecer aquí, con opción de reimprimir el ticket."
@@ -41,10 +39,10 @@ export function ClosedBillsToday({
           {bills.map((bill) => (
             <div
               key={bill.id}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-3"
+              className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3"
             >
               <div className="min-w-0">
-                <p className="font-display truncate text-body font-semibold text-foreground">
+                <p className="truncate text-body font-semibold text-foreground">
                   Cuenta #{bill.bill_number} · {bill.place_label}
                 </p>
                 <p className="mt-0.5 text-caption text-muted-foreground">
@@ -52,8 +50,8 @@ export function ClosedBillsToday({
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <p className="font-display tabular-nums text-wine">{formatPrice(bill.total)}</p>
-                <Button asChild variant="outline" size="icon-lg" className="h-11 w-11 rounded-full">
+                <p className="text-lead font-semibold tabular-nums text-foreground">{formatPrice(bill.total)}</p>
+                <Button asChild variant="outline" size="icon-lg" className="h-11 w-11">
                   <Link
                     href={`/cash/ticket/${bill.id}?print=1`}
                     target="_blank"

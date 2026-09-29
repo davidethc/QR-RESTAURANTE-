@@ -29,24 +29,17 @@ export function RecoverableError({
   return (
     <div
       role="alert"
-      className="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center"
+      className="flex flex-col items-center justify-center gap-1.5 px-6 py-14 text-center"
     >
-      <span className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-        <AlertTriangle className="h-7 w-7" strokeWidth={1.75} aria-hidden />
+      <span className="mb-2 flex size-10 items-center justify-center rounded-control bg-secondary text-muted-foreground">
+        <AlertTriangle className="size-5" strokeWidth={1.75} aria-hidden />
       </span>
-      <p className="font-display text-lead font-semibold leading-tight text-foreground">
-        {title}
-      </p>
+      <p className="text-body font-semibold leading-tight text-foreground">{title}</p>
       <p className="max-w-xs text-meta leading-relaxed text-muted-foreground">
         {description}
       </p>
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-        <Button
-          type="button"
-          onClick={onRetry}
-          disabled={retrying}
-          className="clay clay-primary h-11 rounded-full px-6 text-body-sm font-semibold"
-        >
+        <Button type="button" onClick={onRetry} disabled={retrying} className="h-10">
           {retrying ? (
             <Loader2 className="animate-spin" aria-hidden />
           ) : (
@@ -57,7 +50,7 @@ export function RecoverableError({
         {children}
       </div>
       {digest && (
-        <p className="mt-2 text-tiny text-muted-foreground/60">Ref. {digest}</p>
+        <p className="mt-2 text-caption text-muted-foreground/60">Ref. {digest}</p>
       )}
     </div>
   );

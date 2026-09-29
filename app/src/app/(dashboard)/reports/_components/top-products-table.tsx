@@ -6,7 +6,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { SalesByProductRow } from "@/types/reports";
@@ -16,11 +15,9 @@ export function TopProductsTable({ rows }: { rows: SalesByProductRow[] }) {
   const top = rows.slice(0, 20);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-body">Top productos</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-card border border-border bg-card p-5">
+      <h3 className="mb-3 text-body font-semibold text-foreground">Top productos</h3>
+      <div>
         {top.length === 0 ? (
           <EmptyState icon={UtensilsCrossed} title="Sin productos vendidos en este rango" />
         ) : (
@@ -58,7 +55,7 @@ export function TopProductsTable({ rows }: { rows: SalesByProductRow[] }) {
             Mostrando los primeros {top.length} de {rows.length}. Exporta a Excel para ver todos.
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

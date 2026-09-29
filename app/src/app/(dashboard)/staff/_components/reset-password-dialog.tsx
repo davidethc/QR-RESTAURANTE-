@@ -51,8 +51,13 @@ export function ResetPasswordDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9">
-          <KeyRound /> Nueva clave
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9"
+          aria-label={`Generar nueva clave para ${name}`}
+        >
+          <KeyRound className="size-4" strokeWidth={1.75} />
         </Button>
       </DialogTrigger>
       <DialogContent>

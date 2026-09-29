@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { PeakHoursRow } from "@/types/reports";
@@ -28,11 +27,9 @@ export function PeakHoursHeatmap({ rows }: { rows: PeakHoursRow[] }) {
   const hasData = rows.length > 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-body">Horas pico</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-card border border-border bg-card p-5">
+      <h3 className="mb-3 text-body font-semibold text-foreground">Horas pico</h3>
+      <div>
         {!hasData ? (
           <EmptyState icon={Clock} title="Sin pedidos en este rango" />
         ) : (
@@ -98,7 +95,7 @@ export function PeakHoursHeatmap({ rows }: { rows: PeakHoursRow[] }) {
             </p>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

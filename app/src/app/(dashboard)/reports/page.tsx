@@ -36,7 +36,7 @@ export default async function ReportsPage() {
     return (
       <main>
         <PageHeader title="Reportes" />
-        <div className="px-4">
+        <div className="px-4 md:px-8">
           <EmptyState
             icon={Wallet}
             title="El cobro no está activo"
@@ -63,7 +63,7 @@ export default async function ReportsPage() {
         title="Reportes"
         description="Venta, productos, meseros, pagos y cocina — todo por rango de fechas."
       />
-      <div className="px-4 sm:px-6">
+      <div className="px-4 pb-12 md:px-8">
         <ReportsDashboard
           restaurantId={restaurantId}
           restaurantName={session.restaurant.name}

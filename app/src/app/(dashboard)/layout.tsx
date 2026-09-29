@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { Geist } from "next/font/google";
 import { redirect } from "next/navigation";
 import { getMyRestaurant } from "@/lib/queries/staff";
 import {
@@ -17,6 +18,13 @@ import { ChargeSheetProvider } from "./cash/_components/charge-sheet-host";
 // marca este segmento como "puede bloquear" y silencia su validación,
 // sin cambiar cómo renderiza. Quitar esta línea al migrar el panel.
 export const instant = false;
+
+/**
+ * Tipografía del panel. Se carga aquí y no en el layout raíz para que
+ * la carta del comensal no la descargue. La variable se declara en
+ * :root (no en el contenedor) porque Sheet y Dialog se montan en <body>.
+ */
+const geist = Geist({ subsets: ["latin"], display: "swap" });
 
 export default async function DashboardLayout({
   children,
@@ -54,7 +62,8 @@ export default async function DashboardLayout({
   if (!session) return <DashboardLoadError />;
 
   return (
-    <div data-theme="admin" className="min-h-full">
+    <div data-theme="admin" className="min-h-full md:pl-16 lg:pl-60 print:pl-0">
+      <style>{`:root{--font-geist:${geist.style.fontFamily}}`}</style>
       <DashboardNotifier
         restaurantId={session.restaurant.id}
         role={session.role}
