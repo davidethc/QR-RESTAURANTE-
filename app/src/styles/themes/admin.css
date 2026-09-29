@@ -36,6 +36,9 @@ body:has([data-theme="admin"]) {
     --warning-border: #F0DFB4;
     --warning-indicator: #C98A12;
     --wine: #8A5A06;
+    /* status-badge (compartido con la carta) usa honey-soft para "en curso". */
+    --honey-soft: #FBF3DF;
+    --honey-soft-foreground: #8A5A06;
     --info-soft: #EEF2F8;
     --info-soft-foreground: #3D5A80;
     --info-border: #D8E0EC;
