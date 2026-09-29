@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ImageFileInput } from "@/components/shared/image-file-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -221,12 +222,7 @@ export function ProductDialog({
                   <FieldLabel htmlFor="prod-image">
                     Foto (opcional, JPEG/PNG/WebP, máx. 5 MB)
                   </FieldLabel>
-                  <Input
-                    id="prod-image"
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                  />
+                  <ImageFileInput id="prod-image" ref={fileInputRef} />
                 </Field>
               </div>
 
