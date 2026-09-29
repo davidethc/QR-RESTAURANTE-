@@ -14,12 +14,16 @@ export const metadata: Metadata = { title: "Iniciar sesión" };
 export default function LoginPage() {
   return (
     <main className="flex min-h-full flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-xl font-semibold text-foreground">
+      <div className="w-full max-w-[400px] rounded-card border border-border bg-card px-7 py-8 shadow-sm">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <span className="mb-4 grid size-10 place-items-center rounded-control bg-primary text-body font-semibold text-primary-foreground">
+            M
+          </span>
+          <p className="text-meta font-medium text-muted-foreground">Monky</p>
+          <h1 className="mt-1 text-2xl font-semibold text-foreground">
             Panel de Monky
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-body-sm text-muted-foreground">
             Inicia sesión para gestionar pedidos y solicitudes.
           </p>
         </div>
