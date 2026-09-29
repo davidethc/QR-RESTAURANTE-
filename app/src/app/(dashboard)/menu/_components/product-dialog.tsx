@@ -17,13 +17,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  SheetClose,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { notify } from "@/lib/notifications";
 import {
@@ -123,8 +125,8 @@ export function ProductDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         {isEdit ? (
           <Button variant="ghost" size="icon" aria-label="Editar producto">
             <Pencil className="h-4 w-4" />
@@ -134,160 +136,189 @@ export function ProductDialog({
             <Plus /> Producto
           </Button>
         )}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar producto" : "Nuevo producto"}</DialogTitle>
-        </DialogHeader>
+      </SheetTrigger>
+      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
+        <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
+          <SheetTitle className="text-title-sm font-semibold">
+            {isEdit ? "Editar producto" : "Nuevo producto"}
+          </SheetTitle>
+          <SheetDescription>
+            Aparecerá en la carta del QR cuando lo guardes.
+          </SheetDescription>
+        </SheetHeader>
         {/* Ver la nota en SettingsForm: falso positivo conocido de
             React Hook Form con este eslint rule puntual. */}
-        {/* eslint-disable-next-line react-hooks/refs */}
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="prod-name">Nombre</FieldLabel>
-              <Input id="prod-name" {...register("name")} />
-              <FieldError errors={[errors.name]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="prod-description">
-                Descripción (opcional)
-              </FieldLabel>
-              <Textarea id="prod-description" rows={2} {...register("description")} />
-              <FieldError errors={[errors.description]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="prod-price">Precio</FieldLabel>
-              <Input
-                id="prod-price"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register("price", { valueAsNumber: true })}
-              />
-              <FieldError errors={[errors.price]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="prod-category">Categoría</FieldLabel>
-              <Controller
-                control={control}
-                name="category_id"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || NO_CATEGORY}
-                    onValueChange={(v) =>
-                      field.onChange(v === NO_CATEGORY ? "" : v)
-                    }
-                  >
-                    <SelectTrigger id="prod-category" className="w-full">
-                      <SelectValue placeholder="Sin categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_CATEGORY}>Sin categoría</SelectItem>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="prod-image">
-                Foto (opcional, JPEG/PNG/WebP, máx. 5 MB)
-              </FieldLabel>
-              <Input
-                id="prod-image"
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-              />
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldLabel htmlFor="prod-available">Disponible</FieldLabel>
-              <Controller
-                control={control}
-                name="available"
-                render={({ field }) => (
-                  <Switch
-                    id="prod-available"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </Field>
-
-            <Field orientation="horizontal">
-              <FieldLabel htmlFor="prod-featured">
-                Destacado — aparece en &ldquo;Sugerencias&rdquo;
-              </FieldLabel>
-              <Controller
-                control={control}
-                name="featured"
-                render={({ field }) => (
-                  <Switch
-                    id="prod-featured"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="prod-paired-drink">
-                Bebida del combo (opcional)
-              </FieldLabel>
-              <Controller
-                control={control}
-                name="paired_drink_id"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || NO_PAIRED_DRINK}
-                    onValueChange={(v) =>
-                      field.onChange(v === NO_PAIRED_DRINK ? "" : v)
-                    }
-                  >
-                    <SelectTrigger id="prod-paired-drink" className="w-full">
-                      <SelectValue placeholder="Sin bebida asociada" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_PAIRED_DRINK}>
-                        Sin bebida asociada
-                      </SelectItem>
-                      {pairedDrinkOptions.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <p className="text-xs text-muted-foreground">
-                Si eliges una bebida, este plato aparecerá en
-                &ldquo;Sugerencias para ti&rdquo; combinado con ella.
+        <form
+          // eslint-disable-next-line react-hooks/refs
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex flex-1 flex-col overflow-hidden"
+        >
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <FieldGroup>
+              <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                Datos del producto
               </p>
-            </Field>
+              <Field>
+                <FieldLabel htmlFor="prod-name">Nombre</FieldLabel>
+                <Input id="prod-name" {...register("name")} />
+                <FieldError errors={[errors.name]} />
+              </Field>
 
-            <FieldError errors={[errors.root]} />
-          </FieldGroup>
-          <DialogFooter className="mt-4">
+              <Field>
+                <FieldLabel htmlFor="prod-description">
+                  Descripción (opcional)
+                </FieldLabel>
+                <Textarea id="prod-description" rows={2} {...register("description")} />
+                <FieldError errors={[errors.description]} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="prod-price">Precio</FieldLabel>
+                <Input
+                  id="prod-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("price", { valueAsNumber: true })}
+                />
+                <FieldError errors={[errors.price]} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="prod-category">Categoría</FieldLabel>
+                <Controller
+                  control={control}
+                  name="category_id"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || NO_CATEGORY}
+                      onValueChange={(v) =>
+                        field.onChange(v === NO_CATEGORY ? "" : v)
+                      }
+                    >
+                      <SelectTrigger id="prod-category" className="w-full">
+                        <SelectValue placeholder="Sin categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NO_CATEGORY}>Sin categoría</SelectItem>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+
+              <div className="flex flex-col gap-4 border-t border-border pt-5">
+                <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                  Foto
+                </p>
+                <Field>
+                  <FieldLabel htmlFor="prod-image">
+                    Foto (opcional, JPEG/PNG/WebP, máx. 5 MB)
+                  </FieldLabel>
+                  <Input
+                    id="prod-image"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                  />
+                </Field>
+              </div>
+
+              <div className="flex flex-col gap-4 border-t border-border pt-5">
+                <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                  En la carta
+                </p>
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="prod-available">Disponible</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="available"
+                    render={({ field }) => (
+                      <Switch
+                        id="prod-available"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    )}
+                  />
+                </Field>
+
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="prod-featured">
+                    Destacado — aparece en &ldquo;Sugerencias&rdquo;
+                  </FieldLabel>
+                  <Controller
+                    control={control}
+                    name="featured"
+                    render={({ field }) => (
+                      <Switch
+                        id="prod-featured"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    )}
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="prod-paired-drink">
+                    Bebida del combo (opcional)
+                  </FieldLabel>
+                  <Controller
+                    control={control}
+                    name="paired_drink_id"
+                    render={({ field }) => (
+                      <Select
+                        value={field.value || NO_PAIRED_DRINK}
+                        onValueChange={(v) =>
+                          field.onChange(v === NO_PAIRED_DRINK ? "" : v)
+                        }
+                      >
+                        <SelectTrigger id="prod-paired-drink" className="w-full">
+                          <SelectValue placeholder="Sin bebida asociada" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_PAIRED_DRINK}>
+                            Sin bebida asociada
+                          </SelectItem>
+                          {pairedDrinkOptions.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Si eliges una bebida, este plato aparecerá en
+                    &ldquo;Sugerencias para ti&rdquo; combinado con ella.
+                  </p>
+                </Field>
+              </div>
+
+              <FieldError errors={[errors.root]} />
+            </FieldGroup>
+          </div>
+          <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border px-6 py-4">
+            <SheetClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </SheetClose>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="animate-spin" />}
               {isEdit ? "Guardar" : "Crear"}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
