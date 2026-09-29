@@ -369,4 +369,16 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 
 ---
 
+## [2026-09-29] diseño | Pendientes del rediseño del admin (bloque B)
+
+- **Resumen**: Cocina, Login, 404/error global y control segmentado compartido con el diseño nuevo; sin cambios de lógica.
+- **Detalle**: /kitchen (superficies con tokens, estado con color+texto, botón Listo 48px, tamaños iguales a antes: pedido 26px, tiempo 16px, producto 20px; sin clay/font-display/framer-motion); /login con Geist y data-theme="admin" vía (auth)/layout.tsx, mismo formulario; not-found con EmptyState; global-error con fuentes del sistema y data-theme="admin" en body; components/shared/segmented-control.tsx (SegmentedControl radiogroup con flechas/Home/End y tabindex móvil en Reportes; SegmentedLinks nav+aria-current en Ventas; clases compartidas para los Tabs de Radix en Pedidos); menú lateral completo desde 1280px (carril de iconos en tablet horizontal); a11y: el control segmentado usa aria-disabled para no soltar el foco al recargar, y el mapa de Horas pico pasa de gridcell huérfanos a role="img".
+- **Decisiones cerradas (no se hacen)**: ticket impreso (sigue en blanco y negro para impresora térmica); los diálogos de confirmación siguen como modales.
+- **Resultado de QA**: axe sin Critical/Serious en 10 vistas (390/768/1024/1440); overflow horizontal 0 en todas; teclado en Reportes correcto (navegación con flechas, Home funciona, foco en radio).
+- **Páginas actualizadas**: [[Panel del Admin]]
+- **Contradicciones**: ninguna
+- **Duración**: sesión completa (3 subagentes Sonnet, QA y docs con Haiku)
+
+---
+
 *Este log usa formato consistente `## [FECHA] operacion | descripcion` para ser parseable.*

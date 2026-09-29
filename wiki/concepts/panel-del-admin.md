@@ -2,7 +2,7 @@
 title: "Panel del Admin"
 type: "concept"
 created: "2026-09-28"
-updated: "2026-09-28"
+updated: "2026-09-29"
 sources: ["raw/assets/MAPA DE PANTALLAS — MVP.md", "raw/assets/Roles y flujo operativo — MVP.md"]
 tags: ["admin", "personal", "ventas", "cobro", "navegacion", "diseño"]
 aliases: ["panel-del-admin"]
@@ -63,6 +63,12 @@ Los tokens y temas viven en **`app/src/styles/tokens.css`** (única fuente de ve
 - `--font-sans`: tipografía (Geist en dashboard, ~29 KB; 0 en la carta)
 
 **Patrones del panel**: [[PageHeader]] con título + acciones, métricas en una superficie dividida, listas en superficie con `divide-y`, crear/editar en Sheet derecho con header y footer fijos, [[EmptyState]] con action. Todos los botones ≥44px en caja/mesas/pedidos. Menú lateral agrupado (Operación/Negocio/Configuración): 240px escritorio, iconos en tablet, cajón en móvil.
+
+**Componentes rediseñados (bloque B, 2026-09-29)**:
+- **Control segmentado compartido** (`components/shared/segmented-control.tsx`): SegmentedControl usa radiogroup con flechas/Home/End + tabindex móvil en Reportes; SegmentedLinks nav+aria-current en Ventas; clases compartidas para Tabs de Radix en Pedidos.
+- **Cocina** en el sistema: superficies con tokens, estado con color+texto, botón Listo 48px, tamaños iguales a antes (pedido 26px, tiempo 16px, producto 20px; sin clay/font-display/framer-motion).
+- **Login y not-found/global-error**: Login con Geist y data-theme="admin" vía `(auth)/layout.tsx`; not-found con EmptyState; global-error con fuentes del sistema y data-theme="admin" en body.
+- **Menú lateral completo desde 1280px** (escritorio): carril de iconos en tablet horizontal; a11y: control segmentado usa `aria-disabled` para no soltar el foco al recargar, y el mapa de Horas pico pasa de gridcell huérfanos a `role="img"`.
 
 ## Véase También
 

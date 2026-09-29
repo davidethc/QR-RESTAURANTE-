@@ -2198,3 +2198,32 @@ Capturas verificadas a 1440px (escritorio) y 768px (tablet):
 ### Datos de prueba
 
 Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (`_capturas/` está en `.gitignore`). El script abre la hoja de cobro solo para mirarla, sin cobrar.
+
+---
+
+## 2026-09-29 — Pendientes del rediseño (QA de diseño)
+
+Restaurante aislado de QA: `monky-qa`. Credenciales de `app/.env.qa.local`: `QA_MONKY_OWNER_EMAIL`, `QA_MONKY_PASSWORD` (ver archivo en el proyecto, nunca escribir valores aquí).
+
+### Script de QA (bloque B)
+
+Ejecutado: `node qa-pend.mjs 3100 <output-dir>`. Genera capturas y report.json para las vistas rediseñadas: /login, /no-existe (not-found), /kitchen, /sales, /reports, /orders a anchos 390/768/1024/1440px.
+
+**axe-core** (etiquetas `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`):
+- `/login@390`, `/login@1440`, `/no-existe@390`, `/no-existe@1440`
+- `/kitchen@768`, `/kitchen@1024`, `/kitchen@1440`
+- `/sales@1440`, `/reports@1440`, `/orders@1440`
+
+Resultado: **0 Critical/Serious en todas las vistas** (axe vacío en todas).
+
+**Overflow horizontal** (scrollWidth - innerWidth):
+- Todos los anchos (390/768/1024/1440) en todas las vistas: **0** (sin scroll horizontal).
+
+**Teclado en Reportes** (SegmentedControl con flechas/Home/End):
+- Navegación "7 días" → "Este mes" → "Hoy" con flechas y Home: ✓
+- Foco permanece en la radio del control (aria-disabled): ✓
+
+### Datos de prueba
+
+Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (están fuera del repo).
+
