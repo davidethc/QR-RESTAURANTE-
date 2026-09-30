@@ -341,15 +341,22 @@ Rama por entrega (desde origin/main) → CI (ci + Vercel) → PR → revisión d
 
 ### Sesiones y carpetas (git worktrees)
 
-Varias sesiones de Claude trabajan a la vez. Cada una tiene su carpeta y nunca edita la de otra:
+Varias sesiones de Claude trabajan a la vez. **En reposo solo existe la carpeta principal, en `main`.** Las demás carpetas se crean para una tarea y se borran cuando su PR se fusiona:
 
 | Sesión | Carpeta | Qué hace |
 |---|---|---|
-| `[jefe general]` | `QR-RESTAURANTE-` (principal, siempre en `main`) | Orquesta, revisa y fusiona PRs, aplica migraciones, vigila producción |
-| `{jefe diseno}` | `QR-RESTAURANTE--diseno` | UI/UX y estilos (tokens, componentes visuales) |
-| `[jefe funcionalidades]` | `QR-RESTAURANTE--funcionalidades` | Funcionalidades nuevas (lógica, acciones, migraciones con OK) |
+| `[jefe general]` | `QR-RESTAURANTE-` (principal, siempre en `main`, nunca se edita directo) | Orquesta, revisa y fusiona PRs, aplica migraciones, vigila producción |
+| `{jefe diseno}` | `QR-RESTAURANTE--diseno` (temporal) | UI/UX y estilos (tokens, componentes visuales) |
+| `[jefe funcionalidades]` | `QR-RESTAURANTE--funcionalidades` (temporal) | Funcionalidades nuevas; tablero en Notion y especificación en `docs/pos-spec/` |
 
-- Para crear una carpeta nueva: `git worktree add -b <rama> ../QR-RESTAURANTE--<nombre> origin/main`, copiar `app/.env.local` y `app/.env.qa.local`, y correr `npm ci` en `app/`. Turbopack no acepta `node_modules` como enlace simbólico.
+- Para empezar una tarea:
+  ```bash
+  cd /Users/d/Desktop/monky.dev/QR-RESTAURANTE- && git fetch
+  git worktree add -b <rama> ../QR-RESTAURANTE--<nombre> origin/main
+  cp app/.env.local app/.env.qa.local ../QR-RESTAURANTE--<nombre>/app/
+  cd ../QR-RESTAURANTE--<nombre>/app && npm ci   # Turbopack no acepta node_modules como enlace simbólico
+  ```
+- Al fusionarse el PR: `git worktree remove ../QR-RESTAURANTE--<nombre>` y `git branch -D <rama>`. No quedan carpetas ni ramas sueltas.
 - Los subagentes de un jefe usan `Agent` con `isolation: "worktree"` (rama y carpeta propias en `.claude/worktrees/`, que git ignora). El jefe revisa y fusiona su trabajo en su rama con `git merge --no-ff`.
 - **Una rama por entrega**, creada desde `origin/main`. GitHub borra la rama al fusionar el PR.
 - Para ponerse al día: `git fetch && git merge origin/main`. No se hace rebase de ramas ya publicadas.
