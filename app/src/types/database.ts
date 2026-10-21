@@ -1523,6 +1523,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      save_product_variants: {
+        Args: { p_product_id: string; p_variants: Json }
+        Returns: undefined
+      }
       save_product_with_variants: {
         Args: {
           p_restaurant_id: string

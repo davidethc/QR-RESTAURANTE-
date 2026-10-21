@@ -402,3 +402,12 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Decisión**: mantener writeVariants únicamente para saveProductVariants, conforme a la alternativa permitida; su límite de atomicidad sigue documentado. La RPC resuelve la atomicidad del alta y la edición del producto con variantes.
 - **Contradicciones detectadas**: ninguna.
 - **Duración**: cambio final M01-T04.
+
+## [2026-10-21] código | M01-T04: variantes aisladas por RPC atómica
+
+- **Resumen**: saveProductVariants pasa a save_product_variants con cliente de sesión, sin reenviar otros campos del producto. Se elimina writeVariants y se añade el tipo manual de la función.
+- **Referencias**: `app/supabase/migrations/20261021120000_m01_save_product_variants.sql`, `docs/pos-spec/M01-catalogo.md` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 120/120 en 11 archivos. Tests de RPC void, payload aislado, validación previa y traducción 42501/22023/23514.
+- **Contradicciones resueltas**: queda retirada la limitación anterior de saveProductVariants con múltiples escrituras REST; la función aprobada se encarga de la transacción sin actualizar otros campos del producto.
+- **Duración**: último ajuste M01-T04; sin modificar app/supabase/, sin commit ni push.

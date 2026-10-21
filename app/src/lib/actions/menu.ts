@@ -399,38 +399,16 @@ async function checkProductRelations(supabase: CatalogClient, restaurantId: stri
   return { ok: true, data: undefined };
 }
 
-async function writeVariants(supabase: CatalogClient, productId: string, variants: ProductVariantInput[]): Promise<ActionResult> {
-  const { data: existing, error: readError } = await supabase.from("product_variants").select("id").eq("product_id", productId);
-  if (readError) return dbFailure(readError, "writeVariants.read");
-  if (variants.some((variant) => variant.id && !existing.some((row) => row.id === variant.id))) {
-    return notFoundOrForbidden("la variante");
-  }
-  const reserved = new Set(variants.flatMap((variant) => variant.id ? [variant.id] : []));
-  const reusable = existing.find((row) => !reserved.has(row.id))?.id;
-  const rows = variants.map((variant, index) => ({
-    id: variant.id ?? (index === 0 && reusable ? reusable : crypto.randomUUID()),
-    product_id: productId, name: variant.name, price: variant.price, position: index,
-  }));
-  const { data: saved, error } = await supabase.from("product_variants").upsert(rows).select("id");
-  if (error) return dbFailure(error, "writeVariants.upsert");
-  if (saved?.length !== rows.length) return notFoundOrForbidden("las variantes");
-  const keep = new Set(rows.map((row) => row.id));
-  const remove = existing.filter((row) => !keep.has(row.id)).map((row) => row.id);
-  if (remove.length) {
-    const { data, error: deleteError } = await supabase.from("product_variants").delete().eq("product_id", productId).in("id", remove).select("id");
-    if (deleteError) { await refreshCatalog(); return dbFailure(deleteError, "writeVariants.delete"); }
-    if (data?.length !== remove.length) { await refreshCatalog(); return notFoundOrForbidden("las variantes anteriores"); }
-  }
-  return { ok: true, data: undefined };
-}
-
 export async function saveProductVariants(productId: string, input: unknown): Promise<ActionResult> {
   const parsed = productVariantsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-  const access = await productAccess(productId);
-  if (!access.ok) return access;
-  const result = await writeVariants(access.supabase, productId, parsed.data);
-  if (!result.ok) return result;
+  if (!catalogIdSchema.safeParse(productId).success) return { ok: false, error: "Producto inválido." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_product_variants", {
+    p_product_id: productId,
+    p_variants: parsed.data.map(({ id, name, price }) => ({ ...(id ? { id } : {}), name, price })),
+  });
+  if (error) return dbFailure(error, "save_product_variants");
   await refreshCatalog();
   return { ok: true, data: undefined };
 }

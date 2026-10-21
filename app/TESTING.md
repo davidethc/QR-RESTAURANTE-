@@ -2254,3 +2254,12 @@ Worktree `.claude/worktrees/M01-T04`, rama `feat/M01-T04-catalog-actions`. Refer
 - Pruebas actualizadas: payload exacto y una llamada RPC en el alta; edición sin escrituras REST adicionales; ausencia de borrado compensatorio o fallback ante errores 42501/22023/23514; rechazo de validación previa, respuesta sin ID y caché solo tras éxito. Siguen cubiertos los flujos legacy y personalizaciones.
 - Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`; todo en verde. **115/115 tests en 11 archivos**, incluidos 25 casos de acciones de catálogo.
 - Alcance: pruebas locales con Supabase simulado; sin escrituras en Supabase, sin SQL nuevo, sin commit, push ni PR.
+
+## 2026-10-21 — M01-T04: saveProductVariants mediante RPC específica
+
+- `saveProductVariants` valida el ID y las variantes con Zod, y llama una sola vez a `supabase.rpc('save_product_variants', {p_product_id, p_variants})` con el cliente de sesión. No lee ni reenvía nombre, categoría, descripción, disponibilidad u otros campos del producto. Solo manda `{id?, name, price}` por variante, conservando el orden.
+- Eliminado `writeVariants` y su escritura manual en varios pasos. El resultado void se considera correcto cuando no hay error, tanto si data es null como undefined. Se mantiene `ActionResult<void>` y el refresco de caché solo después del éxito.
+- Añadido a mano el tipo de `save_product_variants` en `database.ts`. Errores 42501, 22023 y 23514 pasan por las traducciones existentes de `dbFailure` en español, sin exponer mensajes internos al usuario.
+- Pruebas actualizadas: una sola RPC sin consultas REST ni campos ajenos; IDs y orden de variantes; respuesta void; validaciones antes de abrir cliente; los tres errores sin escrituras de respaldo ni invalidación de caché.
+- Verificación ejecutada: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todo en verde: **120/120 tests en 11 archivos**, incluidos 30 casos de acciones del catálogo.
+- La limitación anterior de atomicidad de `saveProductVariants` queda sustituida por esta integración. Referencia: `20261021120000_m01_save_product_variants.sql`, leída sin modificar ni aplicar. No se tocó ningún archivo bajo `app/supabase/`; pruebas con mocks, sin escrituras en la base, sin commit ni push.

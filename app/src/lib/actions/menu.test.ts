@@ -128,18 +128,37 @@ describe("producto legacy y variantes", () => {
     client([reply([])]);
     expect((await deleteProduct(productId)).ok).toBe(false);
   });
-  it("rechaza variantes vacías o ajenas sin escribir", async () => {
+  it("rechaza variantes vacías antes de crear el cliente o llamar a la RPC", async () => {
     expect((await saveProductVariants(productId, [])).ok).toBe(false);
     expect(mocks.createClient).not.toHaveBeenCalled();
-    const db = client([reply(product()), owner(), reply([{ id: variantId }])]);
-    expect((await saveProductVariants(productId, [{ id: otherId, name: "", price: 2 }])).ok).toBe(false);
-    expect(db.from).toHaveBeenCalledTimes(3);
   });
-  it("inserta antes de borrar variantes anteriores y nunca envía una lista vacía", async () => {
-    const db = client([reply(product(2)), owner(), reply([{ id: variantId }, { id: otherId }]), reply([{ id: variantId }]), reply([{ id: otherId }])]);
-    expect((await saveProductVariants(productId, [{ id: variantId, name: "", price: 4 }])).ok).toBe(true);
-    expect(db.queries[3].calls.upsert).toHaveBeenCalledWith([expect.objectContaining({ id: variantId, name: "", price: 4 })]);
-    expect(db.queries[4].calls.in).toHaveBeenCalledWith("id", [otherId]);
+  it("valida el ID del producto antes de abrir el cliente", async () => {
+    expect(await saveProductVariants("inválido", [{ name: "", price: 2 }])).toEqual({ ok: false, error: "Producto inválido." });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+  it.each([null, undefined])("guarda solo variantes con una RPC void (%s), sin leer ni escribir campos del producto", async (data) => {
+    const db = client([], { id: "owner" }, reply(data));
+    const rows = [{ id: variantId, name: " Grande ", price: 3, position: 99 }, { name: "Pequeño", price: 2, position: 0 }];
+    expect(await saveProductVariants(productId, rows)).toEqual({ ok: true, data: undefined });
+    expect(db.rpc).toHaveBeenCalledExactlyOnceWith("save_product_variants", {
+      p_product_id: productId,
+      p_variants: [{ id: variantId, name: "Grande", price: 3 }, { name: "Pequeño", price: 2 }],
+    });
+    expect(db.from).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).toHaveBeenCalledExactlyOnceWith("/menu");
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+  });
+  it.each(["42501", "22023", "23514"])("traduce %s al guardar solo variantes sin fallback REST ni refresco de caché", async (code) => {
+    const db = client([], null, fail(code));
+    const result = await saveProductVariants(productId, [{ id: otherId, name: "", price: 2 }]);
+    expect(result).toMatchObject({ ok: false, error: expect.stringMatching(/permiso|catálogo/) });
+    expect(JSON.stringify(result)).not.toContain("internal_constraint");
+    expect(db.rpc).toHaveBeenCalledExactlyOnceWith("save_product_variants", {
+      p_product_id: productId, p_variants: [{ id: otherId, name: "", price: 2 }],
+    });
+    expect(db.from).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
   });
 });
 
