@@ -382,3 +382,13 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 ---
 
 *Este log usa formato consistente `## [FECHA] operacion | descripcion` para ser parseable.*
+
+## [2026-10-21] código | M01-T04: acciones de catálogo y validación
+
+- **Resumen**: extensión de `actions/menu.ts` para productos con variantes, grupos de personalización, opciones y vínculos; tipos manuales de las cuatro tablas de T02/T03 y traducciones controladas de 22023/23514 vía `dbFailure`. Se conserva el contrato de precio único de producción.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, `docs/pos-spec/M00-base.md`, migraciones `20261020150000_m01_product_variants.sql` y `20261020160000_m01_modifier_groups.sql`.
+- **Páginas actualizadas**: ninguna página conceptual; contrato de acciones, decisiones y limitaciones registrados en `app/TESTING.md`.
+- **Verificación**: next typegen, tsc y lint sin errores; Vitest 110/110 (11 archivos). Supabase simulado; sin SQL ni escrituras en producción.
+- **Decisiones y dudas**: reutilizar la variante generada por el trigger en el lote de alta; no mandar `price` inconsistente en productos con múltiples variantes; exigir conteo confirmado al borrar grupos usados. Sin RPC de agregado en las migraciones existentes, las operaciones REST múltiples no son una transacción única y pueden requerir revisión tras errores parciales. La atomicidad y concurrencia completas requieren una entrega de BD posterior.
+- **Contradicciones detectadas**: ninguna; los grupos legacy sin opciones de T03 se pueden leer, pero las nuevas escrituras y vínculos exigen límites cumplibles.
+- **Duración**: sesión M01-T04.

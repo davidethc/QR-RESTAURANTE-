@@ -506,6 +506,185 @@ export type Database = {
           },
         ]
       }
+      product_variants: {
+        Row: {
+          id: string
+          product_id: string
+          name: string
+          price: number
+          position: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          name?: string
+          price: number
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          name?: string
+          price?: number
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modifier_groups: {
+        Row: {
+          id: string
+          restaurant_id: string
+          name: string
+          internal_label: string | null
+          min_select: number
+          max_select: number
+          allow_repeat: boolean
+          legacy_option_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          name: string
+          internal_label?: string | null
+          min_select?: number
+          max_select?: number
+          allow_repeat?: boolean
+          legacy_option_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          name?: string
+          internal_label?: string | null
+          min_select?: number
+          max_select?: number
+          allow_repeat?: boolean
+          legacy_option_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modifier_groups_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modifier_groups_legacy_option_id_fkey"
+            columns: ["legacy_option_id"]
+            isOneToOne: true
+            referencedRelation: "product_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modifier_options: {
+        Row: {
+          id: string
+          group_id: string
+          name: string
+          price: number
+          position: number
+          legacy_value_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          name: string
+          price?: number
+          position?: number
+          legacy_value_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          name?: string
+          price?: number
+          position?: number
+          legacy_value_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modifier_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modifier_options_legacy_value_id_fkey"
+            columns: ["legacy_value_id"]
+            isOneToOne: true
+            referencedRelation: "product_option_values"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_modifier_groups: {
+        Row: {
+          id: string
+          product_id: string
+          group_id: string
+          position: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          group_id: string
+          position?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          group_id?: string
+          position?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_modifier_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_modifier_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           active: boolean

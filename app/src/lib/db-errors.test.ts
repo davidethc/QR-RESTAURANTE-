@@ -20,6 +20,17 @@ describe("userFacingDbError", () => {
     expect(log).toHaveBeenCalledWith("[createOrder]", "23505", raw);
   });
 
+  it("traduce 22023 y 23514 sin exponer nombres internos", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const code of ["22023", "23514"]) {
+      const result = dbFailure({ code, message: "internal_constraint secret_table" }, "catalog");
+      expect(result.ok).toBe(false);
+      expect(result.error).not.toContain("internal_constraint");
+      expect(result.error).not.toBe(GENERIC_DB_ERROR);
+      expect(result.error).toMatch(/variante|catálogo/);
+    }
+  });
+
   it("trata un error sin código (red, PostgREST) como interno", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     expect(userFacingDbError({ message: "fetch failed" }, "ctx")).toBe(GENERIC_DB_ERROR);

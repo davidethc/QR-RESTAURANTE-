@@ -2,7 +2,7 @@
  * Traduce un error de Supabase/PostgREST a un mensaje apto para el usuario.
  *
  * Solo P0001 (RAISE EXCEPTION de nuestras RPCs) trae un texto pensado para
- * mostrarse. Cualquier otro código (constraint, tipo, permisos, PostgREST,
+ * mostrarse. Los códigos 22023 y 23514 tienen traducciones controladas. El resto (tipo, permisos, PostgREST,
  * red) es interno: se registra en el servidor con `context` y el usuario ve
  * un mensaje genérico. Así una columna, un nombre de política o un detalle
  * de la base nunca llega a la pantalla.
@@ -22,6 +22,8 @@ export function userFacingDbError(
 ): string {
   if (error.code === "P0001" && error.message) return error.message;
   console.error(`[${context}]`, error.code ?? "sin código", error.message);
+  if (error.code === "22023") return "El cambio no es válido. Revisa las variantes y las relaciones del catálogo.";
+  if (error.code === "23514") return "No se cumplen las reglas del catálogo. El producto debe conservar al menos una variante y los valores deben ser válidos.";
   return fallback;
 }
 
