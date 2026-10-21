@@ -38,6 +38,10 @@
 -- queda legible para authenticated hasta agregarla al grant por columna.
 -- ---------------------------------------------------------------------------
 
+-- ADD COLUMN toma ACCESS EXCLUSIVE: si hay otra sesión con la tabla tomada,
+-- fallar rápido en vez de quedar en cola frenando a la app.
+set local lock_timeout = '5s';
+
 alter table public.restaurant_members
   add column pin_hash text,
   add column roles text[] not null default '{}',

@@ -17,7 +17,8 @@
 --   T04 cambiar role re-deriva roles; repetir el mismo role (como hace
 --       update_staff_member al cambiar solo el estado) no toca roles; cambiar
 --       role y roles a la vez respeta roles
---   T05 pin_hash no es legible por authenticated ni anon; el resto sí
+--   T05 pin_hash no es legible por authenticated ni anon; el resto sí;
+--       authenticated sigue sin INSERT/UPDATE directo (no puede darse roles)
 --   T06 role sigue funcionando: get_my_restaurant devuelve el role,
 --       add_staff_member / update_staff_member dejan roles sincronizado
 -- ---------------------------------------------------------------------------
@@ -224,6 +225,22 @@ begin
     insert into _r (test, ok, detail) values ('T05b las demás columnas siguen legibles (RLS)', false, sqlstate || ' ' || sqlerrm);
   end;
 
+  begin
+    update public.restaurant_members set roles = array['ADMIN']
+     where user_id = (select v from _ctx where k = 'owner');
+    insert into _r (test, ok, detail) values ('T05g authenticated no escribe roles directo (UPDATE)', false, 'actualizó');
+  exception when insufficient_privilege then
+    insert into _r (test, ok, detail) values ('T05g authenticated no escribe roles directo (UPDATE)', true, sqlerrm);
+  end;
+
+  begin
+    insert into public.restaurant_members (restaurant_id, user_id, role, roles)
+    values ((select v from _ctx where k = 'restaurant'), (select v from _ctx where k = 'u_rpc'), 'WAITER', array['ADMIN']);
+    insert into _r (test, ok, detail) values ('T05h authenticated no inserta miembros directo', false, 'insertó');
+  exception when insufficient_privilege then
+    insert into _r (test, ok, detail) values ('T05h authenticated no inserta miembros directo', true, sqlerrm);
+  end;
+
   v_me := public.get_my_restaurant();
   insert into _r (test, ok, detail) values
     ('T06a get_my_restaurant del OWNER sigue devolviendo role OWNER', v_me ->> 'role' = 'OWNER', v_me ->> 'role');
@@ -242,7 +259,12 @@ insert into _r (test, ok, detail) values
   ('T05c anon sin SELECT de pin_hash', not has_column_privilege('anon', 'public.restaurant_members', 'pin_hash', 'SELECT'), ''),
   ('T05d authenticated sin SELECT de pin_hash', not has_column_privilege('authenticated', 'public.restaurant_members', 'pin_hash', 'SELECT'), ''),
   ('T05e anon sin SELECT de tabla', not has_table_privilege('anon', 'public.restaurant_members', 'SELECT'), ''),
-  ('T05f authenticated conserva SELECT de roles', has_column_privilege('authenticated', 'public.restaurant_members', 'roles', 'SELECT'), '');
+  ('T05f authenticated conserva SELECT de roles', has_column_privilege('authenticated', 'public.restaurant_members', 'roles', 'SELECT'), ''),
+  ('T05i authenticated sin INSERT ni UPDATE en restaurant_members',
+   not has_table_privilege('authenticated', 'public.restaurant_members', 'INSERT')
+   and not has_table_privilege('authenticated', 'public.restaurant_members', 'UPDATE')
+   and not has_any_column_privilege('authenticated', 'public.restaurant_members', 'INSERT')
+   and not has_any_column_privilege('authenticated', 'public.restaurant_members', 'UPDATE'), '');
 
 insert into _r (test, ok, detail)
 select 'T06b add_staff_member + update_staff_member(KITCHEN) deja roles {KITCHEN}',
