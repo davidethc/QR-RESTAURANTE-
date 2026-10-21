@@ -1,10 +1,9 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getRestaurantStaff } from "@/lib/queries/staff";
 import { isAdminClientConfigured } from "@/lib/supabase/admin";
-import { isManager } from "@/lib/permissions";
 import { AddStaffDialog } from "./_components/add-staff-dialog";
 import { StaffList } from "./_components/staff-list";
 
@@ -16,7 +15,7 @@ export const metadata: Metadata = { title: "Personal" };
 export default async function StaffPage() {
   await connection();
   const session = await getMyRestaurant();
-  if (!isManager(session.role)) redirect("/orders");
+  requireRouteAccess(session, "/staff");
 
   const staff = await getRestaurantStaff(session.restaurant.id);
   const canCreate = isAdminClientConfigured();

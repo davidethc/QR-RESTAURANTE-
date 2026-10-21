@@ -2227,3 +2227,19 @@ Resultado: **0 Critical/Serious en todas las vistas** (axe vacío en todas).
 
 Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (están fuera del repo).
 
+
+## 2026-10-21 — M00-T06: permisos y navegación por roles
+
+- Worktree `M00-T06`, rama `feat/M00-T06-permissions`. Verificación local, sin conexiones ni cambios en datos de producción.
+- Matriz de M00 §6: pantallas de WAITER/CASHIER/KITCHEN, permisos administrativos parciales, combinaciones por unión, prioridad de `roles[]`, respaldo legacy solo cuando falta, OWNER implícito, rutas anidadas y filtro del sidebar.
+- Sesión: miembro activo de la misma sucursal/usuario del RPC, selección explícita sin `pin_hash`; errores de red/permisos no recuperan permisos legacy. Proxy: entrada, URLs no permitidas, Inicio, combinación de roles, ausencia de sesión y fallo transitorio.
+- Comandos: `npx next typegen && npx tsc --noEmit && npm run lint && npm test` desde `app/` → todos en verde: 12 archivos de pruebas, 153 tests (77 nuevos); `git diff --check` sin incidencias.
+- Sin QA en navegador ni verificación de las RPC contra la base. `app/supabase/` intacto.
+
+### Decisiones y dependencias de la spec
+
+- El primer rol operativo es el primero guardado en `roles[]` (§8); OWNER/ADMIN van a Inicio. Los gestores parciales conservan sus capacidades de §6, sin elevarse a ADMIN por la frase «panel completo» de §8.
+- Inicio de WAITER y KITCHEN no consulta ventas ni muestra importes. §6 no aclara las cifras visibles a KITCHEN; se conserva el criterio de mínima exposición. CASHIER tiene capacidad de resumen de ventas, pero no acceso a Ventas/Reportes; su resumen monetario queda pendiente de autorización backend específica.
+- Disponibilidad (`/disponibilidad`, M02), Impresión (`/ajustes/impresion`, M16) y Menú digital son capacidades definidas en la matriz. Sus pantallas no existen en esta rama: no se agregan enlaces a páginas inexistentes ni se inventa una ruta de administración de Menú digital.
+- M00-T01 agrega/backfillea `roles[]`, pero deja explícitamente las RPC/RLS legacy. Las pantallas y acciones que todavía exigen OWNER/ADMIN/WAITER/KITCHEN en la base necesitan una entrega backend para funcionar con roles nuevos sin errores. Este trabajo no modifica ni elude esas autorizaciones. Por ello, los tests de frontend no certifican el criterio completo de §6 contra la base (por ejemplo Caja con CASHIER cuyo `role` legacy es WAITER).
+- La matriz declara `members.manage` separado de `members.manageAdmins` y `branch.edit` separado de crear/eliminar sucursales; su enforcement de escritura corresponde a las acciones/RPC de esos módulos. La condición de caja asignada para cobrar corresponde al backend; no se sustituye por el permiso de navegar a Caja.

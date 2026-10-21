@@ -1,9 +1,8 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
-import { isManager } from "@/lib/permissions";
 import { SettingsForm } from "./_components/settings-form";
 import { BillingSettingsForm } from "./_components/billing-settings-form";
 
@@ -20,7 +19,7 @@ export default async function SettingsPage() {
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
   const session = await getMyRestaurant();
-  if (!isManager(session.role)) redirect("/orders");
+  requireRouteAccess(session, "/settings");
   const restaurant = await getRestaurantSettings(session.restaurant.id);
 
   return (

@@ -1,3 +1,4 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
@@ -27,6 +28,7 @@ export default async function TablesPage() {
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
   const session = await getMyRestaurant();
+  requireRouteAccess(session, "/tables");
   const canManage = session.role === "OWNER" || session.role === "ADMIN";
   // Antes solo se pedía para OWNER/ADMIN (el enlace de WhatsApp de
   // CartaLinkDialog). El módulo de cobro también necesita billing_enabled

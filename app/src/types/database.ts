@@ -1057,6 +1057,10 @@ export type Database = {
       }
       restaurant_members: {
         Row: {
+          pin_hash: string | null
+          roles: string[]
+          cash_register_ids: string[]
+          email_login_enabled: boolean
           created_at: string
           id: string
           restaurant_id: string
@@ -1066,6 +1070,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          pin_hash?: string | null
+          roles?: string[]
+          cash_register_ids?: string[]
+          email_login_enabled?: boolean
           created_at?: string
           id?: string
           restaurant_id: string
@@ -1075,6 +1083,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          pin_hash?: string | null
+          roles?: string[]
+          cash_register_ids?: string[]
+          email_login_enabled?: boolean
           created_at?: string
           id?: string
           restaurant_id?: string

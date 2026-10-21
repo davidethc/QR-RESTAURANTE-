@@ -1,3 +1,4 @@
+import { readMemberSession } from "@/lib/auth/member-session";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
@@ -27,10 +28,7 @@ import type {
  */
 export const getMyRestaurant = cache(async (): Promise<MyRestaurant> => {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_my_restaurant");
-
-  if (error) throw error;
-  return data as unknown as MyRestaurant;
+  return readMemberSession(supabase);
 });
 
 export async function getStaffOrders(

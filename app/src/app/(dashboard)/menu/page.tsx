@@ -1,3 +1,4 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
@@ -18,6 +19,7 @@ export default async function MenuAdminPage() {
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
   const session = await getMyRestaurant();
+  requireRouteAccess(session, "/menu");
   const menu = await getAdminMenu(session.restaurant.id);
 
   return (

@@ -1,12 +1,11 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getSalesReport } from "@/lib/queries/staff";
-import { isManager } from "@/lib/permissions";
 import { RangeTabs, type SalesRange } from "./_components/range-tabs";
 import { SalesSummary } from "./_components/sales-summary";
 
@@ -24,7 +23,7 @@ export default async function SalesPage({
 }) {
   await connection();
   const session = await getMyRestaurant();
-  if (!isManager(session.role)) redirect("/orders");
+  requireRouteAccess(session, "/sales");
 
   const { range: rawRange } = await searchParams;
   const range: SalesRange = rawRange === "7d" || rawRange === "30d" ? rawRange : "hoy";

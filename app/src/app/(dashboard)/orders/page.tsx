@@ -1,3 +1,4 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
@@ -30,6 +31,7 @@ export default async function OrdersPage({
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
   const session = await getMyRestaurant();
+  requireRouteAccess(session, "/orders");
   const restaurantId = session.restaurant.id;
   const { table, view } = await searchParams;
   const initialTableFilter = table ? Number(table) : null;
