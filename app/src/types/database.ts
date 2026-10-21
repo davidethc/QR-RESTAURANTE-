@@ -1523,6 +1523,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      save_product_with_variants: {
+        Args: {
+          p_restaurant_id: string
+          p_name: string
+          p_variants: Json
+          p_product_id?: string | null
+          p_category_id?: string | null
+          p_description?: string | null
+          p_paired_drink_id?: string | null
+          p_available?: boolean | null
+          p_featured?: boolean | null
+        }
+        Returns: string
+      }
       accept_and_prepare_order: {
         Args: { p_order_id: string }
         Returns: undefined

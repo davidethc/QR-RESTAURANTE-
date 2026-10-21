@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dbFailure } from "@/lib/db-errors";
 import { categorySchema, productSchema, catalogIdSchema, productVariantsSchema,
   modifierGroupSchema, modifierOptionSchema, productModifierGroupSchema } from "@/lib/validations/menu";
-import type { ProductVariantInput, ModifierGroupInput } from "@/lib/validations/menu";
+import type { ProductInput, ProductVariantInput, ModifierGroupInput } from "@/lib/validations/menu";
 import type { ActionResult } from "@/types/actions";
 
 /**
@@ -109,8 +109,9 @@ export async function createProduct(
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
-  if (parsed.data.variants?.some((variant) => variant.id)) {
-    return { ok: false, error: "No envíes identificadores de variantes al crear un producto." };
+  if (parsed.data.variants) {
+    const supabase = await createClient();
+    return saveVariantProduct(supabase, restaurantId, parsed.data, parsed.data.variants);
   }
   const access = await catalogAccess(restaurantId);
   if (!access.ok) return access;
@@ -124,7 +125,7 @@ export async function createProduct(
       category_id: parsed.data.category_id || null,
       name: parsed.data.name,
       description: parsed.data.description || null,
-      price: parsed.data.variants ? Math.min(...parsed.data.variants.map((variant) => variant.price)) : parsed.data.price,
+      price: parsed.data.price,
       available: parsed.data.available,
       featured: parsed.data.featured,
       paired_drink_id: parsed.data.paired_drink_id || null,
@@ -133,17 +134,6 @@ export async function createProduct(
     .single();
 
   if (error) return dbFailure(error, "createProduct");
-  if (parsed.data.variants) {
-    const written = await writeVariants(supabase, data.id, parsed.data.variants);
-    if (!written.ok) {
-      const { data: removed, error: cleanupError } = await supabase.from("products").delete().eq("id", data.id).select("id");
-      if (cleanupError || !removed?.length) {
-        await refreshCatalog();
-        return { ok: false, error: "No se completó el alta ni se pudo retirar el producto incompleto. Recarga el catálogo y revísalo antes de reintentar." };
-      }
-      return written;
-    }
-  }
   revalidatePath("/menu");
   await refreshPublicMenuTag();
   return { ok: true, data: data.id };
@@ -161,19 +151,19 @@ export async function updateProduct(
   const access = await productAccess(productId);
   if (!access.ok) return access;
   const supabase = access.supabase;
+  if (parsed.data.variants) {
+    const saved = await saveVariantProduct(supabase, access.product.restaurant_id, parsed.data, parsed.data.variants, productId);
+    return saved.ok ? { ok: true, data: undefined } : saved;
+  }
   const relations = await checkProductRelations(supabase, access.product.restaurant_id, parsed.data);
   if (!relations.ok) return relations;
-  if (parsed.data.variants) {
-    const written = await writeVariants(supabase, productId, parsed.data.variants);
-    if (!written.ok) return written;
-  }
   const { data, error } = await supabase
     .from("products")
     .update({
       category_id: parsed.data.category_id || null,
       name: parsed.data.name,
       description: parsed.data.description || null,
-      ...(!parsed.data.variants && access.product.product_variants.length <= 1 ? { price: parsed.data.price } : {}),
+      ...(access.product.product_variants.length <= 1 ? { price: parsed.data.price } : {}),
       available: parsed.data.available,
       featured: parsed.data.featured,
       paired_drink_id: parsed.data.paired_drink_id || null,
@@ -181,8 +171,8 @@ export async function updateProduct(
     .eq("id", productId)
     .select("id");
 
-  if (error) { if (parsed.data.variants) await refreshCatalog(); return dbFailure(error, "updateProduct"); }
-  if (!data?.length) { if (parsed.data.variants) await refreshCatalog(); return notFoundOrForbidden("el producto"); }
+  if (error) return dbFailure(error, "updateProduct");
+  if (!data?.length) return notFoundOrForbidden("el producto");
   revalidatePath("/menu");
   await refreshPublicMenuTag();
   return { ok: true, data: undefined };
@@ -331,6 +321,30 @@ type CatalogClient = Awaited<ReturnType<typeof createClient>>;
 async function refreshCatalog() {
   revalidatePath("/menu");
   await refreshPublicMenuTag();
+}
+
+async function saveVariantProduct(
+  supabase: CatalogClient,
+  restaurantId: string,
+  product: ProductInput,
+  variants: ProductVariantInput[],
+  productId?: string,
+): Promise<ActionResult<string>> {
+  const { data, error } = await supabase.rpc("save_product_with_variants", {
+    p_restaurant_id: restaurantId,
+    p_name: product.name,
+    p_variants: variants.map(({ id, name, price }) => ({ ...(id ? { id } : {}), name, price })),
+    p_product_id: productId ?? null,
+    p_category_id: product.category_id || null,
+    p_description: product.description || null,
+    p_paired_drink_id: product.paired_drink_id || null,
+    p_available: product.available,
+    p_featured: product.featured,
+  });
+  if (error) return dbFailure(error, "save_product_with_variants");
+  if (!data) return notFoundOrForbidden("el producto");
+  await refreshCatalog();
+  return { ok: true, data };
 }
 
 async function catalogAccess(restaurantId: string, client?: CatalogClient) {

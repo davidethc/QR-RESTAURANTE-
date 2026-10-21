@@ -392,3 +392,13 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Decisiones y dudas**: reutilizar la variante generada por el trigger en el lote de alta; no mandar `price` inconsistente en productos con múltiples variantes; exigir conteo confirmado al borrar grupos usados. Sin RPC de agregado en las migraciones existentes, las operaciones REST múltiples no son una transacción única y pueden requerir revisión tras errores parciales. La atomicidad y concurrencia completas requieren una entrega de BD posterior.
 - **Contradicciones detectadas**: ninguna; los grupos legacy sin opciones de T03 se pueden leer, pero las nuevas escrituras y vínculos exigen límites cumplibles.
 - **Duración**: sesión M01-T04.
+
+## [2026-10-21] código | M01-T04: integración de save_product_with_variants
+
+- **Resumen**: createProduct/updateProduct con variantes pasan a la RPC aprobada, con tipo manual en database.ts y errores 42501/22023/23514 traducidos por dbFailure. Se elimina la limpieza compensatoria del alta del producto; flujos sin variantes preservados.
+- **Referencias**: `app/supabase/migrations/20261021100000_m01_save_product_with_variants.sql`, `docs/pos-spec/M01-catalogo.md` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: next typegen, tsc y lint sin errores; Vitest 115/115 (11 archivos). Sin aplicar migraciones ni escrituras en producción.
+- **Decisión**: mantener writeVariants únicamente para saveProductVariants, conforme a la alternativa permitida; su límite de atomicidad sigue documentado. La RPC resuelve la atomicidad del alta y la edición del producto con variantes.
+- **Contradicciones detectadas**: ninguna.
+- **Duración**: cambio final M01-T04.

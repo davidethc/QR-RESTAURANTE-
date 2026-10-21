@@ -23,7 +23,7 @@ type Reply = { data: unknown; error: null | { code: string; message: string }; c
 const reply = (data: unknown, count?: number): Reply => ({ data, error: null, count });
 const fail = (code = "23514"): Reply => ({ data: null, error: { code, message: "internal_constraint" } });
 const owner = () => reply({ role: "OWNER" });
-function client(replies: Reply[], user: { id: string } | null = { id: "owner" }) {
+function client(replies: Reply[], user: { id: string } | null = { id: "owner" }, rpcReply: Reply = reply(productId)) {
   const queries: { table: string; calls: Record<string, ReturnType<typeof vi.fn>> }[] = [];
   const from = vi.fn((table: string) => {
     const response = replies.shift();
@@ -36,8 +36,9 @@ function client(replies: Reply[], user: { id: string } | null = { id: "owner" })
     queries.push({ table, calls });
     return calls;
   });
-  mocks.createClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) }, from });
-  return { from, queries, remaining: replies };
+  const rpc = vi.fn(async () => rpcReply);
+  mocks.createClient.mockResolvedValue({ auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) }, from, rpc });
+  return { from, rpc, queries, remaining: replies };
 }
 
 beforeEach(() => { vi.clearAllMocks(); vi.spyOn(console, "error").mockImplementation(() => {}); });
@@ -49,38 +50,75 @@ describe("producto legacy y variantes", () => {
     expect(await createProduct(restaurantId, input)).toEqual({ ok: true, data: productId });
     expect(db.queries[1].calls.insert).toHaveBeenCalledWith(expect.objectContaining({ price: 2 }));
     expect(db.from).toHaveBeenCalledTimes(2);
+    expect(db.rpc).not.toHaveBeenCalled();
   });
-  it("reutiliza la variante del trigger y escribe el lote sin precio fantasma", async () => {
-    const db = client([owner(), reply({ id: productId }), reply([{ id: variantId }]), reply([{ id: variantId }, { id: otherId }])]);
-    expect((await createProduct(restaurantId, { ...input, price: 99, variants })).ok).toBe(true);
-    expect(db.queries[1].calls.insert).toHaveBeenCalledWith(expect.objectContaining({ price: 2 }));
-    expect(db.queries[3].calls.upsert).toHaveBeenCalledWith([
-      expect.objectContaining({ id: variantId, name: "Pequeño", price: 2, position: 0 }),
-      expect.objectContaining({ name: "Grande", price: 3, position: 1 }),
-    ]);
-    expect(db.from).toHaveBeenCalledTimes(4);
-    expect(db.remaining).toHaveLength(0);
+  it("crea con variantes mediante una sola RPC sin INSERT ni limpieza manual", async () => {
+    const db = client([]);
+    expect(await createProduct(restaurantId, { ...input, price: 99, variants, category_id: groupId, paired_drink_id: otherId, description: " Caliente " })).toEqual({ ok: true, data: productId });
+    expect(db.rpc).toHaveBeenCalledExactlyOnceWith("save_product_with_variants", {
+      p_restaurant_id: restaurantId, p_name: "Café", p_variants: variants,
+      p_product_id: null, p_category_id: groupId, p_description: "Caliente", p_paired_drink_id: otherId,
+      p_available: true, p_featured: false,
+    });
+    expect(db.from).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/menu");
+    expect(mocks.refresh).toHaveBeenCalledOnce();
   });
-  it("retira el producto recién creado si falla el lote de variantes", async () => {
-    const db = client([owner(), reply({ id: productId }), reply([{ id: variantId }]), fail(), reply([{ id: productId }])]);
+  it("edita producto y variantes en la RPC conservando IDs y orden, sin escrituras REST", async () => {
+    const db = client([reply(product(2)), owner()]);
+    const rows = [{ id: variantId, name: "Grande", price: 3, position: 99 }, { name: "Pequeño", price: 2, position: 0 }];
+    expect(await updateProduct(productId, { ...input, variants: rows })).toEqual({ ok: true, data: undefined });
+    expect(db.rpc).toHaveBeenCalledExactlyOnceWith("save_product_with_variants", {
+      p_restaurant_id: restaurantId, p_product_id: productId, p_name: "Café",
+      p_variants: [{ id: variantId, name: "Grande", price: 3 }, { name: "Pequeño", price: 2 }],
+      p_category_id: null, p_description: null, p_paired_drink_id: null, p_available: true, p_featured: false,
+    });
+    expect(db.from).toHaveBeenCalledTimes(2);
+    for (const query of db.queries) {
+      expect(query.calls.update).not.toHaveBeenCalled();
+      expect(query.calls.upsert).not.toHaveBeenCalled();
+      expect(query.calls.delete).not.toHaveBeenCalled();
+    }
+  });
+  it.each(["42501", "22023", "23514"])("traduce %s de la RPC y no limpia ni refresca tras el fallo", async (code) => {
+    const db = client([], null, fail(code));
+    const result = await createProduct(restaurantId, { ...input, variants });
+    expect(result).toMatchObject({ ok: false, error: expect.stringMatching(/permiso|catálogo/) });
+    expect(JSON.stringify(result)).not.toContain("internal_constraint");
+    expect(db.rpc).toHaveBeenCalledOnce();
+    expect(db.from).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+  it("un fallo de edición con variantes no desencadena un UPDATE de respaldo", async () => {
+    const db = client([reply(product(2)), owner()], { id: "owner" }, fail("22023"));
+    expect((await updateProduct(productId, { ...input, variants })).ok).toBe(false);
+    expect(db.from).toHaveBeenCalledTimes(2);
+    expect(db.rpc).toHaveBeenCalledOnce();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+  it("no reporta éxito ni invalida caché si la RPC no devuelve ID", async () => {
+    const db = client([], { id: "owner" }, reply(null));
     expect((await createProduct(restaurantId, { ...input, variants })).ok).toBe(false);
-    expect(db.queries[4].table).toBe("products");
-    expect(db.queries[4].calls.delete).toHaveBeenCalled();
-    expect(db.queries[4].calls.eq).toHaveBeenCalledWith("id", productId);
+    expect(db.from).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
   });
-  it("avisa si también falla la limpieza del alta", async () => {
-    client([owner(), reply({ id: productId }), reply([{ id: variantId }]), fail(), fail()]);
-    expect(await createProduct(restaurantId, { ...input, variants })).toMatchObject({ ok: false, error: expect.stringContaining("producto incompleto") });
+  it("mantiene la validación local antes de llamar a la RPC", async () => {
+    expect((await createProduct(restaurantId, { ...input, variants: [] })).ok).toBe(false);
+    expect((await updateProduct(productId, { ...input, variants: [{ name: "", price: 5 }] })).ok).toBe(false);
+    expect(mocks.createClient).not.toHaveBeenCalled();
   });
   it("actualiza el precio legacy cuando existe una sola variante", async () => {
     const db = client([reply(product()), owner(), reply([{ id: productId }])]);
     expect((await updateProduct(productId, { ...input, price: 4 })).ok).toBe(true);
     expect(db.queries[2].calls.update).toHaveBeenCalledWith(expect.objectContaining({ price: 4 }));
+    expect(db.rpc).not.toHaveBeenCalled();
   });
   it("omite price al editar un producto con múltiples variantes", async () => {
     const db = client([reply(product(2)), owner(), reply([{ id: productId }])]);
     expect((await updateProduct(productId, { ...input, price: 99 })).ok).toBe(true);
     expect(db.queries[2].calls.update.mock.calls[0][0]).not.toHaveProperty("price");
+    expect(db.rpc).not.toHaveBeenCalled();
   });
   it("detecta cero filas en la edición y conserva el contrato del borrado legacy", async () => {
     client([reply(product()), owner(), reply([])]);
