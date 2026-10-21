@@ -8,7 +8,7 @@
 -- migración. El último SELECT lista cada prueba con ok = true/false.
 --
 -- Qué demuestra:
---   S01 backfill: toda categoría de toda la base tiene su "Menú general"
+--   S01 backfill: toda categoría de monky-qa tiene su "Menú general"
 --   S02 una categoría nueva sin horarios recibe el "Menú general" de su restaurante
 --   S02b si el restaurante no tiene "Menú general", el trigger lo crea
 --   S03 se rechaza un schedule_id de otro restaurante (23503)
@@ -19,6 +19,11 @@
 --   S06 weekday fuera de 0..6 se rechaza (23514); un turno que cruza la medianoche se acepta
 --   S07 RLS: OWNER crea horarios; WAITER no escribe en schedules ni en schedule_shifts
 --   S08 anon no lee schedules ni schedule_shifts
+--   S09 un horario no cambia de restaurante ni un turno de horario (22023)
+--   S10 como authenticated (usuarios reales de monky-qa):
+--       a) OWNER no pone en una categoría un horario de otro restaurante (23503)
+--       b) OWNER y WAITER ven 0 schedules / schedule_shifts de otros restaurantes
+--       c) WAITER no hace UPDATE/DELETE en schedule_shifts ni DELETE en schedules
 -- ---------------------------------------------------------------------------
 
 begin;
@@ -59,10 +64,11 @@ end $$;
 -- S01 · backfill
 -- ---------------------------------------------------------------------------
 insert into _r (test, ok, detail)
-select 'S01 toda categoría tiene el Menú general de su restaurante',
+select 'S01 toda categoría de monky-qa tiene su Menú general',
        count(*) = 0, count(*) || ' categorías sin Menú general'
 from public.categories c
-where not exists (
+where c.restaurant_id = (select v from _ctx where k = 'restaurant')
+  and not exists (
   select 1 from public.schedules s
   where s.restaurant_id = c.restaurant_id
     and s.name = 'Menú general'
@@ -276,6 +282,140 @@ begin
 end $$;
 
 reset role;
+
+-- ---------------------------------------------------------------------------
+-- S09 · el padre de un horario o de un turno no cambia (como postgres: aplica a todos)
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_s uuid := (select v from _ctx where k = 'general2');
+begin
+  begin
+    update public.schedules set restaurant_id = gen_random_uuid() where id = v_s;
+    insert into _r (test, ok, detail) values ('S09a schedules.restaurant_id no cambia', false, 'actualizó');
+  exception when others then
+    insert into _r (test, ok, detail) values ('S09a schedules.restaurant_id no cambia', sqlstate = '22023', sqlstate || ' ' || sqlerrm);
+  end;
+
+  begin
+    update public.schedule_shifts set schedule_id = (select v from _ctx where k = 'foreign_schedule')
+    where schedule_id = v_s;
+    insert into _r (test, ok, detail) values ('S09b schedule_shifts.schedule_id no cambia', false, 'actualizó');
+  exception when others then
+    insert into _r (test, ok, detail) values ('S09b schedule_shifts.schedule_id no cambia', sqlstate = '22023', sqlstate || ' ' || sqlerrm);
+  end;
+
+  update public.schedules set name = 'QA M01 renombrado' where id = v_s;
+  insert into _r (test, ok, detail) values ('S09c renombrar un horario sigue permitido', true, '');
+exception when others then
+  insert into _r (test, ok, detail) values ('S09 bloque', false, sqlstate || ' ' || sqlerrm);
+end $$;
+
+update public.schedules set name = 'Menú general' where id = (select v from _ctx where k = 'general2');
+
+-- Datos para S10b/S10c, medidos como postgres (solo lectura fuera de monky-qa).
+insert into _ctx values
+  ('qa_shift', (select ss.id from public.schedule_shifts ss
+                join public.schedules s on s.id = ss.schedule_id
+                where s.restaurant_id = (select v from _ctx where k = 'restaurant') limit 1));
+
+create temp table _n (k text primary key, n bigint) on commit drop;
+grant select on _n to public;
+insert into _n values
+  ('foreign_schedules', (select count(*) from public.schedules where restaurant_id <> (select v from _ctx where k = 'restaurant'))),
+  ('foreign_shifts', (select count(*) from public.schedule_shifts ss join public.schedules s on s.id = ss.schedule_id
+                      where s.restaurant_id <> (select v from _ctx where k = 'restaurant'))),
+  ('qa_shifts', (select count(*) from public.schedule_shifts ss join public.schedules s on s.id = ss.schedule_id
+                 where s.restaurant_id = (select v from _ctx where k = 'restaurant'))),
+  ('qa_schedules', (select count(*) from public.schedules where restaurant_id = (select v from _ctx where k = 'restaurant')));
+
+-- ---------------------------------------------------------------------------
+-- S10a / S10b · OWNER de monky-qa
+-- ---------------------------------------------------------------------------
+select set_config('role', 'authenticated', true),
+       set_config('request.jwt.claims',
+                  json_build_object('sub', (select v from _ctx where k = 'owner'), 'role', 'authenticated')::text, true);
+
+do $$
+declare
+  v_r uuid := (select v from _ctx where k = 'restaurant');
+  v_n bigint;
+  v_m bigint;
+begin
+  begin
+    insert into public.categories (restaurant_id, name, schedule_ids)
+    values (v_r, 'QA M01 owner ajeno', array[(select v from _ctx where k = 'foreign_schedule')]);
+    insert into _r (test, ok, detail) values ('S10a OWNER: INSERT con horario de otro restaurante se rechaza', false, 'insertó');
+  exception when others then
+    insert into _r (test, ok, detail) values
+      ('S10a OWNER: INSERT con horario de otro restaurante se rechaza', sqlstate = '23503', sqlstate || ' ' || sqlerrm);
+  end;
+
+  begin
+    update public.categories set schedule_ids = schedule_ids || (select v from _ctx where k = 'foreign_schedule')
+    where restaurant_id = v_r and name = 'QA M01 sin horarios';
+    insert into _r (test, ok, detail) values ('S10a OWNER: UPDATE con horario de otro restaurante se rechaza', false, 'actualizó');
+  exception when others then
+    insert into _r (test, ok, detail) values
+      ('S10a OWNER: UPDATE con horario de otro restaurante se rechaza', sqlstate = '23503', sqlstate || ' ' || sqlerrm);
+  end;
+
+  select count(*) into v_n from public.schedules where restaurant_id <> v_r;
+  select count(*) into v_m from public.schedule_shifts ss
+    where not exists (select 1 from public.schedules s where s.id = ss.schedule_id and s.restaurant_id = v_r);
+  insert into _r (test, ok, detail) values
+    ('S10b OWNER ve 0 schedules y 0 schedule_shifts de otros restaurantes',
+     v_n = 0 and v_m = 0 and (select n from _n where k = 'foreign_schedules') > 0,
+     format('visibles %s/%s horarios y %s/%s turnos ajenos', v_n, (select n from _n where k = 'foreign_schedules'),
+            v_m, (select n from _n where k = 'foreign_shifts')));
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- S10b / S10c · WAITER de monky-qa
+-- ---------------------------------------------------------------------------
+select set_config('role', 'authenticated', true),
+       set_config('request.jwt.claims',
+                  json_build_object('sub', (select v from _ctx where k = 'waiter'), 'role', 'authenticated')::text, true);
+
+do $$
+declare
+  v_r uuid := (select v from _ctx where k = 'restaurant');
+  v_n bigint;
+  v_m bigint;
+begin
+  select count(*) into v_n from public.schedules where restaurant_id <> v_r;
+  select count(*) into v_m from public.schedule_shifts ss
+    where not exists (select 1 from public.schedules s where s.id = ss.schedule_id and s.restaurant_id = v_r);
+  insert into _r (test, ok, detail) values
+    ('S10b WAITER ve 0 schedules y 0 schedule_shifts de otros restaurantes', v_n = 0 and v_m = 0,
+     format('visibles %s horarios y %s turnos ajenos', v_n, v_m));
+
+  update public.schedule_shifts set ends_at = '23:00' where id = (select v from _ctx where k = 'qa_shift');
+  get diagnostics v_n = row_count;
+  insert into _r (test, ok, detail) values ('S10c WAITER no actualiza schedule_shifts', v_n = 0, v_n || ' filas');
+
+  delete from public.schedule_shifts where schedule_id in (select id from public.schedules where restaurant_id = v_r);
+  get diagnostics v_n = row_count;
+  insert into _r (test, ok, detail) values ('S10c WAITER no borra schedule_shifts', v_n = 0, v_n || ' filas');
+
+  delete from public.schedules where restaurant_id = v_r;
+  get diagnostics v_n = row_count;
+  insert into _r (test, ok, detail) values ('S10c WAITER no borra schedules', v_n = 0, v_n || ' filas');
+exception when others then
+  insert into _r (test, ok, detail) values ('S10 WAITER bloque', false, sqlstate || ' ' || sqlerrm);
+end $$;
+
+reset role;
+
+-- Control como postgres: lo de monky-qa sigue intacto después de los intentos del WAITER.
+insert into _r (test, ok, detail)
+select 'S10c horarios y turnos de monky-qa siguen intactos',
+       (select count(*) from public.schedules where restaurant_id = (select v from _ctx where k = 'restaurant')) = (select n from _n where k = 'qa_schedules')
+       and (select count(*) from public.schedule_shifts ss join public.schedules s on s.id = ss.schedule_id
+            where s.restaurant_id = (select v from _ctx where k = 'restaurant')) = (select n from _n where k = 'qa_shifts')
+       and (select n from _n where k = 'qa_shifts') > 0
+       and (select ends_at from public.schedule_shifts where id = (select v from _ctx where k = 'qa_shift')) <> '23:00',
+       format('%s horarios, %s turnos', (select n from _n where k = 'qa_schedules'), (select n from _n where k = 'qa_shifts'));
 
 select n, test, ok, detail from _r order by n;
 

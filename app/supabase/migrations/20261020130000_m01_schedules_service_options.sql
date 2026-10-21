@@ -39,16 +39,29 @@
 --     calificados: corren con los permisos (y la RLS) de quien escribe la
 --     categoría o borra el horario, que ya es OWNER/ADMIN de ese restaurante.
 --
--- Efecto colateral del backfill: el UPDATE de categories dispara
--- categories_set_updated_at, así que updated_at de todas las categorías
--- existentes pasa a la hora de la migración.
+--   * Un horario no cambia de restaurante ni un turno de horario: trigger
+--     BEFORE UPDATE que lanza 22023 si cambian schedules.restaurant_id o
+--     schedule_shifts.schedule_id. Se eligió trigger y no grants por columna
+--     porque también cubre a service_role y a postgres (server actions con
+--     cliente admin, scripts) y no se reabre si una migración futura hace
+--     "grant update on ..." completo. Así la invariante "ids del mismo
+--     restaurante" de categories.schedule_ids no se puede romper moviendo
+--     el horario.
+--   * schedules.name sin espacios al borde ni vacío (CHECK name = btrim(name)).
+--
+-- El backfill desactiva categories_set_updated_at para no tocar updated_at
+-- de las categorías existentes. lock_timeout corto: si hay una lectura larga
+-- delante, la migración falla rápido (se reintenta) en vez de encolar la carta.
 -- ---------------------------------------------------------------------------
+
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
 
 -- 1. Horarios -----------------------------------------------------------------
 create table public.schedules (
   id uuid primary key default gen_random_uuid(),
   restaurant_id uuid not null references public.restaurants (id) on delete cascade,
-  name text not null check (char_length(btrim(name)) between 1 and 80),
+  name text not null check (name = btrim(name) and char_length(name) between 1 and 80),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint schedules_restaurant_name_key unique (restaurant_id, name)
@@ -74,6 +87,31 @@ comment on table public.schedule_shifts is
   'Turnos de un horario. weekday 0 = domingo ... 6 = sábado. Si ends_at < starts_at el turno cruza la medianoche y termina al día siguiente.';
 
 create index schedule_shifts_schedule_weekday_idx on public.schedule_shifts (schedule_id, weekday);
+
+create or replace function public.forbid_parent_change()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if (to_jsonb(new) -> tg_argv[0]) is distinct from (to_jsonb(old) -> tg_argv[0]) then
+    raise exception '% no se puede cambiar en %', tg_argv[0], tg_table_name
+      using errcode = '22023';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.forbid_parent_change() from public, anon, authenticated;
+
+create trigger schedules_forbid_restaurant_change
+before update of restaurant_id on public.schedules
+for each row execute function public.forbid_parent_change('restaurant_id');
+
+create trigger schedule_shifts_forbid_schedule_change
+before update of schedule_id on public.schedule_shifts
+for each row execute function public.forbid_parent_change('schedule_id');
 
 -- 2. RLS y permisos -----------------------------------------------------------
 alter table public.schedules enable row level security;
@@ -167,12 +205,16 @@ select r.id, 'Menú general'
 from public.restaurants r
 on conflict (restaurant_id, name) do nothing;
 
+alter table public.categories disable trigger categories_set_updated_at;
+
 update public.categories c
 set schedule_ids = array[s.id]
 from public.schedules s
 where s.restaurant_id = c.restaurant_id
   and s.name = 'Menú general'
   and c.schedule_ids = '{}';
+
+alter table public.categories enable trigger categories_set_updated_at;
 
 create or replace function public.categories_schedule_ids_guard()
 returns trigger
