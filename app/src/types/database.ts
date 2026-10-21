@@ -1229,39 +1229,64 @@ export type Database = {
       }
       tables: {
         Row: {
+          col: number | null
           created_at: string
+          height_cells: number
           id: string
           kind: Database["public"]["Enums"]["table_kind"]
           name: string | null
           number: number
           qr_token: string
           restaurant_id: string
+          row: number | null
+          shape: string
           status: Database["public"]["Enums"]["table_status"]
           updated_at: string
+          width_cells: number
+          zone_id: string | null
         }
         Insert: {
+          col?: number | null
           created_at?: string
+          height_cells?: number
           id?: string
           kind?: Database["public"]["Enums"]["table_kind"]
           name?: string | null
           number: number
           qr_token?: string
           restaurant_id: string
+          row?: number | null
+          shape?: string
           status?: Database["public"]["Enums"]["table_status"]
           updated_at?: string
+          width_cells?: number
+          zone_id?: string | null
         }
         Update: {
+          col?: number | null
           created_at?: string
+          height_cells?: number
           id?: string
           kind?: Database["public"]["Enums"]["table_kind"]
           name?: string | null
           number?: number
           qr_token?: string
           restaurant_id?: string
+          row?: number | null
+          shape?: string
           status?: Database["public"]["Enums"]["table_status"]
           updated_at?: string
+          width_cells?: number
+          zone_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tables_zone_restaurant_fkey"
+            columns: ["zone_id", "restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id", "restaurant_id"]
+          },
           {
             foreignKeyName: "tables_restaurant_id_fkey"
             columns: ["restaurant_id"]
@@ -1335,6 +1360,47 @@ export type Database = {
             columns: ["table_session_id"]
             isOneToOne: false
             referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zones: {
+        Row: {
+          created_at: string
+          grid_cols: number
+          grid_rows: number
+          id: string
+          name: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grid_cols?: number
+          grid_rows?: number
+          id?: string
+          name: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grid_cols?: number
+          grid_rows?: number
+          id?: string
+          name?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zones_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
