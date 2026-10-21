@@ -382,3 +382,21 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 ---
 
 *Este log usa formato consistente `## [FECHA] operacion | descripcion` para ser parseable.*
+
+## [2026-10-21] código | M01-T07: editor reutilizable de horarios básicos
+
+- **Resumen**: tipos manuales de `schedules`/`schedule_shifts` según la migración M01-T01, validación Zod con A1/B2/C1 y solapamientos, acciones OWNER/ADMIN y editor reutilizable con tokens existentes y controles de al menos 44 px. Sin cambios SQL ni al layout del admin.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, `app/supabase/migrations/20261020130000_m01_schedules_service_options.sql`, `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro técnico en `app/TESTING.md`.
+- **Verificación**: typegen, tsc, lint; Vitest 96/96. No se verificó UI en navegador. La validación de solapamientos no es atómica entre sesiones concurrentes con la API y el SQL existentes.
+- **Contradicciones detectadas**: A1 del encargo precisa que un día sin turnos queda cerrado cuando hay turnos en otros días; cero turnos en todo el horario significa 24 h.
+- **Duración**: sesión M01-T07.
+
+## [2026-10-21] código | M01-T07: segunda pasada de horarios según diseño
+
+- **Resumen**: editor ajustado a la maqueta de horarios, mensajes exactos por campo, resumen semanal durante la edición y confirmación del último turno. La validación detecta la cola nocturna sobre el día siguiente, incluido el cruce semanal.
+- **Referencias**: `_capturas/diseno-sprint1/M01-T07-horarios/README.md` y `maqueta.html` del repo principal (solo lectura); `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; se amplía el registro de QA.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 99/99 (11 archivos). Sin QA visual ni cambios SQL.
+- **Contradicciones detectadas**: ninguna; el encargo confirma que la superposición también incluye intervalos que empiezan en días distintos.
+- **Duración**: segunda pasada M01-T07.

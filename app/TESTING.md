@@ -2227,3 +2227,24 @@ Resultado: **0 Critical/Serious en todas las vistas** (axe vacío en todas).
 
 Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (están fuera del repo).
 
+
+## 2026-10-21 — M01-T07: horarios básicos
+
+Worktree `.claude/worktrees/M01-T07`, rama `feat/M01-T07-horarios`.
+
+- Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`.
+- Resultado: typegen, TypeScript y ESLint sin errores; Vitest **96/96** (11 archivos), incluidos 10 casos de reglas de horarios y 10 de acciones con Supabase simulado.
+- A1: cero turnos abre 24 h toda la semana; con algún turno, los demás días sin turnos quedan cerrados. B2: turno nocturno pertenece al día de inicio, continúa al siguiente y excluye el instante de cierre; probado sábado → domingo. C1: UI lunes → domingo conservando domingo = 0. Solapamientos: duplicados, contención y cruce nocturno rechazados en el mismo día; extremos contiguos permitidos.
+- Acciones: sesión requerida, membresía ACTIVE, OWNER/ADMIN, pertenencia del horario al restaurante, nombre duplicado en español, validación contra turnos persistidos y detección de escrituras con cero filas.
+- Editor reutilizable: `src/components/schedules/schedule-editor.tsx`; props `restaurantId`, `initialSchedule?`, `onSaved?`. Usar `key={initialSchedule?.id ?? "new"}` al seleccionar otro horario. Crea el horario vacío y guarda/agrega/quita cada turno por separado; controles con altura mínima de 44 px y tokens existentes. Sin integración en rutas ni cambios al layout del admin.
+- Límite: las lecturas y escrituras REST separadas no evitan una carrera de solapamientos entre sesiones concurrentes. La migración existente no tiene exclusión de intervalos ni RPC transaccional; esta entrega no modifica SQL. El editor bloquea cambios simultáneos dentro de su propia instancia.
+- Alcance de QA: pruebas automatizadas locales; sin pruebas visuales en navegador ni escrituras en Supabase.
+
+## 2026-10-21 — M01-T07: segunda pasada según maqueta
+
+- Referencia de solo lectura: `_capturas/diseno-sprint1/M01-T07-horarios/README.md` y `maqueta.html` del repo principal.
+- Editor: + Turno por día, tiempos apilados en móvil y en pareja desde 768 px, resumen semanal que refleja la edición y queda lateral desde 1024 px; confirmación antes de borrar el último turno persistido. Sin cambios al layout del admin.
+- Textos exactos: «Termina al día siguiente» bajo Hasta; igualdad de horas «La hora final no puede ser igual al inicio.» junto a Hasta; superposición «Este turno se superpone con otro, incluido el que termina al día siguiente.» junto a Desde. Se conserva el aviso completo de 24 horas sin turnos.
+- Solapamientos: ahora se comparan intervalos semanales con sus continuaciones nocturnas; regresiones para los siete cambios de día, domingo → lunes y sábado → domingo incluidos, en ambos órdenes de entrada. Intervalos contiguos al cierre nocturno siguen siendo válidos. La acción usa la misma validación contra turnos persistidos.
+- Verificación ejecutada: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todos en verde: **99/99 tests**, 11 archivos (12 casos de validación de horarios y 11 de acciones).
+- Sin QA visual en navegador ni escrituras en Supabase. Se mantiene el límite documentado de concurrencia entre sesiones.
