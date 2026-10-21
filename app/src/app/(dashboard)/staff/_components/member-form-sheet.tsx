@@ -1,14 +1,12 @@
 "use client";
 
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, useTransition, type ReactNode } from "react";
 import { Delete, KeyRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Field,
   FieldLabel,
@@ -41,7 +39,20 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { RecoverableError } from "@/components/shared/recoverable-error";
+import { useRouter } from "next/navigation";
+import { notify } from "@/lib/notifications";
+import { saveMember } from "@/lib/actions/staff";
+import { MEMBER_ROLES, type MemberRole } from "@/lib/validations/staff";
+import type { CashRegisterOption } from "@/lib/queries/cash";
+import {
+  memberFormInput,
+  memberFormErrors,
+  memberServerErrorField,
+  type MemberFormInitial,
+  type MemberFormValues,
+  type MemberFormErrors,
+  type MemberFormField,
+} from "./member-form-model";
 
 const roles = [
   [
@@ -82,30 +93,12 @@ const roles = [
   ],
 ] as const;
 
-type MemberRole = (typeof roles)[number][0];
-export type MemberFormExample = {
-  firstName: string;
-  lastName: string;
-  hasPin: boolean;
-  emailEnabled: boolean;
-  email: string;
-  hasPassword: boolean;
-  roles: MemberRole[];
-  branchIds: string[];
-  registerIds: string[];
-};
 export type MemberFormSheetProps = {
+  restaurantId: string;
+  registers: readonly CashRegisterOption[];
+  assignableRoles?: readonly MemberRole[];
   trigger: ReactNode;
-  mode?: "create" | "edit";
-  initialMember?: MemberFormExample;
-  branches: { id: string; name: string; description?: string }[];
-  registers: { id: string; branchId: string; name: string }[];
-  currentBranchId?: string;
-  /** Only UI examples: no lookup or persistence is performed. */
-  duplicateEmails?: string[];
-  loadState?: "ready" | "loading" | "error";
-  saveState?: "ready" | "saving" | "error";
-  onRetry?: () => void;
+  initialMember?: MemberFormInitial;
 };
 
 function Choice({
@@ -163,7 +156,7 @@ function PinDialog({
   assigned: boolean;
   invalid: boolean;
   errorId: string;
-  onAssign: () => void;
+  onAssign: (pin: string) => void;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -181,7 +174,7 @@ function PinDialog({
       input.current?.focus();
       return;
     }
-    onAssign();
+    onAssign(digits);
     changeOpen(false);
   }
   return (
@@ -296,13 +289,15 @@ function PinDialog({
   );
 }
 
-/** Visual prototype. Credentials are never returned, logged or persisted. */
 export function MemberFormSheet(props: MemberFormSheetProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [discard, setDiscard] = useState(false);
+  const [saving, startTransition] = useTransition();
   const dirty = useRef(false);
+  const submitting = useRef(false);
   function requestClose(value: boolean) {
-    if (!value && props.saveState === "saving") return;
+    if (submitting.current) return;
     if (!value && dirty.current) setDiscard(true);
     else {
       dirty.current = false;
@@ -319,10 +314,38 @@ export function MemberFormSheet(props: MemberFormSheetProps) {
         {open && (
           <MemberForm
             {...props}
+            saving={saving}
             markDirty={() => {
               dirty.current = true;
             }}
             onCancel={() => requestClose(false)}
+            onSubmit={(input, onError) => {
+              if (submitting.current) return;
+              submitting.current = true;
+              startTransition(async () => {
+                try {
+                  const result = await saveMember(props.restaurantId, input);
+                  if (!result.ok) {
+                    onError(result.error);
+                    return;
+                  }
+                  dirty.current = false;
+                  setOpen(false);
+                  notify.success(
+                    props.initialMember
+                      ? "Miembro actualizado"
+                      : "Miembro agregado",
+                  );
+                  router.refresh();
+                } catch {
+                  onError(
+                    "No pudimos confirmar el guardado. Tu borrador sigue aquí. Revisa Personal antes de reintentar.",
+                  );
+                } finally {
+                  submitting.current = false;
+                }
+              });
+            }}
           />
         )}
         <AlertDialog open={discard} onOpenChange={setDiscard}>
@@ -358,96 +381,74 @@ export function MemberFormSheet(props: MemberFormSheetProps) {
 }
 
 function MemberForm({
-  mode = "create",
   initialMember,
-  branches,
   registers,
-  currentBranchId,
-  duplicateEmails = [],
-  loadState = "ready",
-  saveState = "ready",
-  onRetry,
+  assignableRoles = MEMBER_ROLES,
+  saving,
   markDirty,
   onCancel,
-}: MemberFormSheetProps & { markDirty: () => void; onCancel: () => void }) {
+  onSubmit,
+}: MemberFormSheetProps & {
+  saving: boolean;
+  markDirty: () => void;
+  onCancel: () => void;
+  onSubmit: (
+    input: ReturnType<typeof memberFormInput>,
+    onError: (message: string) => void,
+  ) => void;
+}) {
   const id = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const previewRef = useRef<HTMLElement>(null);
-  const [member, setMember] = useState<MemberFormExample>(
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const [member, setMember] = useState<MemberFormValues>(
     () =>
       initialMember ?? {
         firstName: "",
         lastName: "",
-        hasPin: false,
-        emailEnabled: false,
         email: "",
-        hasPassword: false,
+        active: true,
         roles: [],
-        branchIds:
-          currentBranchId &&
-          branches.some((branch) => branch.id === currentBranchId)
-            ? [currentBranchId]
-            : [],
-        registerIds: [],
+        cashRegisterIds: [],
       },
   );
+  const [pin, setPin] = useState("");
   const [password, setPassword] = useState("");
   const [changePassword, setChangePassword] = useState(false);
-  const [attempted, setAttempted] = useState(false);
-  const [withoutAccess, setWithoutAccess] = useState(false);
-  const [feedback, setFeedback] = useState(false);
-  const saving = saveState === "saving";
+  const [errors, setErrors] = useState<MemberFormErrors>({});
+  const [serverError, setServerError] = useState("");
+  const editing = !!initialMember;
   const cashier = member.roles.includes("CASHIER");
-  const selectedBranches = branches.filter((branch) =>
-    member.branchIds.includes(branch.id),
+  const pinAssigned = !!pin || initialMember?.hasPin === true;
+  const selectedRegisters = registers.filter((register) =>
+    member.cashRegisterIds.includes(register.id),
   );
-  const availableRegisters = registers.filter((register) =>
-    selectedBranches.some((branch) => branch.id === register.branchId),
-  );
-  const selectedRegisters = availableRegisters.filter((register) =>
-    member.registerIds.includes(register.id),
-  );
-  const needsPassword =
-    member.emailEnabled && (!member.hasPassword || changePassword);
-  const errors = {
-    firstName: member.firstName.trim() ? "" : "Completa este campo.",
-    lastName: member.lastName.trim() ? "" : "Completa este campo.",
-    pin: member.hasPin ? "" : "Asigna un PIN de 4 dígitos.",
-    email: !member.emailEnabled
-      ? ""
-      : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email.trim())
-        ? "Escribe un correo válido."
-        : duplicateEmails.some(
-              (email) =>
-                email.toLowerCase() === member.email.trim().toLowerCase(),
-            )
-          ? "Ya existe una cuenta con este correo. Usa su cuenta existente."
-          : "",
-    password: needsPassword && !password ? "Completa este campo." : "",
-    registers:
-      cashier && !selectedRegisters.length
-        ? "Asigna al menos una caja para el rol Cajero."
-        : "",
-  };
-  function update(patch: Partial<MemberFormExample>) {
+  function clearError(field: MemberFormField) {
+    setErrors((value) => ({ ...value, [field]: undefined }));
+  }
+  function update(patch: Partial<MemberFormValues>) {
     setMember((value) => ({ ...value, ...patch }));
+    for (const field of Object.keys(patch))
+      clearError(field as MemberFormField);
     markDirty();
-    setFeedback(false);
-  }
-  function toggle(values: string[], value: string, checked: boolean) {
-    return checked
-      ? [...values, value]
-      : values.filter((item) => item !== value);
-  }
-  function simulateSave() {
-    setWithoutAccess(false);
-    setFeedback(saveState !== "error");
   }
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (saving) return;
-    setAttempted(true);
-    if (Object.values(errors).some(Boolean)) {
+    const input = memberFormInput(
+      member,
+      { pin, password },
+      initialMember?.memberId,
+    );
+    const validation = memberFormErrors(
+      member,
+      input,
+      initialMember ? initialMember.hasPin : false,
+    );
+    if (editing && changePassword && !password)
+      validation.password = "Completa este campo.";
+    setErrors(validation);
+    if (Object.values(validation).some(Boolean)) {
       requestAnimationFrame(() =>
         formRef.current
           ?.querySelector<HTMLElement>('[aria-invalid="true"]')
@@ -455,96 +456,30 @@ function MemberForm({
       );
       return;
     }
-    if (!selectedBranches.length) setWithoutAccess(true);
-    else simulateSave();
+    setServerError("");
+    onSubmit(input, (message) => {
+      setServerError(message);
+      const field = memberServerErrorField(message);
+      if (field) setErrors((value) => ({ ...value, [field]: message }));
+      requestAnimationFrame(() => errorRef.current?.focus());
+    });
   }
-  const preview = (
-    <aside
-      ref={previewRef}
-      id={`${id}-preview`}
-      tabIndex={-1}
-      aria-label="Vista previa del miembro"
-      className="min-w-0 scroll-mt-6 rounded-card border bg-background p-6 outline-none focus-visible:ring-2 focus-visible:ring-ring lg:sticky lg:top-6"
-    >
-      <p className="mb-6 text-meta text-muted-foreground">
-        Así quedará su acceso
-      </p>
-      <Avatar className="mb-4 size-14">
-        <AvatarFallback className="bg-primary-soft text-title text-primary">
-          {[member.firstName[0], member.lastName[0]]
-            .filter(Boolean)
-            .join("")
-            .toUpperCase() || "·"}
-        </AvatarFallback>
-      </Avatar>
-      <h3 className="break-words text-title font-semibold">
-        {[member.firstName.trim(), member.lastName.trim()]
-          .filter(Boolean)
-          .join(" ") || "Nombre del miembro"}
-      </h3>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {member.roles.length ? (
-          roles
-            .filter(([role]) => member.roles.includes(role))
-            .map(([role, label]) => (
-              <Badge
-                key={role}
-                className="h-auto whitespace-normal bg-primary-soft text-primary"
-              >
-                {label}
-              </Badge>
-            ))
-        ) : (
-          <Badge variant="secondary">Sin roles asignados</Badge>
-        )}
-      </div>
-      <div className="my-5 border-t" />
-      <h4 className="font-medium">Sucursales</h4>
-      <p className="mt-2 break-words text-body-sm text-muted-foreground">
-        {selectedBranches.map((branch) => branch.name).join(", ") ||
-          "Sin acceso"}
-      </p>
-      {cashier && (
-        <>
-          <h4 className="mt-4 font-medium">Cajas</h4>
-          <p className="mt-2 break-words text-body-sm text-muted-foreground">
-            {selectedRegisters
-              .map(
-                (register) =>
-                  `${register.name} · ${branches.find((branch) => branch.id === register.branchId)?.name}`,
-              )
-              .join(", ") || "Sin cajas asignadas"}
-          </p>
-        </>
-      )}
-      <div className="my-5 border-t" />
-      <h4 className="font-medium">Acceso</h4>
-      <p className="mt-2 text-body-sm text-muted-foreground">
-        {member.hasPin ? "PIN asignado" : "PIN pendiente"}
-      </p>
-      <p className="mt-1 break-words text-body-sm text-muted-foreground">
-        {member.emailEnabled
-          ? member.email || "Correo pendiente"
-          : "Sin correo"}
-      </p>
-      {member.emailEnabled && (
-        <p className="mt-2 text-caption text-muted-foreground">
-          El correo requiere confirmación.
-        </p>
-      )}
-      <p className="mt-4 text-body-sm text-muted-foreground">
-        El PIN y la contraseña nunca aparecen en esta vista.
-      </p>
-    </aside>
-  );
+  function errorId(field: MemberFormField) {
+    return errors[field] ? `${id}-${field}-error` : undefined;
+  }
+  function fieldError(field: MemberFormField) {
+    return errors[field] ? (
+      <FieldError id={`${id}-${field}-error`}>{errors[field]}</FieldError>
+    ) : null;
+  }
   return (
     <>
       <SheetHeader className="shrink-0 border-b p-5 pr-18 sm:p-6 sm:pr-20">
         <SheetTitle className="text-title font-semibold">
-          {mode === "edit" ? "Editar miembro" : "Agregar miembro"}
+          {editing ? "Editar miembro" : "Agregar miembro"}
         </SheetTitle>
         <SheetDescription>
-          Define quién puede entrar y qué podrá hacer en cada sucursal.
+          Define su acceso y lo que podrá hacer en el local.
         </SheetDescription>
         <Button
           type="button"
@@ -558,458 +493,396 @@ function MemberForm({
           <X aria-hidden />
         </Button>
       </SheetHeader>
-      {loadState === "loading" ? (
-        <div aria-busy="true" className="space-y-6 p-6">
-          <p role="status">Cargando…</p>
-          {[0, 1, 2, 3].map((key) => (
-            <Skeleton key={key} className="h-14 w-full" />
-          ))}
-        </div>
-      ) : loadState === "error" ? (
-        <div className="[&_button]:min-h-11">
-          <RecoverableError
-            title="No pudimos cargar el miembro"
-            description="Reintenta para recuperar sus datos antes de editar."
-            onRetry={() => onRetry?.()}
-          />
-        </div>
-      ) : (
-        <form
-          ref={formRef}
-          noValidate
-          onSubmit={submit}
-          aria-busy={saving}
-          className="flex min-h-0 flex-1 flex-col"
+      <form
+        ref={formRef}
+        noValidate
+        onSubmit={submit}
+        aria-busy={saving}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          data-member-scroll
         >
-          <div
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-            data-member-scroll
-          >
-            <div className="grid items-start gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-              <fieldset disabled={saving} className="min-w-0 space-y-7">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-11 lg:hidden"
-                  onClick={() => {
-                    previewRef.current?.scrollIntoView({ block: "start" });
-                    previewRef.current?.focus({ preventScroll: true });
-                  }}
+          <div className="grid items-start gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <fieldset disabled={saving} className="min-w-0 space-y-7">
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 lg:hidden"
+                onClick={() => {
+                  previewRef.current?.scrollIntoView({ block: "start" });
+                  previewRef.current?.focus({ preventScroll: true });
+                }}
+              >
+                Ver vista previa
+              </Button>
+              <section aria-labelledby={`${id}-identity`}>
+                <h3
+                  id={`${id}-identity`}
+                  className="mb-4 text-title-sm font-semibold"
                 >
-                  Ver vista previa
-                </Button>
-                <section aria-labelledby={`${id}-identity`}>
-                  <h3
-                    id={`${id}-identity`}
-                    className="mb-4 text-title-sm font-semibold"
-                  >
-                    Datos del miembro
-                  </h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {(["firstName", "lastName"] as const).map((key) => (
-                      <Field
-                        key={key}
-                        data-invalid={attempted && !!errors[key]}
-                      >
-                        <FieldLabel htmlFor={`${id}-${key}`}>
-                          {key === "firstName" ? "Nombre" : "Apellido"}
-                        </FieldLabel>
-                        <Input
-                          id={`${id}-${key}`}
-                          required
-                          autoComplete={
-                            key === "firstName" ? "given-name" : "family-name"
-                          }
-                          className="min-h-11"
-                          value={member[key]}
-                          onChange={(event) =>
-                            update({ [key]: event.target.value })
-                          }
-                          aria-invalid={attempted && !!errors[key]}
-                          aria-describedby={
-                            attempted && errors[key]
-                              ? `${id}-${key}-error`
-                              : undefined
-                          }
-                        />
-                        {attempted && errors[key] && (
-                          <FieldError id={`${id}-${key}-error`}>
-                            {errors[key]}
-                          </FieldError>
-                        )}
-                      </Field>
-                    ))}
+                  Datos del miembro
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(["firstName", "lastName"] as const).map((field) => (
+                    <Field key={field} data-invalid={!!errors[field]}>
+                      <FieldLabel htmlFor={`${id}-${field}`}>
+                        {field === "firstName" ? "Nombre" : "Apellido"}
+                      </FieldLabel>
+                      <Input
+                        id={`${id}-${field}`}
+                        required
+                        autoComplete={
+                          field === "firstName" ? "given-name" : "family-name"
+                        }
+                        className="min-h-11"
+                        value={member[field]}
+                        onChange={(event) =>
+                          update({ [field]: event.target.value })
+                        }
+                        aria-invalid={!!errors[field]}
+                        aria-describedby={errorId(field)}
+                      />
+                      {fieldError(field)}
+                    </Field>
+                  ))}
+                </div>
+              </section>
+              <section
+                className="space-y-4 border-t pt-6"
+                aria-labelledby={`${id}-access`}
+              >
+                <h3 id={`${id}-access`} className="text-title-sm font-semibold">
+                  Acceso al local
+                </h3>
+                <p className="text-body-sm text-muted-foreground">
+                  Este PIN se usa para iniciar sesión en los dispositivos del
+                  local.
+                </p>
+                <Field>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Badge
+                      variant="secondary"
+                      className={
+                        pinAssigned
+                          ? "bg-primary-soft text-primary"
+                          : "bg-warning-soft text-warning-soft-foreground"
+                      }
+                    >
+                      {pinAssigned
+                        ? pin
+                          ? "PIN nuevo · ••••"
+                          : "PIN asignado · ••••"
+                        : editing && initialMember.hasPin === null
+                          ? "PIN actual sin consultar"
+                          : "PIN pendiente"}
+                    </Badge>
+                    <PinDialog
+                      assigned={pinAssigned}
+                      invalid={!!errors.pin}
+                      errorId={`${id}-pin-error`}
+                      onAssign={(value) => {
+                        setPin(value);
+                        clearError("pin");
+                        markDirty();
+                      }}
+                    />
                   </div>
-                </section>
-                <section
-                  className="space-y-4 border-t pt-6"
-                  aria-labelledby={`${id}-access`}
-                >
-                  <h3
-                    id={`${id}-access`}
-                    className="text-title-sm font-semibold"
-                  >
-                    Acceso al local
-                  </h3>
-                  <p className="text-body-sm text-muted-foreground">
-                    Este PIN se usa para iniciar sesión en los dispositivos del
-                    local.
-                  </p>
+                  {fieldError("pin")}
+                </Field>
+                <p className="text-body-sm text-muted-foreground">
+                  El acceso por correo está habilitado para todos los miembros.
+                </p>
+                <Field data-invalid={!!errors.email}>
+                  <FieldLabel htmlFor={`${id}-email`}>
+                    Correo electrónico
+                  </FieldLabel>
+                  <Input
+                    id={`${id}-email`}
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="min-h-11"
+                    value={member.email}
+                    onChange={(event) => update({ email: event.target.value })}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errorId("email")}
+                  />
+                  {fieldError("email")}
+                </Field>
+                {editing && !changePassword ? (
                   <Field>
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Badge
-                        variant="secondary"
-                        className={
-                          member.hasPin
-                            ? "bg-primary-soft text-primary"
-                            : "bg-warning-soft text-warning-soft-foreground"
-                        }
+                      <p className="text-body-sm text-muted-foreground">
+                        Contraseña actual conservada
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11"
+                        aria-invalid={!!errors.password}
+                        aria-describedby={errorId("password")}
+                        onClick={() => setChangePassword(true)}
                       >
-                        {member.hasPin
-                          ? "PIN asignado · ••••"
-                          : "PIN pendiente"}
-                      </Badge>
-                      <PinDialog
-                        assigned={member.hasPin}
-                        invalid={attempted && !!errors.pin}
-                        errorId={`${id}-pin-error`}
-                        onAssign={() => update({ hasPin: true })}
-                      />
+                        Cambiar contraseña
+                      </Button>
                     </div>
-                    {attempted && errors.pin && (
-                      <FieldError id={`${id}-pin-error`}>
-                        {errors.pin}
-                      </FieldError>
+                    {fieldError("password")}
+                  </Field>
+                ) : (
+                  <Field data-invalid={!!errors.password}>
+                    <FieldLabel htmlFor={`${id}-password`}>
+                      {editing ? "Nueva contraseña" : "Contraseña"}
+                    </FieldLabel>
+                    <Input
+                      id={`${id}-password`}
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      className="min-h-11"
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        clearError("password");
+                        markDirty();
+                      }}
+                      aria-invalid={!!errors.password}
+                      aria-describedby={`${id}-password-help${errors.password ? ` ${errorId("password")}` : ""}`}
+                    />
+                    <FieldDescription id={`${id}-password-help`}>
+                      Usa entre 8 y 72 caracteres.
+                    </FieldDescription>
+                    {fieldError("password")}
+                    {editing && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11"
+                        onClick={() => {
+                          setChangePassword(false);
+                          setPassword("");
+                          clearError("password");
+                        }}
+                      >
+                        Conservar contraseña actual
+                      </Button>
                     )}
                   </Field>
-                  <FieldLabel
-                    htmlFor={`${id}-email-enabled`}
-                    className="min-h-11 w-full cursor-pointer items-center gap-4 py-3"
-                  >
-                    <Switch
-                      id={`${id}-email-enabled`}
-                      checked={member.emailEnabled}
-                      onCheckedChange={(checked) => {
-                        update({ emailEnabled: checked });
-                        if (!checked) {
-                          setPassword("");
-                          setChangePassword(false);
-                        }
-                      }}
-                      className="after:-inset-y-3.5"
-                    />
-                    <span className="flex-1">
-                      <span className="block text-body">
-                        Permitir acceso con correo electrónico
-                      </span>
-                      <span className="mt-1 block text-body-sm font-normal text-muted-foreground">
-                        El PIN sigue siendo obligatorio.
-                      </span>
-                    </span>
-                  </FieldLabel>
-                  {member.emailEnabled && (
-                    <div className="space-y-4">
-                      <Field data-invalid={attempted && !!errors.email}>
-                        <FieldLabel htmlFor={`${id}-email`}>
-                          Correo electrónico
-                        </FieldLabel>
-                        <Input
-                          id={`${id}-email`}
-                          type="email"
-                          autoComplete="email"
-                          required
-                          className="min-h-11"
-                          value={member.email}
-                          onChange={(event) =>
-                            update({ email: event.target.value })
-                          }
-                          aria-invalid={attempted && !!errors.email}
-                          aria-describedby={`${id}-email-help${attempted && errors.email ? ` ${id}-email-error` : ""}`}
-                        />
-                        <FieldDescription id={`${id}-email-help`}>
-                          Enviaremos un correo para confirmar la cuenta.
-                        </FieldDescription>
-                        {attempted && errors.email && (
-                          <FieldError id={`${id}-email-error`}>
-                            {errors.email}
-                          </FieldError>
-                        )}
-                      </Field>
-                      {member.hasPassword && !changePassword ? (
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="text-body-sm text-muted-foreground">
-                            Contraseña actual conservada
-                          </p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="min-h-11"
-                            onClick={() => {
-                              setChangePassword(true);
-                              markDirty();
-                            }}
-                          >
-                            Cambiar contraseña
-                          </Button>
-                        </div>
-                      ) : (
-                        <Field data-invalid={attempted && !!errors.password}>
-                          <FieldLabel htmlFor={`${id}-password`}>
-                            {member.hasPassword
-                              ? "Nueva contraseña"
-                              : "Contraseña"}
-                          </FieldLabel>
-                          <Input
-                            id={`${id}-password`}
-                            type="password"
-                            autoComplete="new-password"
-                            required
-                            className="min-h-11"
-                            value={password}
-                            onChange={(event) => {
-                              setPassword(event.target.value);
-                              markDirty();
-                              setFeedback(false);
-                            }}
-                            aria-invalid={attempted && !!errors.password}
-                            aria-describedby={
-                              attempted && errors.password
-                                ? `${id}-password-error`
-                                : undefined
-                            }
-                          />
-                          {attempted && errors.password && (
-                            <FieldError id={`${id}-password-error`}>
-                              {errors.password}
-                            </FieldError>
-                          )}
-                          {member.hasPassword && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="min-h-11"
-                              onClick={() => {
-                                setChangePassword(false);
-                                setPassword("");
-                              }}
-                            >
-                              Conservar contraseña actual
-                            </Button>
-                          )}
-                        </Field>
-                      )}
-                    </div>
-                  )}
-                </section>
-                <fieldset className="border-t pt-6">
-                  <legend className="sr-only">Roles combinables</legend>
-                  <h3 className="text-title-sm font-semibold">Roles</h3>
-                  <p className="mb-3 mt-2 text-body-sm text-muted-foreground">
-                    Puedes combinar varios roles. Sus permisos se suman.
-                  </p>
-                  <div className="divide-y">
-                    {roles.map(([role, title, description]) => (
+                )}
+              </section>
+              <fieldset
+                tabIndex={-1}
+                aria-invalid={!!errors.roles}
+                aria-describedby={errorId("roles")}
+                className="border-t pt-6 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <legend className="sr-only">Roles combinables</legend>
+                <h3 className="text-title-sm font-semibold">Roles</h3>
+                <p className="mb-3 mt-2 text-body-sm text-muted-foreground">
+                  Puedes combinar varios roles. Sus permisos se suman.
+                </p>
+                <div className="divide-y">
+                  {roles.map(([role, title, description]) =>
+                    role === "SUPER_ADMIN" ? (
+                      <Choice
+                        key={role}
+                        id={`${id}-${role}`}
+                        title={title}
+                        description={description}
+                        checked={false}
+                        disabled
+                        onChange={() => {}}
+                      />
+                    ) : (
                       <Choice
                         key={role}
                         id={`${id}-${role}`}
                         title={title}
                         description={description}
                         checked={member.roles.includes(role)}
-                        disabled={role === "SUPER_ADMIN"}
+                        disabled={!assignableRoles.includes(role)}
                         onChange={(checked) =>
                           update({
-                            roles: toggle(
-                              member.roles,
-                              role,
-                              checked,
-                            ) as MemberRole[],
+                            roles: checked
+                              ? [...member.roles, role]
+                              : member.roles.filter((value) => value !== role),
                             ...(role === "CASHIER" && !checked
-                              ? { registerIds: [] }
+                              ? { cashRegisterIds: [] }
                               : {}),
                           })
                         }
                       />
-                    ))}
-                  </div>
-                  {!member.roles.length && (
-                    <p className="mt-3 text-body-sm text-muted-foreground">
-                      Sin roles asignados
+                    ),
+                  )}
+                </div>
+                {!member.roles.length && (
+                  <p className="mt-3 text-body-sm text-muted-foreground">
+                    Sin roles asignados
+                  </p>
+                )}
+                {fieldError("roles")}
+              </fieldset>
+              {cashier && (
+                <fieldset
+                  tabIndex={-1}
+                  aria-invalid={!!errors.cashRegisterIds}
+                  aria-describedby={errorId("cashRegisterIds")}
+                  className="border-t pt-6 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <legend className="sr-only">Cajas asignadas</legend>
+                  <h3 className="text-title-sm font-semibold">
+                    Cajas asignadas
+                  </h3>
+                  <p className="my-3 text-body-sm text-muted-foreground">
+                    Selecciona al menos una caja activa del local.
+                  </p>
+                  {!registers.length && (
+                    <p className="rounded-control bg-muted p-3 text-body-sm">
+                      No hay cajas activas disponibles. Solicita una caja al
+                      administrador o retira el rol Cajero.
                     </p>
                   )}
-                </fieldset>
-                <fieldset
-                  className="border-t pt-6"
-                  aria-describedby={
-                    !selectedBranches.length
-                      ? `${id}-branch-warning`
-                      : undefined
-                  }
-                >
-                  <legend className="sr-only">Sucursales con acceso</legend>
-                  <h3 className="mb-3 text-title-sm font-semibold">
-                    Sucursales con acceso
-                  </h3>
-                  {branches.map((branch) => (
+                  {registers.map((register) => (
                     <Choice
-                      key={branch.id}
-                      id={`${id}-branch-${branch.id}`}
-                      title={branch.name}
-                      description={branch.description}
-                      checked={member.branchIds.includes(branch.id)}
-                      onChange={(checked) => {
-                        const branchIds = toggle(
-                          member.branchIds,
-                          branch.id,
-                          checked,
-                        );
+                      key={register.id}
+                      id={`${id}-register-${register.id}`}
+                      title={register.name}
+                      checked={member.cashRegisterIds.includes(register.id)}
+                      onChange={(checked) =>
                         update({
-                          branchIds,
-                          registerIds: member.registerIds.filter((registerId) =>
-                            registers.some(
-                              (register) =>
-                                register.id === registerId &&
-                                branchIds.includes(register.branchId),
-                            ),
-                          ),
-                        });
-                      }}
+                          cashRegisterIds: checked
+                            ? [...member.cashRegisterIds, register.id]
+                            : member.cashRegisterIds.filter(
+                                (value) => value !== register.id,
+                              ),
+                        })
+                      }
                     />
                   ))}
-                  {!selectedBranches.length && (
-                    <p
-                      id={`${id}-branch-warning`}
-                      className="mt-3 rounded-control bg-warning-soft p-4 text-body-sm text-warning-soft-foreground"
-                    >
-                      Sin una sucursal asignada, este miembro no podrá ingresar.
-                    </p>
-                  )}
+                  {fieldError("cashRegisterIds")}
                 </fieldset>
-                {cashier && (
-                  <fieldset
-                    tabIndex={-1}
-                    aria-invalid={attempted && !!errors.registers}
-                    aria-describedby={`${id}-register-help${attempted && errors.registers ? ` ${id}-register-error` : ""}`}
-                    className="border-t pt-6 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <legend className="sr-only">Cajas asignadas</legend>
-                    <h3 className="text-title-sm font-semibold">
-                      Cajas asignadas
-                    </h3>
-                    <p
-                      id={`${id}-register-help`}
-                      className="my-3 text-body-sm text-muted-foreground"
-                    >
-                      Selecciona al menos una caja de sus sucursales.
-                    </p>
-                    {!selectedBranches.length && (
-                      <p className="text-body-sm text-muted-foreground">
-                        Selecciona una sucursal para ver sus cajas.
-                      </p>
-                    )}
-                    {selectedBranches.map((branch) => (
-                      <div key={branch.id}>
-                        {!availableRegisters.some(
-                          (register) => register.branchId === branch.id,
-                        ) && (
-                          <p className="rounded-control bg-muted p-3 text-body-sm">
-                            {branch.name}: No hay cajas disponibles en esta
-                            sucursal. Solicita una caja al administrador o
-                            retira el rol Cajero.
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                    {availableRegisters.map((register) => (
-                      <Choice
-                        key={register.id}
-                        id={`${id}-register-${register.id}`}
-                        title={`${register.name} · ${branches.find((branch) => branch.id === register.branchId)?.name}`}
-                        checked={member.registerIds.includes(register.id)}
-                        onChange={(checked) =>
-                          update({
-                            registerIds: toggle(
-                              member.registerIds,
-                              register.id,
-                              checked,
-                            ),
-                          })
-                        }
-                      />
-                    ))}
-                    {attempted && errors.registers && (
-                      <FieldError id={`${id}-register-error`}>
-                        {errors.registers}
-                      </FieldError>
-                    )}
-                  </fieldset>
+              )}
+              <Field className="border-t pt-6" data-invalid={!!errors.active}>
+                <Choice
+                  id={`${id}-active`}
+                  title="Miembro activo"
+                  description="Si está inactivo, no podrá ingresar a su cuenta."
+                  checked={member.active}
+                  onChange={(checked) => update({ active: checked })}
+                />
+                {fieldError("active")}
+              </Field>
+            </fieldset>
+            <aside
+              ref={previewRef}
+              id={`${id}-preview`}
+              tabIndex={-1}
+              aria-label="Vista previa del miembro"
+              className="min-w-0 scroll-mt-6 rounded-card border bg-background p-6 outline-none focus-visible:ring-2 focus-visible:ring-ring lg:sticky lg:top-6"
+            >
+              <p className="mb-6 text-meta text-muted-foreground">
+                Así quedará su acceso
+              </p>
+              <Avatar className="mb-4 size-14">
+                <AvatarFallback className="bg-primary-soft text-title text-primary">
+                  {[member.firstName[0], member.lastName[0]]
+                    .filter(Boolean)
+                    .join("")
+                    .toUpperCase() || "·"}
+                </AvatarFallback>
+              </Avatar>
+              <h3 className="break-words text-title font-semibold">
+                {[member.firstName.trim(), member.lastName.trim()]
+                  .filter(Boolean)
+                  .join(" ") || "Nombre del miembro"}
+              </h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {member.roles.length ? (
+                  roles
+                    .filter(
+                      ([role]) =>
+                        role !== "SUPER_ADMIN" && member.roles.includes(role),
+                    )
+                    .map(([role, label]) => (
+                      <Badge
+                        key={role}
+                        className="h-auto whitespace-normal bg-primary-soft text-primary"
+                      >
+                        {label}
+                      </Badge>
+                    ))
+                ) : (
+                  <Badge variant="secondary">Sin roles asignados</Badge>
                 )}
-              </fieldset>
-              {preview}
-            </div>
-          </div>
-          <div className="shrink-0 space-y-3 border-t bg-card p-4 sm:px-6">
-            {saveState === "error" && (
-              <p
-                role="alert"
-                className="rounded-control bg-destructive-soft p-3 text-body-sm text-destructive"
-              >
-                No pudimos guardar el miembro. Tu información sigue aquí; vuelve
-                a intentarlo.
+                <Badge variant="secondary">
+                  {member.active ? "Activo" : "Inactivo"}
+                </Badge>
+              </div>
+              {cashier && (
+                <>
+                  <div className="my-5 border-t" />
+                  <h4 className="font-medium">Cajas</h4>
+                  <p className="mt-2 break-words text-body-sm text-muted-foreground">
+                    {selectedRegisters
+                      .map((register) => register.name)
+                      .join(", ") || "Sin cajas asignadas"}
+                  </p>
+                </>
+              )}
+              <div className="my-5 border-t" />
+              <h4 className="font-medium">Acceso</h4>
+              <p className="mt-2 text-body-sm text-muted-foreground">
+                {pinAssigned
+                  ? "PIN asignado"
+                  : editing && initialMember.hasPin === null
+                    ? "PIN actual sin consultar"
+                    : "PIN pendiente"}
               </p>
-            )}
-            {feedback && (
-              <p
-                role="status"
-                className="rounded-control bg-primary-soft p-3 text-body-sm text-primary"
-              >
-                {mode === "edit" ? "Cambios revisados" : "Miembro revisado"} ·
-                Confirmación de ejemplo, sin guardado real.
+              <p className="mt-1 break-words text-body-sm text-muted-foreground">
+                {member.email || "Correo pendiente"}
               </p>
-            )}
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                className="min-h-11 flex-1 sm:flex-none"
-                onClick={onCancel}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-                className="min-h-11 flex-1 sm:flex-none"
-              >
-                {saving
-                  ? "Guardando…"
-                  : mode === "edit"
-                    ? "Guardar cambios"
-                    : "Agregar miembro"}
-              </Button>
-            </div>
+              <p className="mt-4 text-body-sm text-muted-foreground">
+                El PIN y la contraseña nunca aparecen en esta vista.
+              </p>
+            </aside>
           </div>
-        </form>
-      )}
-      <AlertDialog open={withoutAccess} onOpenChange={setWithoutAccess}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Guardar sin acceso?</AlertDialogTitle>
-            <AlertDialogDescription>
-              No hay sucursales asignadas. El miembro quedará sin poder ingresar
-              hasta que le asignes una.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="min-h-11">
-              Revisar sucursales
-            </AlertDialogCancel>
-            <Button type="button" className="min-h-11" onClick={simulateSave}>
-              Guardar sin acceso
+        </div>
+        <div className="shrink-0 space-y-3 border-t bg-card p-4 sm:px-6">
+          {serverError && (
+            <p
+              ref={errorRef}
+              tabIndex={-1}
+              role="alert"
+              className="max-h-32 overflow-y-auto rounded-control bg-destructive-soft p-3 text-body-sm text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {serverError}
+            </p>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              className="min-h-11 flex-1 sm:flex-none"
+              onClick={onCancel}
+            >
+              Cancelar
             </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="min-h-11 flex-1 sm:flex-none"
+            >
+              {saving
+                ? "Guardando…"
+                : editing
+                  ? "Guardar cambios"
+                  : "Agregar miembro"}
+            </Button>
+          </div>
+        </div>
+      </form>
     </>
   );
 }

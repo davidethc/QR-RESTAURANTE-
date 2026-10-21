@@ -6,6 +6,10 @@ import { getMyRestaurant, getRestaurantStaff } from "@/lib/queries/staff";
 import { isAdminClientConfigured } from "@/lib/supabase/admin";
 import { isManager } from "@/lib/permissions";
 import { AddStaffDialog } from "./_components/add-staff-dialog";
+import { getCashRegisters } from "@/lib/queries/cash";
+import { MEMBER_ROLES } from "@/lib/validations/staff";
+import { Button } from "@/components/ui/button";
+import { MemberFormSheet } from "./_components/member-form-sheet";
 import { StaffList } from "./_components/staff-list";
 
 // Ver la nota en (dashboard)/layout.tsx.
@@ -18,8 +22,11 @@ export default async function StaffPage() {
   const session = await getMyRestaurant();
   if (!isManager(session.role)) redirect("/orders");
 
-  const staff = await getRestaurantStaff(session.restaurant.id);
   const canCreate = isAdminClientConfigured();
+  const [staff, registers] = await Promise.all([
+    getRestaurantStaff(session.restaurant.id),
+    canCreate ? getCashRegisters(session.restaurant.id) : Promise.resolve([]),
+  ]);
   const assignableRoles =
     session.role === "OWNER"
       ? (["ADMIN", "WAITER", "KITCHEN"] as const)
@@ -32,10 +39,20 @@ export default async function StaffPage() {
         description="Quién entra al panel y qué puede hacer."
         action={
           canCreate ? (
-            <AddStaffDialog
-              restaurantId={session.restaurant.id}
-              roles={[...assignableRoles]}
-            />
+            <div className="flex flex-wrap gap-2">
+              <MemberFormSheet
+                restaurantId={session.restaurant.id}
+                registers={registers}
+                assignableRoles={MEMBER_ROLES.filter(
+                  (role) => session.role === "OWNER" || role !== "ADMIN",
+                )}
+                trigger={<Button className="min-h-11">Agregar miembro</Button>}
+              />
+              <AddStaffDialog
+                restaurantId={session.restaurant.id}
+                roles={[...assignableRoles]}
+              />
+            </div>
           ) : undefined
         }
       />
@@ -43,12 +60,18 @@ export default async function StaffPage() {
         {!canCreate && (
           <p className="rounded-card border border-dashed border-border bg-muted p-3 text-meta text-muted-foreground">
             Para crear cuentas o cambiar claves falta configurar{" "}
-            <code className="font-mono text-foreground">SUPABASE_SECRET_KEY</code> en
-            el servidor. Mientras tanto puedes cambiar roles y activar o
+            <code className="font-mono text-foreground">
+              SUPABASE_SECRET_KEY
+            </code>{" "}
+            en el servidor. Mientras tanto puedes cambiar roles y activar o
             desactivar personas.
           </p>
         )}
-        <StaffList staff={staff} roles={[...assignableRoles]} canResetPassword={canCreate} />
+        <StaffList
+          staff={staff}
+          roles={[...assignableRoles]}
+          canResetPassword={canCreate}
+        />
       </div>
     </main>
   );

@@ -2232,7 +2232,6 @@ Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y e
 ## 2026-10-21 — M00-T05: esqueleto visual del formulario de miembro
 
 - Worktree `M00-T05`, rama `feat/M00-T05-member-form-ui`. Componente nuevo `staff/_components/member-form-sheet.tsx`; `add-staff-dialog` permanece intacto.
-- Vista temporal `/preview-member-form`, solo en desarrollo (`notFound()` fuera de development). **Borrar `src/app/preview-member-form/` antes de integrar.** Se monta fuera del layout autenticado para probar exclusivamente UI, sin llamadas a Supabase ni datos reales.
 - Datos ficticios por props: Alex Rivera, sucursales Centro/Norte/Sur y cajas de ejemplo. Alta vacía con sucursal actual; edición recibe únicamente indicadores de credenciales existentes, nunca su valor. `usado@example.com` simula duplicado local.
 - Playwright Chromium: alta con errores asociados y foco al primer error; PIN de cuatro dígitos con ceros iniciales, teclado, borrar/limpiar, cancelación y retorno de foco; contraseña existente conservada y correo opcional; Super administrador deshabilitado; roles combinables y cero roles permitido.
 - Cajero: cajas obligatorias solo mientras está marcado; quitar sucursal elimina sus selecciones; quitar Cajero retira campo/error. Sucursal sin cajas ofrece explicación. Cero sucursales requiere confirmación «Guardar sin acceso», conservando selección en el resumen local.
@@ -2282,3 +2281,24 @@ Worktree `.claude/worktrees/M00-T04`, rama `feat/M00-T04-save-member`, basada en
 - Pruebas: cinco y seis dígitos rechazados en alta y edición; `saveMember` los rechaza antes de abrir clientes o llamar a RPCs. Las pruebas de errores/secretos de RPC usan ahora un PIN válido de cuatro dígitos para seguir ejercitando esa ruta.
 - Ejecutado: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`; todo en verde, **115/115 tests en 10 archivos** (16 de validación y 28 de acciones de personal).
 - Sin cambios en `app/supabase/`, sin escrituras en la base, sin commit ni push.
+
+## 2026-10-21 — M00-T05 fase 2: conexión del Sheet a saveMember
+
+Esta ronda sustituye el comportamiento de prototipo descrito en la fase 1. Solo cambios del worktree `M00-T05`, rama `feat/M00-T05-member-form-ui`; sin commit, push ni PR.
+
+- `staff/page.tsx` añade «Agregar miembro» con el nuevo Sheet junto al `AddStaffDialog` existente, sin modificarlo. Reutiliza `getCashRegisters(restaurantId)`: consulta existente que devuelve solo cajas activas del restaurante. Los administradores no pueden marcar Administrador en el nuevo formulario.
+- El Sheet llama a `saveMember(restaurantId, input)` dentro de `useTransition`. Envía nombre/apellido unidos, roles del catálogo compartido, `active`, correo siempre habilitado, correo de acceso y cajas solo con `CASHIER`. Alta requiere PIN exacto de cuatro dígitos y contraseña conforme al schema compartido; edición incluye `memberId` y omite PIN/contraseña hasta que cambien. No recupera credenciales ni hashes.
+- Retirados el switch de correo, las sucursales y la ruta temporal de prototipo. El formulario consume el schema existente sin cambiarlo. El servidor continúa siendo la autoridad de permisos y validación.
+- Error: mensaje exacto de `result.error` en el resumen y, cuando se reconoce el campo, también asociado al control; conserva borrador y selecciones. Excepción de transporte muestra un mensaje prudente sin afirmar que no hubo escritura. Éxito: cierra, `notify.success` y `router.refresh`. Controles y cierre bloqueados mientras guarda; guardia síncrona adicional contra doble envío.
+- Validación automatizada: `next typegen`, `tsc --noEmit`, `npm run lint` en verde; **131/131 tests en 11 archivos**, incluidos 16 casos nuevos del límite UI/API. Se eliminaron tipos generados obsoletos de `.next/dev/types` que aún referían a la ruta retirada; no se cambió configuración TS.
+- Playwright Chromium con el componente real empaquetado localmente: `saveMember`, `notify` y router sustituidos por mocks antes del empaquetado. No se monta el servidor Next ni se importan clientes Supabase. **0 peticiones HTTP/HTTPS y 0 errores JS; ninguna lectura o escritura en la base de producción.** No es una prueba de persistencia.
+- Navegador: alta válida y errores; PIN `0012`; edición sin cambios omite credenciales; edición con cambio envía PIN `0000` y contraseña nueva; cancelar cambios de credenciales los omite; error duplicado y error PIN asociados; excepción de transporte conserva borrador; quitar Cajero omite cajas; cero roles exige inactivo; éxito notifica/refresca; cierre y doble envío bloqueados durante la transición.
+- Capturas: `_capturas/M00-T05/` **dentro de este worktree**, a 390×844, 768×1024, 1024×900 y 1440×1000. Sin overflow horizontal; vista lateral desde 1024 px; objetivos ≥44 px directamente o por etiqueta de fila completa (inputs auxiliares invisibles de Radix excluidos). axe-core sin violaciones en el Sheet a 390/1440. El harness usa la fuente de sistema; importa los tokens y componentes reales.
+
+### Huecos y límites de la API observados, sin modificarlos
+
+- `getRestaurantStaff`/`StaffMember` solo exponen el rol legacy y `full_name`; faltan roles combinados, cajas asignadas y presencia de PIN, además de nombre/apellido separados. Por eso solo se conecta la entrada de alta; la edición queda soportada con `MemberFormInitial` completo, sin inventar datos ni reconstruir permisos a partir del rol legacy.
+- El alta exige al menos un rol compatible (`ADMIN`, `WAITER` o `KITCHEN`); roles nuevos puros siguen siendo rechazados por `saveMember`. El schema exige `active=false` cuando no hay roles, y editar ciertos roles administrativos también tiene restricciones de compatibilidad.
+- `ActionResult` devuelve un único texto, sin errores estructurados por campo: el resumen conserva el mensaje original y la asociación de campo se hace por coincidencias. Los mensajes desconocidos permanecen en el resumen.
+- Sin contrato multi-sucursal: se envía únicamente el `restaurantId` de la página. El acceso solo-PIN sigue pendiente; el formulario siempre envía `emailLoginEnabled=true`. El servidor crea el correo confirmado, por lo que se retiró el aviso de envío de confirmación del prototipo.
+- La acción puede informar escrituras parciales. La UI conserva esos avisos y no reintenta automáticamente ni cierra ante un fallo. No se validó persistencia ni estado de despliegue de la RPC en esta ronda.
