@@ -2227,3 +2227,17 @@ Resultado: **0 Critical/Serious en todas las vistas** (axe vacío en todas).
 
 Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (están fuera del repo).
 
+
+
+## 2026-10-21 — M00-T05: esqueleto visual del formulario de miembro
+
+- Worktree `M00-T05`, rama `feat/M00-T05-member-form-ui`. Componente nuevo `staff/_components/member-form-sheet.tsx`; `add-staff-dialog` permanece intacto.
+- Vista temporal `/preview-member-form`, solo en desarrollo (`notFound()` fuera de development). **Borrar `src/app/preview-member-form/` antes de integrar.** Se monta fuera del layout autenticado para probar exclusivamente UI, sin llamadas a Supabase ni datos reales.
+- Datos ficticios por props: Alex Rivera, sucursales Centro/Norte/Sur y cajas de ejemplo. Alta vacía con sucursal actual; edición recibe únicamente indicadores de credenciales existentes, nunca su valor. `usado@example.com` simula duplicado local.
+- Playwright Chromium: alta con errores asociados y foco al primer error; PIN de cuatro dígitos con ceros iniciales, teclado, borrar/limpiar, cancelación y retorno de foco; contraseña existente conservada y correo opcional; Super administrador deshabilitado; roles combinables y cero roles permitido.
+- Cajero: cajas obligatorias solo mientras está marcado; quitar sucursal elimina sus selecciones; quitar Cajero retira campo/error. Sucursal sin cajas ofrece explicación. Cero sucursales requiere confirmación «Guardar sin acceso», conservando selección en el resumen local.
+- Cancelar/Escape: intacto cierra; con cambios pide descartar; seguir editando conserva borrador; foco vuelve al disparador al cerrar. Tab permanece en Sheet. Estados loading/error bloquean edición hasta recuperar datos; saving bloquea controles; error de guardado conserva borrador.
+- Responsive: 390×844, 768×1024, 1024×900, 1440×1000; overflow horizontal **0** en documento y panel. Vista previa lateral desde 1024; enlace con foco a vista previa en móvil/tablet. Objetivos táctiles **≥44×44 px**, directamente o mediante etiqueta asociada.
+- axe-core: **0 violaciones** WCAG 2 A/AA, 2.1 A/AA y 2.2 AA en Sheet y diálogo PIN a 390/1440. Sin errores JS ni peticiones Supabase.
+- Capturas y reportes: `_capturas/M00-T05/` en la carpeta principal del proyecto (fuera del worktree), archivos `miembro-*.png`, `pin-*.png`, `sucursales-cajas-*.png`, `vista-previa-*.png`, `report.json`, `accessibility.json`. El indicador dev de Next se oculta solo en las capturas.
+- Comprobaciones: `next typegen`, `tsc --noEmit`, `npm run lint`. No se prueba persistencia: el envío solo muestra confirmación de ejemplo; no hay server actions, SQL, zod ni integración al flujo existente.
