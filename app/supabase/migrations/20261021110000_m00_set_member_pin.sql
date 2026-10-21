@@ -11,9 +11,8 @@
 --     restaurante del miembro. Mismas reglas que assert_can_manage_member
 --     (se reutiliza): ADMIN solo gestiona WAITER/KITCHEN; OWNER también
 --     ADMIN; nadie toca al OWNER ni a sí mismo por esta ruta.
---   * PIN: solo dígitos ASCII, de 4 a 6 (decisión de M00-T04; la spec dice
---     4 y el formulario puede ser más estricto). Se valida aquí aunque el
---     servidor ya lo valide con zod.
+--   * PIN: exactamente 4 dígitos ASCII (spec M00 §3/§7.1, confirmado por el
+--     jefe general). Se valida aquí aunque el servidor ya lo valide con zod.
 --   * pin_hash = bcrypt de pgcrypto (esquema extensions en Supabase), coste
 --     10, sal aleatoria por llamada. Se puede verificar en SQL con
 --     extensions.crypt(pin, pin_hash) = pin_hash (M00-T03).
@@ -44,8 +43,8 @@ begin
     raise exception 'No autenticado';
   end if;
 
-  if p_pin is null or p_pin !~ '^[0-9]{4,6}$' then
-    raise exception 'El PIN debe tener de 4 a 6 números';
+  if p_pin is null or p_pin !~ '^[0-9]{4}$' then
+    raise exception 'El PIN debe tener exactamente 4 números';
   end if;
 
   perform public.assert_can_manage_member(p_member_id);
@@ -77,7 +76,7 @@ end;
 $$;
 
 comment on function public.set_member_pin(uuid, text) is
-  'M00-T04: OWNER/ADMIN guarda el PIN (4-6 dígitos) de un miembro que puede gestionar, como bcrypt en pin_hash. No devuelve el hash. Audita sin el PIN.';
+  'M00-T04: OWNER/ADMIN guarda el PIN (4 dígitos) de un miembro que puede gestionar, como bcrypt en pin_hash. No devuelve el hash. Audita sin el PIN.';
 
 revoke all on function public.set_member_pin(uuid, text) from public, anon, authenticated, service_role;
 grant execute on function public.set_member_pin(uuid, text) to authenticated;

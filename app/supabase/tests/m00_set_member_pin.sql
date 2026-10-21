@@ -10,8 +10,8 @@
 -- Qué demuestra:
 --   P01 OWNER asigna un PIN de 4 dígitos: queda un hash bcrypt (coste 10)
 --       que verifica con crypt() y no con otro PIN
---   P02 ADMIN asigna un PIN de 6 dígitos a un mesero: reemplaza el anterior
---   P03 PIN corto, largo, no numérico, con espacios, salto de línea, dígitos
+--   P02 ADMIN asigna otro PIN (con cero inicial) a un mesero: reemplaza el anterior
+--   P03 PIN de 3, 5 o 6 dígitos, largo, no numérico, con espacios, salto de línea, dígitos
 --       no ASCII, vacío o NULL: se rechaza y el hash no cambia
 --   P04 KITCHEN, WAITER, ADMIN inactivo y llamada sin sesión: rechazados
 --   P05 ADMIN sobre otro ADMIN, sobre el OWNER o sobre sí mismo: rechazado;
@@ -149,18 +149,18 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- P02 · ADMIN asigna PIN de 6 dígitos (reemplaza el anterior)
+-- P02 · ADMIN asigna PIN con cero inicial (reemplaza el anterior)
 -- ---------------------------------------------------------------------------
 do $$
 declare
   v_before text := pg_temp.hash_of('m_waiter');
-  v_res text := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_waiter', '098765');
+  v_res text := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_waiter', '0987');
   v_h text := pg_temp.hash_of('m_waiter');
 begin
   insert into _r (test, ok, detail) values
-    ('P02a ADMIN asigna PIN 098765 a un mesero', v_res = 'OK', v_res),
-    ('P02b el hash nuevo verifica con 098765 y no con 1234',
-     coalesce(v_h <> v_before and extensions.crypt('098765', v_h) = v_h
+    ('P02a ADMIN asigna PIN 0987 a un mesero', v_res = 'OK', v_res),
+    ('P02b el hash nuevo verifica con 0987 y no con 1234',
+     coalesce(v_h <> v_before and extensions.crypt('0987', v_h) = v_h
               and extensions.crypt('1234', v_h) <> v_h, false), '');
 end $$;
 
@@ -173,7 +173,7 @@ declare
   v_pin text;
   v_res text;
 begin
-  foreach v_pin in array array['123', '1234567', '12a4', 'abcd', '', ' 1234', '1234 ',
+  foreach v_pin in array array['123', '12345', '123456', '1234567', '12a4', 'abcd', '', ' 1234', '1234 ',
                                '12 34', E'1234\n', '-123', '1.234', '١٢٣٤', '１２３４'] loop
     v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_waiter', v_pin);
     insert into _r (test, ok, detail) values
@@ -316,7 +316,7 @@ where a.entity_type = 'RESTAURANT_MEMBER'
 insert into _r (test, ok, detail)
 select 'P08c la auditoría no contiene el PIN ni el hash',
        coalesce(bool_and(coalesce(a.metadata::text, '') not like '%1234%'
-                         and coalesce(a.metadata::text, '') not like '%098765%'
+                         and coalesce(a.metadata::text, '') not like '%0987%'
                          and coalesce(a.metadata::text, '') not like '%$2a$%'), false),
        string_agg(coalesce(a.metadata::text, 'null'), ' | ')
 from public.audit_logs a
