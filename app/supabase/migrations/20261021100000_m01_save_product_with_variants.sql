@@ -60,6 +60,9 @@
 --     el nombre y las variantes guardadas.
 --   * Permisos: execute solo a authenticated (ni public, ni anon, ni
 --     service_role: sin sesión de usuario la función siempre rechaza).
+--
+-- Rollback (mientras la app no llame a la RPC; no hay datos que restaurar):
+--   drop function public.save_product_with_variants(uuid, text, jsonb, uuid, uuid, text, uuid, boolean, boolean);
 -- ---------------------------------------------------------------------------
 
 create or replace function public.save_product_with_variants(
