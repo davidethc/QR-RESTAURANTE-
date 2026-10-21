@@ -62,6 +62,26 @@
 --                        quedan pendientes de M00-T08.
 --   reason               metadata.reason, salvo en CASH_MOVEMENT (ahí es el
 --                        motivo del enum y va en cash_movement_reason)
+--   group_key            agrupa en una fila los eventos de una misma cuenta
+--                        (M00-T07: venta de mostrador anulada = bill_voided +
+--                        sus order_cancelled). Nunca es null:
+--                        · entity_type BILL (VOID_BILL, APPLY_DISCOUNT,
+--                          REMOVE_DISCOUNT): entity_id (id de la cuenta);
+--                        · metadata.bill_id con forma de uuid (VOID_PAYMENT,
+--                          FORCE_CLOSE_SESSION cuando hay cuenta);
+--                        · order_cancelled de cancel_counter_sale
+--                          (metadata.counter_sale = true, sin bill_id): el
+--                          VOID_BILL que esa misma RPC escribe en la misma
+--                          transacción (mismo restaurant_id y created_at =
+--                          now() de la transacción) y que lista el pedido en
+--                          metadata.cancelled_orders. Solo lee audit_logs y
+--                          usa idx_audit_logs_restaurant_created;
+--                        · resto (REJECT_ORDER, cancel_order de mesa, caja,
+--                          FORCE_CLOSE_SESSION sin cuenta): el id del propio
+--                          evento, así cada uno forma su propio grupo.
+--                        Pendiente (M00-T08): que cancel_counter_sale y
+--                        cancel_order escriban bill_id en metadata; con eso
+--                        la búsqueda del VOID_BILL deja de hacer falta.
 --
 -- Pendiente de M00-T08 (sin audit_action propio; no se agregan valores al
 -- enum aquí):
@@ -109,6 +129,30 @@ select
   end as event_type,
   a.entity_type,
   a.entity_id,
+  coalesce(
+    case
+      when a.entity_type = 'BILL' then a.entity_id
+      when a.metadata ->> 'bill_id'
+           ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        then (a.metadata ->> 'bill_id')::uuid
+      when a.action = 'UPDATE'
+           and a.entity_type = 'ORDER'
+           and a.metadata ->> 'action' = 'CANCEL_ORDER'
+           and a.metadata ->> 'counter_sale' = 'true'
+           and a.entity_id is not null
+        then (
+          select v.entity_id
+          from public.audit_logs v
+          where v.restaurant_id = a.restaurant_id
+            and v.created_at = a.created_at
+            and v.action = 'VOID_BILL'
+            and v.entity_type = 'BILL'
+            and v.metadata -> 'cancelled_orders' ? a.entity_id::text
+          limit 1
+        )
+    end,
+    a.id
+  ) as group_key,
   case
     when a.action = 'VOID_BILL'
          and jsonb_typeof(a.metadata -> 'total') = 'number'

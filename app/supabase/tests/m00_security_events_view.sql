@@ -30,6 +30,10 @@
 --   S14 un OWNER y un ADMIN INACTIVE de monky-qa ven 0 filas
 --   S15 un usuario OWNER del restaurante ajeno y WAITER de monky-qa, y otro
 --       OWNER ajeno y KITCHEN de monky-qa, ven solo eventos del ajeno
+--   S16 anular una venta de mostrador (create_counter_sale +
+--       cancel_counter_sale) da el mismo group_key (= id de la cuenta) en el
+--       bill_voided y en todos sus order_cancelled; los eventos sueltos usan
+--       su propio id como group_key
 -- ---------------------------------------------------------------------------
 
 begin;
@@ -422,6 +426,75 @@ begin
   from public.security_events;
 exception when others then
   insert into _r (test, ok, detail) values ('S15b bloque mixto KITCHEN', false, sqlstate || ' ' || sqlerrm);
+end $$;
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- S16 · venta de mostrador anulada agrupada por group_key (OWNER)
+-- ---------------------------------------------------------------------------
+select set_config('role', 'authenticated', true),
+       set_config('request.jwt.claims',
+                  json_build_object('sub', (select v from _ctx where k = 'owner'), 'role', 'authenticated')::text, true);
+
+do $$
+declare
+  v_r uuid := (select v from _ctx where k = 'restaurant');
+  v_product uuid;
+  v_sale jsonb;
+  v_bill uuid;
+  v_orders jsonb;
+  v_n_void bigint;
+  v_n_cancel bigint;
+  v_n_expected int;
+begin
+  select id into v_product
+  from public.products
+  where restaurant_id = v_r and active and available
+  order by id limit 1;
+  if v_product is null then
+    raise exception 'monky-qa necesita un producto activo y disponible';
+  end if;
+
+  v_sale := public.create_counter_sale(
+    jsonb_build_array(jsonb_build_object('product_id', v_product, 'quantity', 1)),
+    gen_random_uuid(), null, 'QA M00-T02', v_r);
+  v_bill := (v_sale ->> 'bill_id')::uuid;
+
+  perform public.cancel_counter_sale(v_bill, 'QA M00-T02 anulación');
+
+  select metadata -> 'cancelled_orders' into v_orders
+  from public.security_events
+  where event_type = 'bill_voided' and entity_id = v_bill;
+  v_n_expected := coalesce(jsonb_array_length(v_orders), 0);
+
+  select count(*) filter (where event_type = 'bill_voided'),
+         count(*) filter (where event_type = 'order_cancelled'
+                            and v_orders ? entity_id::text)
+  into v_n_void, v_n_cancel
+  from public.security_events
+  where group_key = v_bill;
+
+  insert into _r (test, ok, detail) values
+    ('S16a bill_voided y sus order_cancelled comparten group_key = cuenta',
+     v_n_void = 1 and v_n_expected >= 1 and v_n_cancel = v_n_expected,
+     format('bill_voided %s, order_cancelled %s de %s', v_n_void, v_n_cancel, v_n_expected));
+
+  insert into _r (test, ok, detail)
+  select 'S16b ningún order_cancelled de la venta queda fuera del grupo',
+         count(*) = 0, count(*)::text
+  from public.security_events
+  where event_type = 'order_cancelled'
+    and v_orders ? entity_id::text
+    and group_key is distinct from v_bill;
+
+  insert into _r (test, ok, detail)
+  select 'S16c eventos sin cuenta usan su propio id como group_key',
+         count(*) = 4 and bool_and(group_key = id), count(*)::text
+  from public.security_events
+  where metadata ->> 'qa_m00t02' in ('reject', 'cancel', 'cash_out', 'cut_diff');
+exception when others then
+  insert into _r (test, ok, detail) values ('S16 bloque venta de mostrador', false, sqlstate || ' ' || sqlerrm);
 end $$;
 
 reset role;
