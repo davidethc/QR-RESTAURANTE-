@@ -1566,6 +1566,10 @@ export type Database = {
         Args: { p_days?: number; p_restaurant_id: string }
         Returns: Json
       }
+      get_staff_pin_status: {
+        Args: { p_restaurant_id: string }
+        Returns: { has_pin: boolean; member_id: string }[]
+      }
       get_session_bill: { Args: { p_session_token: string }; Returns: Json }
       get_session_calls: { Args: { p_session_token: string }; Returns: Json }
       get_session_orders: { Args: { p_session_token: string }; Returns: Json }

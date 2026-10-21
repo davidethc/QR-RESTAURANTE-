@@ -207,7 +207,7 @@ describe("saveMember: correcciones de seguridad", () => {
     expect(mocks.admin).not.toHaveBeenCalled();
   });
   it.each(["01234", "012345"])("rechaza el PIN %s sin abrir clientes ni llamar a la RPC", async (pin) => {
-    expect(await saveMember(restaurantId, { ...input, pin })).toEqual({ ok: false, error: "El PIN debe tener 4 dígitos" });
+    expect(await saveMember(restaurantId, { ...input, pin })).toEqual({ ok: false, error: "El PIN debe tener 4 dígitos", field: "pin", code: "PIN_INVALID" });
     expect(mocks.client).not.toHaveBeenCalled();
     expect(mocks.admin).not.toHaveBeenCalled();
   });
@@ -248,5 +248,71 @@ describe("saveMember: correcciones de seguridad", () => {
     expect(result.ok).toBe(false);
     expect(mocks.deleteUser).toHaveBeenCalledWith(userId);
     expect(JSON.stringify(result)).not.toContain("0123");
+  });
+});
+
+describe("saveMember: contrato de errores para el formulario", () => {
+  it.each([
+    ["fullName", { fullName: "" }, "FULL_NAME_INVALID"],
+    ["roles", { roles: ["OWNER"] }, "ROLES_INVALID"],
+    ["cashRegisterIds", { roles: ["WAITER", "CASHIER"], cashRegisterIds: ["inválida"] }, "CASH_REGISTER_INVALID"],
+    ["email", { email: "inválido" }, "EMAIL_INVALID"],
+    ["password", { password: "corta" }, "PASSWORD_INVALID"],
+    ["pin", { pin: "12345" }, "PIN_INVALID"],
+    ["emailLoginEnabled", { emailLoginEnabled: "sí" }, "EMAIL_LOGIN_INVALID"],
+  ])("validación de %s devuelve field/code antes de abrir clientes", async (field, patch, code) => {
+    expect(await saveMember(restaurantId, { ...input, ...patch })).toMatchObject({ ok: false, error: expect.any(String), field, code });
+    expect(mocks.client).not.toHaveBeenCalled();
+  });
+  it("los errores globales no inventan un campo", async () => {
+    const result = await saveMember("no-es-uuid", input);
+    expect(result).toEqual({ ok: false, error: "Sucursal inválida.", code: "RESTAURANT_INVALID" });
+    setup({ user: null });
+    expect(await saveMember(restaurantId, input)).toEqual({ ok: false, error: "Inicia sesión para gestionar miembros.", code: "AUTH_REQUIRED" });
+  });
+  it("el bloqueo del acceso por correo se atribuye al interruptor", async () => {
+    expect(await saveMember(restaurantId, { ...input, emailLoginEnabled: false })).toMatchObject({ ok: false, field: "emailLoginEnabled", code: "EMAIL_LOGIN_REQUIRED" });
+  });
+  it("roles denegados y cajas ajenas tienen códigos estables", async () => {
+    setup({ rpcReplies: [reply(false)] });
+    expect(await saveMember(restaurantId, input)).toMatchObject({ ok: false, field: "roles", code: "ROLES_FORBIDDEN" });
+    setup({ clientReplies: [reply([])] });
+    expect(await saveMember(restaurantId, { ...input, roles: ["WAITER", "CASHIER"], cashRegisterIds: [registerId] })).toMatchObject({ ok: false, field: "cashRegisterIds", code: "CASH_REGISTER_INVALID" });
+  });
+  it.each(["email_exists", "email_already_exists", "user_already_exists"])("Auth %s se atribuye al correo en alta y edición", async (authCode) => {
+    setup({ rpcReplies: [reply(true)] });
+    mocks.createUser.mockResolvedValue({ data: { user: null }, error: { code: authCode, message: "dato privado" } });
+    const created = await saveMember(restaurantId, { ...input, memberId: undefined, password: "clave1234", pin: "0123" });
+    expect(created).toMatchObject({ ok: false, field: "email", code: "EMAIL_EXISTS" });
+    setup();
+    mocks.updateUser.mockResolvedValue({ error: { code: authCode, message: "dato privado" } });
+    const updated = await saveMember(restaurantId, { ...input, email: "otro@correo.com" });
+    expect(updated).toMatchObject({ ok: false, field: "email", code: "EMAIL_EXISTS" });
+    expect(JSON.stringify([created, updated])).not.toContain("dato privado");
+  });
+  it("Auth atribuye contraseña débil a password", async () => {
+    setup();
+    mocks.updateUser.mockResolvedValue({ error: { code: "weak_password", message: "clave1234" } });
+    const result = await saveMember(restaurantId, { ...input, password: "clave1234" });
+    expect(result).toMatchObject({ ok: false, field: "password", code: "PASSWORD_WEAK" });
+    expect(JSON.stringify(result)).not.toContain("clave1234");
+  });
+  it.each([["22023", "PIN_INVALID"], ["42501", "PIN_FORBIDDEN"], ["P0001", "PIN_SAVE_FAILED"]])("RPC %s mantiene field pin sin secretos", async (rpcCode, code) => {
+    setup({ newPin: true, rpcReplies: [reply(true), reply(userId), failure(rpcCode, "secreto 0987")] });
+    const result = await saveMember(restaurantId, { ...input, pin: "0987" });
+    expect(result).toMatchObject({ ok: false, field: "pin", code });
+    expect(JSON.stringify(result)).not.toContain("0987");
+  });
+  it("PIN ausente en edición solicita el campo pin", async () => {
+    setup({ pinPresent: false });
+    expect(await saveMember(restaurantId, input)).toMatchObject({ ok: false, field: "pin", code: "PIN_INVALID" });
+  });
+  it("fallo SQL genérico no se atribuye arbitrariamente a un campo", async () => {
+    const { privileged } = setup();
+    privileged.remaining[2] = failure();
+    const result = await saveMember(restaurantId, input);
+    expect(result).toMatchObject({ ok: false, code: "MEMBER_SAVE_FAILED" });
+    expect(result).not.toHaveProperty("field");
+    expect(JSON.stringify(result)).not.toContain("hash-secreto");
   });
 });

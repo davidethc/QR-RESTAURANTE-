@@ -410,3 +410,11 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Verificación**: typegen, tsc y lint sin errores; Vitest 115/115 en 10 archivos.
 - **Contradicciones resueltas**: la decisión final de cuatro dígitos sustituye la regla temporal de 4–6. No se modificó app/supabase/.
 - **Duración**: ajuste final M00-T04.
+
+## [2026-10-21] código | M00-T04 (#21): contrato para edición de miembros
+
+- **Resumen**: listado con roles y cajas, manteniendo autorización OWNER/ADMIN; errores de saveMember con field/code opcionales compatibles con ActionResult.
+- **Archivos**: acciones/consultas de personal y sus tests, types/actions.ts, types/staff.ts, app/TESTING.md.
+- **Pendiente de BD**: no existe lectura segura de has_pin para authenticated. Tipo opcional y TODO claro; se requiere ampliar get_restaurant_staff para devolver solo el booleano de presencia, manteniendo permisos y sin exponer pin_hash. Petición detallada en app/TESTING.md.
+- **Verificación**: typegen, tsc --noEmit y lint en verde; Vitest 140/140 en 11 archivos. Sin cambios en app/supabase/, sin commit ni push.
+- **Páginas conceptuales actualizadas**: ninguna.
