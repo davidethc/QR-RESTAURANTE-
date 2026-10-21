@@ -11,6 +11,7 @@ import type { ScheduleShift, ScheduleWithShifts } from "@/lib/actions/schedules"
 import { scheduleDays, scheduleDayStatus, scheduleSchema, scheduleShiftSchema, scheduleOverlapError } from "@/lib/validations/schedules";
 import type { ScheduleShiftInput } from "@/lib/validations/schedules";
 import type { ActionResult } from "@/types/actions";
+import { isScheduleShiftDirty, scheduleTimeLabel } from "./schedule-display";
 
 type ScheduleEditorProps = {
   restaurantId: string;
@@ -31,10 +32,11 @@ export function ScheduleEditor({ restaurantId, initialSchedule, onSaved }: Sched
   const shifts = schedule?.schedule_shifts ?? [];
   const [draftDays, setDraftDays] = useState<number[]>([]);
   const [edits, setEdits] = useState<Record<string, ScheduleShiftInput>>({});
-  const previewShifts = [
-    ...shifts.map((shift) => edits[shift.id] ?? shift),
-    ...draftDays.map((weekday) => edits[`draft-${weekday}`] ?? { weekday, starts_at: "08:00", ends_at: "12:00" }),
-  ];
+  const pendingDays = new Set([
+    ...draftDays,
+    ...shifts.filter((shift) => edits[shift.id] && isScheduleShiftDirty(shift, edits[shift.id])).map((shift) => shift.weekday),
+  ]);
+  const hasPendingChanges = pendingDays.size > 0 || name !== (schedule?.name ?? "");
 
   function clearEdit(key: string) {
     setEdits((previous) => {
@@ -75,6 +77,7 @@ export function ScheduleEditor({ restaurantId, initialSchedule, onSaved }: Sched
     if (!schedule) return { ok: false, error: "Crea el horario antes de agregar turnos." };
     if (saving.current) return { ok: false, error: "Espera a que termine el cambio anterior." };
     saving.current = true;
+    setMessage("");
     setBusy(true);
     try {
       const result = await saveScheduleShift(restaurantId, schedule.id, input, shiftId);
@@ -82,6 +85,7 @@ export function ScheduleEditor({ restaurantId, initialSchedule, onSaved }: Sched
         publish({ ...schedule, schedule_shifts: [...shifts.filter((shift) => shift.id !== shiftId), result.data] });
         clearEdit(shiftId ?? `draft-${input.weekday}`);
         if (!shiftId) setDraftDays((days) => days.filter((day) => day !== input.weekday));
+        setMessage("Turno guardado");
       }
       return result;
     } finally {
@@ -94,12 +98,14 @@ export function ScheduleEditor({ restaurantId, initialSchedule, onSaved }: Sched
     if (!schedule) return { ok: false, error: "El horario no existe." };
     if (saving.current) return { ok: false, error: "Espera a que termine el cambio anterior." };
     saving.current = true;
+    setMessage("");
     setBusy(true);
     try {
       const result = await deleteScheduleShift(restaurantId, schedule.id, shiftId);
       if (result.ok) {
         publish({ ...schedule, schedule_shifts: shifts.filter((shift) => shift.id !== shiftId) });
         clearEdit(shiftId);
+        setMessage("Turno quitado");
       }
       return result;
     } finally {
@@ -124,16 +130,19 @@ export function ScheduleEditor({ restaurantId, initialSchedule, onSaved }: Sched
         </form>
         <div className="space-y-4 p-5 sm:p-6">
           <h2 className="text-title-sm font-semibold">Turnos de la semana</h2>
-          <p className={`rounded-control p-4 text-sm ${previewShifts.length === 0 ? "bg-warning-soft text-warning-soft-foreground" : "bg-info-soft text-info-soft-foreground"}`}>
-            {previewShifts.length === 0 ? "El horario permanecerá abierto las 24 horas hasta que agregues un turno." : "Solo se aplican los turnos configurados. Los días sin turnos no tienen atención en este horario."}
+          {!schedule && <p id={`${id}-create-first`} className="text-sm text-muted-foreground">Crea el horario para agregar turnos.</p>}
+          <p className="text-sm text-muted-foreground">Cada turno se guarda por separado.</p>
+          <p className={`rounded-control p-4 text-sm ${shifts.length === 0 ? "bg-warning-soft text-warning-soft-foreground" : "bg-info-soft text-info-soft-foreground"}`}>
+            {shifts.length === 0 ? "El horario permanecerá abierto las 24 horas hasta que agregues un turno." : "Solo se aplican los turnos configurados. Los días sin turnos no tienen atención en este horario."}
           </p>
-          <fieldset disabled={!schedule || pending || busy} className="min-w-0 divide-y divide-border">
+          <fieldset disabled={!schedule || pending || busy} aria-describedby={!schedule ? `${id}-create-first` : undefined} className="min-w-0 divide-y divide-border">
             <legend className="sr-only">Turnos por día</legend>
             {scheduleDays.map((day) => (
               <section key={day.weekday} aria-label={day.label} className="min-w-0 space-y-3 py-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-semibold">{day.label}</h3>
-                  <Button type="button" variant="outline" className="min-h-11" disabled={draftDays.includes(day.weekday)}
+                  {pendingDays.has(day.weekday) && <Badge variant="outline">Cambios sin guardar</Badge>}
+                  <Button type="button" variant="outline" className="min-h-11" disabled={!schedule || pending || busy || draftDays.includes(day.weekday)}
                     aria-label={`Agregar turno del ${day.label.toLowerCase()}`}
                     onClick={() => setDraftDays((days) => [...days, day.weekday])}>+ Turno</Button>
                 </div>
@@ -143,9 +152,9 @@ export function ScheduleEditor({ restaurantId, initialSchedule, onSaved }: Sched
                 ))}
                 {draftDays.includes(day.weekday) && <ShiftRow day={day.label} weekday={day.weekday} onSave={saveShift} onRemove={removeShift}
                   onChange={(value) => setEdits((previous) => ({ ...previous, [`draft-${day.weekday}`]: value }))}
-                  onCancel={() => { setDraftDays((days) => days.filter((weekday) => weekday !== day.weekday)); clearEdit(`draft-${day.weekday}`); }} />}
-                {!previewShifts.some((shift) => shift.weekday === day.weekday) && <p className="text-sm text-muted-foreground">
-                  {previewShifts.length === 0 ? "Abierto 24 h" : "Sin atención en este horario"}
+                  onCancel={() => { setDraftDays((days) => days.filter((weekday) => weekday !== day.weekday)); clearEdit(`draft-${day.weekday}`); setMessage("Turno quitado"); }} />}
+                {!shifts.some((shift) => shift.weekday === day.weekday) && <p className="text-sm text-muted-foreground">
+                  {shifts.length === 0 ? "Abierto 24 h" : "Sin atención en este horario"}
                 </p>}
               </section>
             ))}
@@ -154,18 +163,19 @@ export function ScheduleEditor({ restaurantId, initialSchedule, onSaved }: Sched
       </div>
       <aside aria-label="Resumen del horario" className="min-w-0 space-y-4 rounded-card border border-border bg-card p-5 sm:p-6 lg:sticky lg:top-6">
         <p className="text-sm text-muted-foreground">Disponibilidad de las categorías</p>
-        <h2 className="break-words text-title-sm font-semibold">{name || "Nombre del horario"}</h2>
-        <Badge variant="secondary">{previewShifts.length === 0 ? "Abierto 24 h" : "Con turnos"}</Badge>
-        <dl className="divide-y divide-border border-y border-border">
+        <h2 className="break-words text-title-sm font-semibold">{schedule?.name || "Horario sin guardar"}</h2>
+        {hasPendingChanges && <Badge variant="outline">Cambios sin guardar</Badge>}
+        {schedule && <Badge variant="secondary">{shifts.length === 0 ? "Abierto 24 h" : "Con turnos"}</Badge>}
+        {schedule ? <dl className="divide-y divide-border border-y border-border">
           {scheduleDays.map((day) => {
-            const dayShifts = previewShifts.filter((shift) => shift.weekday === day.weekday);
+            const dayShifts = shifts.filter((shift) => shift.weekday === day.weekday);
             return <div key={day.weekday} className="space-y-1 py-3">
-              <dt className="font-medium">{day.label}</dt>
-              <dd className="text-sm text-muted-foreground">{dayShifts.length ? dayShifts.map((shift) => `${shift.starts_at} – ${shift.ends_at}${shift.ends_at < shift.starts_at ? " (Termina al día siguiente)" : ""}`).join(" / ") : scheduleDayStatus(previewShifts, day.weekday)}</dd>
+              <dt className="flex flex-wrap items-center gap-2 font-medium">{day.label}{pendingDays.has(day.weekday) && <Badge variant="outline">Cambios sin guardar</Badge>}</dt>
+              <dd className="text-sm text-muted-foreground">{dayShifts.length ? dayShifts.map((shift) => `${scheduleTimeLabel(shift.starts_at)} – ${scheduleTimeLabel(shift.ends_at)}${shift.ends_at < shift.starts_at ? " (Termina al día siguiente)" : ""}`).join(" / ") : scheduleDayStatus(shifts, day.weekday)}</dd>
             </div>;
           })}
-        </dl>
-        <p className="text-sm text-muted-foreground">{previewShifts.length === 0 ? "El horario permanecerá abierto las 24 horas hasta que agregues un turno." : "Con turnos definidos, solo se aplican los intervalos configurados."}</p>
+        </dl> : <p className="text-sm text-muted-foreground">Crea el horario para ver el resumen guardado.</p>}
+        {schedule && <p className="text-sm text-muted-foreground">{shifts.length === 0 ? "El horario permanecerá abierto las 24 horas hasta que agregues un turno." : "Con turnos definidos, solo se aplican los intervalos configurados."}</p>}
       </aside>
     </section>
   );
@@ -182,8 +192,8 @@ function ShiftRow({ day, weekday, shift, lastShift, onSave, onRemove, onChange, 
   onCancel?: () => void;
 }) {
   const id = useId();
-  const [start, setStart] = useState(shift?.starts_at ?? "08:00");
-  const [end, setEnd] = useState(shift?.ends_at ?? "12:00");
+  const [start, setStart] = useState(scheduleTimeLabel(shift?.starts_at ?? "08:00"));
+  const [end, setEnd] = useState(scheduleTimeLabel(shift?.ends_at ?? "12:00"));
   const [errors, setErrors] = useState<{ starts_at?: string; ends_at?: string; general?: string }>({});
   const [pending, startTransition] = useTransition();
 
@@ -233,13 +243,13 @@ function ShiftRow({ day, weekday, shift, lastShift, onSave, onRemove, onChange, 
       <div className="grid min-w-0 items-start gap-3 md:grid-cols-2">
         <div className="min-w-0 space-y-2">
           <Label htmlFor={`${id}-start`}>Desde</Label>
-          <Input id={`${id}-start`} type="time" step="any" value={start} onChange={(event) => change("starts_at", event.target.value)} className="min-h-11"
+          <Input id={`${id}-start`} type="time" step={60} value={start} onChange={(event) => change("starts_at", event.target.value)} className="min-h-11"
             aria-label={`Desde, ${day}`} aria-invalid={Boolean(errors.starts_at)} aria-describedby={errors.starts_at ? `${id}-start-error` : undefined} />
           {errors.starts_at && <p id={`${id}-start-error`} role="alert" className="text-sm text-destructive">{errors.starts_at}</p>}
         </div>
         <div className="min-w-0 space-y-2">
           <Label htmlFor={`${id}-end`}>Hasta</Label>
-          <Input id={`${id}-end`} type="time" step="any" value={end} onChange={(event) => change("ends_at", event.target.value)} className="min-h-11"
+          <Input id={`${id}-end`} type="time" step={60} value={end} onChange={(event) => change("ends_at", event.target.value)} className="min-h-11"
             aria-label={`Hasta, ${day}`} aria-invalid={Boolean(errors.ends_at)} aria-describedby={`${id}-hint${errors.ends_at ? ` ${id}-end-error` : ""}`} />
           <p id={`${id}-hint`} aria-live="polite" className="text-sm text-muted-foreground">{start && end && end < start ? "Termina al día siguiente" : ""}</p>
           {errors.ends_at && <p id={`${id}-end-error`} role="alert" className="text-sm text-destructive">{errors.ends_at}</p>}

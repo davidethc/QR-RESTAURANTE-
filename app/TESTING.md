@@ -2248,3 +2248,13 @@ Worktree `.claude/worktrees/M01-T07`, rama `feat/M01-T07-horarios`.
 - Solapamientos: ahora se comparan intervalos semanales con sus continuaciones nocturnas; regresiones para los siete cambios de día, domingo → lunes y sábado → domingo incluidos, en ambos órdenes de entrada. Intervalos contiguos al cierre nocturno siguen siendo válidos. La acción usa la misma validación contra turnos persistidos.
 - Verificación ejecutada: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todos en verde: **99/99 tests**, 11 archivos (12 casos de validación de horarios y 11 de acciones).
 - Sin QA visual en navegador ni escrituras en Supabase. Se mantiene el límite documentado de concurrencia entre sesiones.
+
+## 2026-10-21 — M01-T07: página Horarios y correcciones de revisión
+
+- Ruta `/menu/horarios`, enlazada desde la cabecera de Menú, sin modificar el layout del dashboard. Carga mediante `getSchedules` con el restaurante de la sesión; exige OWNER/ADMIN. Permite seleccionar horarios existentes o abrir el editor de uno nuevo.
+- Estados: lista vacía con «Todavía no hay horarios» y CTA «Crear horario»; `loading.tsx` y esqueleto de reintento sin datos de disponibilidad provisionales; error esperado con Reintentar y sin editor, más `error.tsx` para fallos inesperados. El reintento vuelve a consultar `getSchedules`.
+- Editor nuevo: bajo «Turnos de la semana», «Crea el horario para agregar turnos.»; los siete botones + Turno están explícitamente deshabilitados hasta crear. Se añade «Cada turno se guarda por separado.».
+- Resumen: muestra únicamente nombre y turnos persistidos. Los borradores y las ediciones marcan «Cambios sin guardar» en el día y el resumen; volver a las horas originales elimina el estado pendiente. El resumen de un horario aún no creado explica que primero hay que crearlo.
+- Feedback persistente en `role=status`: «Turno guardado» / «Turno quitado», también tras desmontarse la fila guardada o retirada. Inputs con `step={60}` y valores HH:mm; resumen recorta los TIME de PostgreSQL a minutos.
+- Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`, todo en verde. **107/107 tests, 12 archivos**. Ocho casos nuevos de helpers y renderizado SSR de editor, contenedor y esqueleto; incluyen que el error no monte un editor y que carga no muestre 24 h. Las pruebas de reglas y acciones siguen pasando.
+- Alcance de esta ronda: sin QA interactivo de navegador ni escrituras en Supabase; sin commit ni push.

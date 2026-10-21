@@ -400,3 +400,12 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Verificación**: typegen, tsc y lint sin errores; Vitest 99/99 (11 archivos). Sin QA visual ni cambios SQL.
 - **Contradicciones detectadas**: ninguna; el encargo confirma que la superposición también incluye intervalos que empiezan en días distintos.
 - **Duración**: segunda pasada M01-T07.
+
+## [2026-10-21] código | M01-T07: acceso a Horarios y estados de guardado
+
+- **Resumen**: página `/menu/horarios` con getSchedules y enlace desde Menú, lista vacía, esqueleto y errores recuperables. Editor con explicación previa al alta, resumen de datos guardados, distintivos de cambios pendientes, feedback accesible por turno y horas HH:mm.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, revisión de diseño del encargo y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 107/107 (12 archivos). Ocho pruebas nuevas de presentación y estados; sin QA interactivo ni escrituras en Supabase.
+- **Contradicciones detectadas**: ninguna; el resumen ahora distingue datos persistidos de las ediciones locales.
+- **Duración**: revisión de diseño M01-T07.

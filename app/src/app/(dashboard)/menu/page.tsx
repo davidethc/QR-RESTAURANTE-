@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getAdminMenu } from "@/lib/queries/staff";
@@ -25,7 +27,10 @@ export default async function MenuAdminPage() {
       <PageHeader
         title="Carta"
         description={`${menu.categories.length} categorías · ${menu.products.length} productos`}
-        action={<CategoryDialog restaurantId={session.restaurant.id} />}
+        action={<div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="min-h-11"><Link href="/menu/horarios">Horarios</Link></Button>
+          <CategoryDialog restaurantId={session.restaurant.id} />
+        </div>}
       />
       <MenuAdminBoard
         restaurantId={session.restaurant.id}
