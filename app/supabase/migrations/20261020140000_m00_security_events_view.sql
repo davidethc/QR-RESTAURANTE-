@@ -19,6 +19,14 @@
 --      Usa solo restaurant_members.role (el modelo de roles combinables de
 --      M00-T01 aún no está aplicado; al hacer el contract de role, actualizar
 --      este filtro).
+--   Si la RLS de audit_logs se abre al propio historial de cada miembro,
+--   agregar security_barrier = true a esta vista en esa misma migración,
+--   para que ningún predicado del cliente se evalúe antes del filtro de rol.
+--
+-- La vista expone metadata completo a OWNER/ADMIN: nunca se escriben
+-- secretos en audit_logs.metadata (PIN, hashes, tokens de mesa o de sesión,
+-- credenciales). Cualquier RPC nueva que audite debe respetarlo.
+--
 --   Consecuencia: sin auth.uid() (service_role, postgres) la vista devuelve 0
 --   filas. Para tareas internas se lee audit_logs directamente.
 --
@@ -77,7 +85,10 @@ select
   a.action,
   case
     when a.action = 'REJECT_ORDER' then 'order_cancelled'
-    when a.action = 'UPDATE' then 'order_cancelled'
+    when a.action = 'UPDATE'
+         and a.entity_type = 'ORDER'
+         and a.metadata ->> 'action' = 'CANCEL_ORDER'
+      then 'order_cancelled'
     when a.action = 'VOID_BILL' then 'bill_voided'
     when a.action = 'VOID_PAYMENT' then 'refund'
     when a.action = 'CASH_MOVEMENT' then
@@ -133,7 +144,7 @@ where (
   );
 
 comment on view public.security_events is
-  'Historial de seguridad (M00 §7.2): acciones sensibles de audit_logs. Solo OWNER/ADMIN del restaurante; security_invoker aplica además la RLS de audit_logs. Solo lectura.';
+  'Historial de seguridad (M00 §7.2): acciones sensibles de audit_logs. Solo OWNER/ADMIN del restaurante; security_invoker aplica además la RLS de audit_logs. Solo lectura. No escribir secretos en audit_logs.metadata; si la RLS de audit_logs se abre al propio historial, agregar security_barrier.';
 
 revoke all on public.security_events from public;
 revoke all on public.security_events from anon;
