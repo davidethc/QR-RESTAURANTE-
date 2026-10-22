@@ -13,7 +13,7 @@ import { cn, formatPrice } from "@/lib/utils";
 import { PAYMENT_METHOD_LABEL } from "@/lib/payment-method-labels";
 import { CashTabs } from "../../_components/cash-tabs";
 import { CashResultBadge } from "../../_components/cash-result-badge";
-import { REASON_LABEL } from "../../_components/cash-movement-dialog";
+import { REASON_LABEL } from "@/lib/cash-labels";
 
 export const instant = false;
 export const metadata: Metadata = { title: "Detalle del corte" };

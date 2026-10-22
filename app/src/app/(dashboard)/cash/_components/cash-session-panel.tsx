@@ -3,7 +3,8 @@
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
-import { CashMovementDialog, REASON_LABEL } from "./cash-movement-dialog";
+import { CashMovementDialog } from "./cash-movement-dialog";
+import { REASON_LABEL } from "@/lib/cash-labels";
 import { CashCutDialog } from "./cash-cut-dialog";
 import type { CashSessionSummary } from "@/types/billing";
 

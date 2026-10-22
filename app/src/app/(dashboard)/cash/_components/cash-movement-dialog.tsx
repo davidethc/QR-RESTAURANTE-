@@ -31,16 +31,8 @@ import { newRequestId } from "@/lib/request-id";
 import { addCashMovement } from "@/lib/actions/cash";
 import { addCashMovementSchema, type AddCashMovementInput } from "@/lib/validations/cash";
 import { CASH_MOVEMENT_TYPE } from "@/config/constants";
+import { REASON_LABEL } from "@/lib/cash-labels";
 
-export const REASON_LABEL: Record<string, string> = {
-  FLOAT_TOPUP: "Refuerzo de fondo",
-  TIPS_PAYOUT: "Reparto de propinas",
-  SUPPLIER_PAYMENT: "Pago a proveedor",
-  EXPENSE: "Gasto",
-  REFUND: "Devolución",
-  WITHDRAWAL: "Retiro",
-  OTHER: "Otro",
-};
 
 /**
  * Entrada/salida de caja. OWNER/ADMIN y CASHIER de esa caja (add_cash_movement).

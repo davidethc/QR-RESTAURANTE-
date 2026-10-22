@@ -7,12 +7,13 @@ import { getMyRestaurant } from "@/lib/queries/staff";
 import { getLastCashFloat, listCashMovements } from "@/lib/actions/cash";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { segmentedItemClass, segmentedListClass } from "@/components/shared/segmented-control";
+import { segmentedItemClass, segmentedListClass } from "@/components/shared/segmented-classes";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCutDate } from "@/lib/cash-cut";
 import { cn, formatPrice } from "@/lib/utils";
 import { CashTabs } from "../_components/cash-tabs";
-import { CashMovementDialog, REASON_LABEL } from "../_components/cash-movement-dialog";
+import { CashMovementDialog } from "../_components/cash-movement-dialog";
+import { REASON_LABEL } from "@/lib/cash-labels";
 
 export const instant = false;
 export const metadata: Metadata = { title: "Entradas y retiros" };
