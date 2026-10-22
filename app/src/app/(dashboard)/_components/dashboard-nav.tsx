@@ -40,6 +40,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import type { MyRestaurant } from "@/types/staff";
+import { ConnectionStatus } from "@/components/shared/connection-status";
+import { useStaffCounters } from "@/hooks/use-staff-counters";
+import { formatBadge, navBadgeFor, type StaffCounters } from "@/lib/staff-counters";
 
 const ROLE_LABEL: Record<PermissionRole, string> = {
   OWNER: "Dueño",
@@ -91,9 +94,12 @@ function NavItem({
   active,
   compact,
   onNavigate,
+  badge = 0,
 }: {
   link: NavLink;
   active: boolean;
+  /** M09: avisos pendientes de esta sección (0 = sin insignia). */
+  badge?: number;
   compact?: boolean;
   onNavigate?: () => void;
 }) {
@@ -113,6 +119,17 @@ function NavItem({
     >
       <link.icon className="size-[17px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
       <span className={cn(compact && "hidden xl:inline")}>{link.label}</span>
+      {badge > 0 && (
+        <span
+          className={cn(
+            "ml-auto grid min-w-5 place-items-center rounded-full bg-destructive px-1.5 text-tiny font-semibold leading-5 text-white",
+            compact && "max-xl:absolute max-xl:right-1 max-xl:top-1 max-xl:ml-0"
+          )}
+        >
+          <span aria-hidden>{formatBadge(badge)}</span>
+          <span className="sr-only">{badge} pendientes</span>
+        </span>
+      )}
     </Link>
   );
 }
@@ -122,9 +139,11 @@ function NavList({
   pathname,
   compact,
   onNavigate,
+  counters,
 }: {
   role: PermissionSource;
   pathname: string;
+  counters: StaffCounters;
   compact?: boolean;
   onNavigate?: () => void;
 }) {
@@ -151,6 +170,7 @@ function NavList({
               key={link.href}
               link={link}
               active={pathname.startsWith(link.href)}
+              badge={navBadgeFor(link.href, counters)}
               compact={compact}
               onNavigate={onNavigate}
             />
@@ -192,6 +212,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
   const [open, setOpen] = useState(false);
   const initials = (session.user.full_name ?? "?").slice(0, 1).toUpperCase();
   const current = ALL_LINKS.find((l) => pathname.startsWith(l.href));
+  const { counters, connected } = useStaffCounters(session.restaurant.id);
 
   return (
     <>
@@ -204,7 +225,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
       {/* Escritorio: barra completa. Tablet: solo iconos. Móvil: cajón. */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col gap-6 border-r border-border bg-card px-3 py-4 md:flex xl:w-60 print:hidden">
         <Brand session={session} compact />
-        <NavList role={session} pathname={pathname} compact />
+        <NavList role={session} pathname={pathname} counters={counters} compact />
       </aside>
 
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-card px-4 md:px-7 print:hidden">
@@ -222,7 +243,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
             <SheetContent side="left" className="w-72 gap-6 px-3 py-4" showCloseButton={false}>
               <SheetTitle className="sr-only">Menú del panel</SheetTitle>
               <Brand session={session} />
-              <NavList role={session} pathname={pathname} onNavigate={() => setOpen(false)} />
+              <NavList role={session} pathname={pathname} counters={counters} onNavigate={() => setOpen(false)} />
             </SheetContent>
           </Sheet>
           <p className="truncate text-meta text-muted-foreground">
@@ -231,6 +252,8 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
           </p>
         </div>
 
+        <div className="flex shrink-0 items-center gap-3">
+        <ConnectionStatus connected={connected} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -258,6 +281,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </header>
 
     </>

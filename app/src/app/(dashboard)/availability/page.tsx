@@ -23,7 +23,7 @@ export default async function AvailabilityPage() {
         description="Marca lo que hoy no hay. El cambio se refleja en el POS y la carta."
       />
       <div className="px-4 pb-12 md:px-8">
-        <AvailabilityList items={items} />
+        <AvailabilityList items={items} restaurantId={session.restaurant.id} />
       </div>
     </main>
   );

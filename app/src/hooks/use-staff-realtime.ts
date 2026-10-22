@@ -15,7 +15,11 @@ export type StaffTable =
   // en vivo de cuentas y turnos de caja. Ampliación retrocompatible — el
   // resto de llamadas sigue usando DEFAULT_TABLES sin tocar esto.
   | "bills"
-  | "cash_sessions";
+  | "cash_sessions"
+  // M09: comandas del KDS y disponibilidad (en la publicación desde
+  // 20261023120000; ambas traen restaurant_id).
+  | "tickets"
+  | "availability";
 
 const DEFAULT_TABLES: StaffTable[] = ["orders", "waiter_calls", "tables"];
 
@@ -63,7 +67,8 @@ export function useStaffRealtime(
   {
     channelName = "staff",
     tables = DEFAULT_TABLES,
-  }: { channelName?: string; tables?: StaffTable[] } = {}
+    immediate = false,
+  }: { channelName?: string; tables?: StaffTable[]; immediate?: boolean } = {}
 ) {
   // El callback más reciente, sin meterlo en las dependencias del efecto
   // de suscripción (si no, cada render recrearía el canal WebSocket).
@@ -174,6 +179,9 @@ export function useStaffRealtime(
 
     setup();
 
+    // Para quien no recibe datos del servidor (contadores): carga inicial.
+    if (immediate) void refresh();
+
     // La red de seguridad. Corre pase lo que pase con el socket.
     const safetyNet = setInterval(() => void refresh(), SAFETY_NET_MS);
 
@@ -195,7 +203,7 @@ export function useStaffRealtime(
       authListener.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
-  }, [restaurantId, channelName, tablesKey, refresh]);
+  }, [restaurantId, channelName, tablesKey, immediate, refresh]);
 
   return { connected, refresh };
 }
