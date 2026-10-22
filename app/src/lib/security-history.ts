@@ -1,7 +1,9 @@
 import { z } from "zod";
 import type { Database } from "@/types/database";
 
-export type SecurityEvent = Database["public"]["Views"]["security_events"]["Row"];
+type SecurityEventRow = Database["public"]["Views"]["security_events"]["Row"];
+/** La vista expone todo como nullable; estas columnas nunca lo son en la práctica. */
+export type SecurityEvent = Omit<SecurityEventRow, "id" | "restaurant_id" | "group_key" | "created_at"> & { id: string; restaurant_id: string; group_key: string; created_at: string };
 export const SECURITY_ACTIONS = {
   order_cancelled: "Pedido cancelado",
   bill_voided: "Cuenta anulada",

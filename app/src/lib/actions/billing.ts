@@ -16,6 +16,8 @@ import {
   forceCloseTableSchema,
   openBillSchema,
   recordPaymentSchema,
+  recordPaymentsSchema,
+  voidPaymentWithRefundSchema,
   restaurantIdSchema,
   removeDiscountSchema,
   setBillSplitSchema,
@@ -24,6 +26,8 @@ import {
   type ApplyDiscountInput,
   type ForceCloseTableInput,
   type RecordPaymentInput,
+  type RecordPaymentsInput,
+  type VoidPaymentWithRefundInput,
   type RemoveDiscountInput,
   type SetBillSplitInput,
   type VoidBillInput,
@@ -35,7 +39,9 @@ import type { TopProduct } from "@/types/staff";
 import type {
   Bill,
   OpenBillSummary,
+  BillPaymentContext,
   RecordPaymentResult,
+  RecordPaymentsResult,
   SessionBill,
 } from "@/types/billing";
 
@@ -169,6 +175,101 @@ export async function voidPayment(input: VoidPaymentInput): Promise<ActionResult
     { p_payment_id: parsed.data.paymentId, p_reason: parsed.data.reason },
     { revalidate: true }
   );
+}
+
+/**
+ * Cobro con varios métodos en una sola transacción (M07-T04). Tarjeta y
+ * transferencia se aplican por su monto exacto; el efectivo cubre el resto
+ * con cambio. `requestId` (idempotencia) la genera el formulario.
+ */
+export async function recordPayments(input: RecordPaymentsInput): Promise<ActionResult<RecordPaymentsResult>> {
+  const parsed = recordPaymentsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const v = parsed.data;
+  return run<RecordPaymentsResult>(
+    "record_payments",
+    {
+      p_bill_id: v.billId,
+      p_amount: v.amount,
+      p_payments: v.payments.map((p) => ({
+        method: p.method,
+        received: p.received,
+        reference: p.reference || null,
+      })),
+      p_request_id: v.requestId,
+      p_tip_amount: v.tipAmount,
+      p_items: v.items && v.items.length > 0 ? v.items : null,
+      p_auto_close: v.autoClose,
+    },
+    { revalidate: true }
+  );
+}
+
+/** Anula un pago; el reembolso puede hacerse con otro método (queda en el registro de seguridad). */
+export async function voidPaymentWithRefund(
+  input: VoidPaymentWithRefundInput
+): Promise<ActionResult<{ bill: Bill }>> {
+  const parsed = voidPaymentWithRefundSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const result = await run<Bill | { bill: Bill }>(
+    "void_payment_with_refund",
+    {
+      p_payment_id: parsed.data.paymentId,
+      p_reason: parsed.data.reason,
+      p_refund_method: parsed.data.refundMethod ?? null,
+    },
+    { revalidate: true }
+  );
+  if (!result.ok) return result;
+  const data = result.data;
+  return { ok: true, data: "bill" in data ? data : { bill: data } };
+}
+
+/**
+ * Datos de lectura para la hoja de cobro que bill_json aún no trae: número
+ * de cada pago (payments.number) y lo que el cliente indicó al pedir
+ * (orders.preferred_payment_method / pays_with_amount) + si todos los pedidos
+ * de la cuenta están cancelados. Solo lectura, bajo RLS.
+ */
+export async function getBillPaymentContext(billId: string): Promise<ActionResult<BillPaymentContext>> {
+  const parsed = billIdSchema.safeParse({ billId });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  try {
+    const supabase = await createClient();
+    const { data: bill } = await supabase
+      .from("bills")
+      .select("table_session_id")
+      .eq("id", parsed.data.billId)
+      .maybeSingle();
+    const [pays, orders] = await Promise.all([
+      supabase.from("payments").select("id, number").eq("bill_id", parsed.data.billId),
+      bill
+        ? supabase
+            .from("orders")
+            .select("status, cancelled, preferred_payment_method, pays_with_amount, created_at")
+            .eq("table_session_id", bill.table_session_id)
+            .order("created_at", { ascending: true })
+        : Promise.resolve({ data: [] as never[] }),
+    ]);
+    const numbers: Record<string, number> = {};
+    for (const p of pays.data ?? []) if (p.number !== null) numbers[p.id] = p.number;
+    const list = orders.data ?? [];
+    const isCancelled = (o: { status: string; cancelled: boolean }) => o.cancelled || o.status === "CANCELLED";
+    const pref = list.find((o) => !isCancelled(o) && o.preferred_payment_method);
+    const map = { cash: "CASH", card: "CARD", transfer: "TRANSFER" } as const;
+    const key = pref?.preferred_payment_method as keyof typeof map | undefined;
+    return {
+      ok: true,
+      data: {
+        paymentNumbers: numbers,
+        preferredMethod: key && map[key] ? map[key] : null,
+        paysWithAmount: pref?.pays_with_amount === null || pref === undefined ? null : Number(pref.pays_with_amount),
+        allOrdersCancelled: list.length > 0 && list.every(isCancelled),
+      },
+    };
+  } catch {
+    return { ok: false, error: "No se pudo leer el detalle del pago." };
+  }
 }
 
 export async function closeBill(billId: string): Promise<ActionResult<Bill>> {

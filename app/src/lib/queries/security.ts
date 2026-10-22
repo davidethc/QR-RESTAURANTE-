@@ -26,7 +26,7 @@ export async function getSecurityHistory(filters: SecurityFilters) {
   for (let offset = 0; ; offset += CHUNK) {
     const { data, error } = await filtered("id, group_key, created_at").range(offset, offset + CHUNK - 1);
     if (error) throw error;
-    index.push(...(data ?? []));
+    index.push(...((data ?? []) as unknown as typeof index));
     if (index.length > MAX_EVENTS) throw new Error("SECURITY_RANGE_TOO_LARGE");
     if ((data?.length ?? 0) < CHUNK) break;
   }
@@ -36,7 +36,7 @@ export async function getSecurityHistory(filters: SecurityFilters) {
     for (let offset = 0; ; offset += CHUNK) {
       const { data, error } = await filtered(EVENT_COLUMNS).in("group_key", pagination.keys).range(offset, offset + CHUNK - 1);
       if (error) throw error;
-      for (const row of data ?? []) events.push({ ...row, metadata: null });
+      for (const row of data ?? []) events.push({ ...(row as unknown as SecurityEvent), metadata: null });
       if (events.length > MAX_EVENTS) throw new Error("SECURITY_RANGE_TOO_LARGE");
       if ((data?.length ?? 0) < CHUNK) break;
     }

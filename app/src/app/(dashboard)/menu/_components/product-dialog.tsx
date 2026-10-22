@@ -367,7 +367,7 @@ export function ProductDialog({
             </Button>
           )}
         </SheetTrigger>
-        <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md lg:max-w-4xl">
+        <SheetContent className="flex w-full flex-col gap-0 data-[side=right]:sm:max-w-md data-[side=right]:lg:max-w-4xl">
           <SheetHeader className="shrink-0 border-b border-border px-4 py-5 sm:px-6">
             <SheetTitle className="text-title-sm font-semibold">
               {isEdit ? "Editar producto" : "Nuevo producto"}

@@ -147,3 +147,82 @@ export function cashQuickAmounts(due: number, max = 3): number[] {
   }
   return result.map(fromCents);
 }
+
+/**
+ * Cambio en vivo para la hoja de cobro (M07): recibido − a cobrar, a 2
+ * decimales y NUNCA negativo (si falta dinero devuelve 0; usa `cashShortfall`
+ * para saber cuánto falta). A diferencia de `calcChange`, no lanza.
+ */
+export function changeDue(tendered: number, due: number): number {
+  const diff = toCents(tendered) - toCents(due);
+  return fromCents(Math.max(0, diff));
+}
+
+/** Lo que falta para cubrir lo adeudado con lo recibido (0 si alcanza). */
+export function cashShortfall(tendered: number, due: number): number {
+  const diff = toCents(due) - toCents(tendered);
+  return fromCents(Math.max(0, diff));
+}
+
+export type MultiMethodInput = { cash: number; card: number; transfer: number };
+
+export type MultiMethodResult = {
+  /** Suma recibida entre los tres métodos. */
+  received: number;
+  /** Cuánto falta para cubrir el monto (0 si alcanza). */
+  missing: number;
+  /** Cambio: solo el efectivo puede exceder; nunca negativo. */
+  change: number;
+  /** Parte que cubre el efectivo (monto − tarjeta − transferencia, ≥ 0). */
+  cashPart: number;
+  /** Aviso en español cuando no se puede cobrar; null si todo está bien. */
+  error: string | null;
+};
+
+/**
+ * Reparto entre efectivo, tarjeta y transferencia. Mismas reglas que la RPC
+ * record_payments: tarjeta y transferencia se aplican por su monto exacto (no
+ * pueden superar lo que se cobra) y el efectivo cubre el resto con cambio.
+ * `tip` se exige en efectivo (va con el primer método de la lista).
+ */
+export function evaluateMultiMethod(amount: number, input: MultiMethodInput, tip = 0): MultiMethodResult {
+  const due = toCents(amount);
+  const tipC = toCents(tip);
+  const cash = Math.max(0, toCents(input.cash));
+  const card = Math.max(0, toCents(input.card));
+  const transfer = Math.max(0, toCents(input.transfer));
+  const noncash = card + transfer;
+  const received = cash + noncash;
+
+  if (due <= 0) {
+    return { received: fromCents(received), missing: 0, change: 0, cashPart: 0, error: "Escribe un monto a cobrar." };
+  }
+  if (noncash > due) {
+    return {
+      received: fromCents(received),
+      missing: 0,
+      change: 0,
+      cashPart: 0,
+      error: "Tarjeta y transferencia superan el monto a cobrar.",
+    };
+  }
+  const cashPart = due - noncash;
+  const need = cashPart + (cashPart > 0 ? tipC : 0);
+  const missing = Math.max(0, need - cash);
+  const change = cashPart > 0 ? Math.max(0, cash - need) : 0;
+  let error: string | null = null;
+  if (cashPart === 0 && cash > 0) error = "Tarjeta y transferencia ya cubren el monto: quita el efectivo.";
+  else if (missing > 0) error = `Faltan $${(missing / 100).toFixed(2)} para cubrir el monto.`;
+  return {
+    received: fromCents(received),
+    missing: fromCents(missing),
+    change: fromCents(change),
+    cashPart: fromCents(cashPart),
+    error,
+  };
+}
+
+/** Saldo pendiente: total − cobrado, a 2 decimales y nunca negativo. */
+export function balanceDue(total: number, paid: number): number {
+  return fromCents(Math.max(0, toCents(total) - toCents(paid)));
+}

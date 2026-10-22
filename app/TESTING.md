@@ -2448,3 +2448,39 @@ RESTRICT impide borrar zonas con mesas vinculadas; validar movimientos de mesas
 con sesiones activas y el flujo de borrado corresponde a M03-T03. Solapamiento y
 límites respecto a la cuadrícula corresponden a M03-T02/T03. RLS sigue el `role`
 legado OWNER/ADMIN solicitado; BRANCH_MANAGER requiere la transición de M00.
+
+## S2 — 2026-10-22
+
+Ronda en navegador (Playwright, Chromium) sobre el build de producción local (`next build` + `next start`, puerto 3210), contra la base de producción pero **solo en `monky-qa`** (confirmado en pantalla: "Monky QA"). Cuentas `QA_MONKY_*`. Capturas a 1280 y 390 px en `_capturas/qa-s2/` (ignorada por git). Tipos regenerados tras aplicar M05–M07: `tsc`, lint, 420 tests y build en verde.
+
+| Flujo | Resultado | Notas |
+|---|---|---|
+| Login OWNER / KITCHEN en monky-qa | Pasa | Redirige a /today y /kitchen; sin 5xx ni errores de consola en toda la ronda |
+| /staff: alta de miembro con PIN | No probado | La pantalla avisa "falta configurar SUPABASE_SECRET_KEY en el servidor"; sin esa clave no se pueden crear cuentas. Solo se verificó el listado y el botón de desbloqueo por PIN |
+| /menu: producto con 2 variantes + personalización | Pasa tras arreglo | Se creó "QA Hamburguesa" (Simple $5 / Doble $7,50) con grupo "QA Extras". Bug: a 1280 px el panel quedaba de 380 px y la vista previa tapaba el formulario (corregido) |
+| /availability: agotar y volver | Pasa | Producto, variantes y opciones de personalización se listan; el cambio persiste tras recargar (~5 s en reflejarse con el contador) |
+| /settings: zona + editor de plano (2 mesas) | Pasa | "QA Terraza" con mesas 4 y 5; guardar ~4,4 s; aparece en /tables |
+| /tables: plano en escritorio | Pasa tras arreglo | Bug: mesas sin posición (creadas antes de las zonas) se apilaban en la celda (1,1); corregido acomodándolas en celdas libres |
+| Mesa: abrir, comanda #1 (variante + extra) y #2 | Pasa | Precio en vivo correcto ($8,00 = Doble + queso); ambas comandas visibles |
+| Cocina (KITCHEN): contador, completar, devolver | Pasa | Contador "2 → 1 → 0 comandas por preparar"; historial muestra "Devolver a preparación" y la comanda regresa a la cola |
+| Cobro de mesa en efectivo con cambio | Pasa | $13,50 con $20 recibidos: cambio $6,50 (~3,5 s). Con la cuenta pagada y el pedido aún "En cocina", la mesa no se libera hasta marcar "Entregado" |
+| Pedir cuenta (flujo cliente por QR) | No probado | Solo se verificó el botón Pre-cuenta del panel |
+| Mostrador "Para llevar", cobro con varios métodos | Pasa | $7,75 = $4,00 efectivo + $3,00 tarjeta + $0,75 transferencia; la caja suma cada método |
+| Mostrador "Domicilio propio", cobrar después, copiar pedido | Pasa | Guarda sin cobrar; "Copiar pedido" funciona (en headless hay que conceder permiso de portapapeles) |
+| Cancelar con motivo y verificar que no se cobra | Pasa tras arreglo | Exige motivo (mín. 3 caracteres); la cuenta sale de caja y el pedido no ofrece "Cobrar". Bug: el pedido cancelado seguía en "Pedidos de mostrador" (corregido en la consulta) |
+| Responsive 390 px (8 pantallas del panel + cocina) | Pasa | Sin desborde horizontal |
+
+Tiempos (servidor local): carga de pantallas del panel 0,7–1,2 s a 390 px; acciones de escritura 3–3,5 s hasta ver el resultado.
+
+### Hallazgos pendientes (no arreglados)
+- `cancel_counter_sale` deja el pedido en `status = CANCELLED` pero no marca `cancelled = true` (sí lo hace `cancel_order`): requiere migración. Mientras tanto la consulta filtra por ambos.
+- En /cash un domicilio aparece como "Para llevar #N" (la etiqueta se arma en SQL, migración `counter_labels_in_orders_and_bills`).
+- Al completar todas las comandas en cocina, el pedido sigue "En cocina" y el mesero ve "Cocina aún no lo marcó listo" al entregar; conviene decidir si completar todas las comandas debe pasar el pedido a LISTO.
+- La cuenta en el cobro muestra "1× QA Hamburguesa $8,00" sin variante ni extras (la cocina sí los muestra).
+- En /menu la fila del producto muestra "$5,00" en vez de "Desde $5,00" con varias variantes; tras eliminar un producto la lista tarda en refrescarse (el contador sí cambia).
+- `callUntypedRpc` / `untyped-table` siguen en uso (29 usos): quitarlos requiere revisar cada llamada; no es trivial.
+- Mesas 1 y 3 de monky-qa tienen cuentas abiertas de $1,25 y el pedido #24 de mostrador "Para comer aquí" anteriores a esta ronda.
+
+### Datos de prueba
+- Eliminados con la app: producto "QA Hamburguesa", personalización "QA Extras", zona "QA Terraza" (con sus mesas), pedidos de mostrador no pagados (cancelados con motivo). "Café QA" quedó disponible.
+- Quedan (pagos registrados, la app no permite cancelarlos): cuenta #37 (Mesa 2, $13,50 efectivo) y cuenta #38 ("Para llevar #1", $7,75 en 3 métodos), más los pedidos y comandas asociados, y los pedidos cancelados. Afectan los reportes de hoy de monky-qa.

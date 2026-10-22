@@ -28,6 +28,8 @@ export function ChargeFooter({
   formId,
   payAmount,
   paySubmitting,
+  payBlockReason,
+  chargeBlockedReason,
   closePending,
   onGoToPay,
   onCloseBill,
@@ -37,6 +39,10 @@ export function ChargeFooter({
   formId: string;
   payAmount: number;
   paySubmitting: boolean;
+  /** Qué falta para poder cobrar (null = listo). Se muestra junto al botón. */
+  payBlockReason?: string | null;
+  /** Cuenta/pedidos cancelados: no se cobra y se dice por qué. */
+  chargeBlockedReason?: string | null;
   closePending: boolean;
   onGoToPay: () => void;
   onCloseBill: () => void;
@@ -60,25 +66,40 @@ export function ChargeFooter({
         Cerrar cuenta
       </Button>
     );
+  } else if (chargeBlockedReason && bill.status === "OPEN") {
+    action = (
+      <p className="flex-1 text-right text-meta text-muted-foreground lg:flex-none">{chargeBlockedReason}</p>
+    );
   } else if (bill.status === "OPEN" && tab === "pay") {
     action = (
-      <Button
-        type="submit"
-        form={formId}
-        disabled={paySubmitting || !online}
-        title={offlineTitle}
-        className={primaryClass}
-      >
-        {paySubmitting && <Loader2 className="animate-spin" data-icon="inline-start" aria-hidden />}
-        {online ? "Cobrar" : "Sin conexión"}{" "}
-        <span className="tabular-nums">{formatPrice(payAmount)}</span>
-      </Button>
+      <div className="flex min-w-0 flex-1 flex-col gap-1 lg:flex-none lg:items-end">
+        {payBlockReason && (
+          <p role="status" className="text-meta font-medium text-warning-soft-foreground lg:text-right">
+            {payBlockReason}
+          </p>
+        )}
+        <Button
+          type="submit"
+          form={formId}
+          disabled={paySubmitting || !online || !!payBlockReason}
+          title={offlineTitle ?? payBlockReason ?? undefined}
+          className={primaryClass}
+        >
+          {paySubmitting && <Loader2 className="animate-spin" data-icon="inline-start" aria-hidden />}
+          {online ? "Cobrar" : "Sin conexión"}{" "}
+          <span className="tabular-nums">{formatPrice(payAmount)}</span>
+        </Button>
+      </div>
     );
   } else if (bill.status === "OPEN") {
     action = (
       <Button type="button" onClick={onGoToPay} className={primaryClass}>
         Cobrar
       </Button>
+    );
+  } else if (bill.status === "VOID") {
+    action = (
+      <p className="flex-1 text-right text-meta text-muted-foreground lg:flex-none">Cuenta anulada · no se puede cobrar</p>
     );
   } else if (bill.status === "PAID") {
     action = (
