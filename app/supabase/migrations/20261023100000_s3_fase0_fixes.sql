@@ -12,6 +12,9 @@
 --      su propio GRANT SELECT (columna) a authenticated.
 -- ---------------------------------------------------------------------------
 
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
+
 create or replace function public.session_place_label(p_session_id uuid)
 returns text
 language sql
@@ -503,5 +506,20 @@ $$;
 revoke all on function public.get_order_contact(uuid) from public, anon;
 grant execute on function public.get_order_contact(uuid) to authenticated, service_role;
 
-revoke select on public.orders from authenticated;
-grant select (accepted_at, accepted_by, cancel_reason, cancelled, cancelled_by, client_request_id, created_at, customer_name, delivered_at, delivery_provider, external_order_id, folio, general_comment, id, notes, order_number, pays_with_amount, preferred_payment_method, preparing_at, ready_at, rejection_reason, restaurant_id, service_type, shipping_cost, short_code, status, status_review, subtotal, table_id, table_session_id, total, updated_at) on public.orders to authenticated;
+-- Grant por columna calculado en tiempo de ejecución: todas las columnas
+-- actuales de orders salvo la PII. Así no depende del orden respecto a M11
+-- (orders.source) ni de columnas que existan en producción y no aquí.
+do $$
+declare
+  v_cols text;
+begin
+  select string_agg(quote_ident(a.attname), ', ' order by a.attnum)
+    into v_cols
+  from pg_attribute a
+  where a.attrelid = 'public.orders'::regclass
+    and a.attnum > 0 and not a.attisdropped
+    and a.attname not in ('customer_phone', 'delivery_address');
+  revoke select on public.orders from authenticated;
+  execute format('grant select (%s) on public.orders to authenticated', v_cols);
+end;
+$$;

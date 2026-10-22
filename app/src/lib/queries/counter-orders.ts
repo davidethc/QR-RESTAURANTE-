@@ -16,6 +16,8 @@ export async function getCounterOrders(restaurantId: string, limit = 30): Promis
     .eq("restaurant_id", restaurantId)
     .in("service_type", ["dine_in_no_table", "takeaway", "delivery"])
     .eq("cancelled", false)
+    // Ventas anuladas antes de S3-F0 quedaron con status CANCELLED y cancelled=false.
+    .neq("status", "CANCELLED")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
