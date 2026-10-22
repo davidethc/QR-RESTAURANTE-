@@ -1,70 +1,69 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { splitLineInList } from "@/lib/order-lines";
 import type { StaffCartItem } from "@/types/menu";
+
+export type NewCartLine = Omit<StaffCartItem, "id">;
 
 /**
  * El pedido que el mesero va armando mientras el cliente se lo dicta.
  *
- * A diferencia del carrito del cliente, este NO se guarda en `localStorage`:
- * es una atención que empieza y termina en la mesa, en un par de minutos. Si
- * el mesero sale de la pantalla, salió; y en una tablet compartida entre
- * turnos, un carrito a medias que sobrevive es un pedido equivocado esperando
- * a pasar.
- *
- * Las líneas se identifican por producto: pedir dos veces lo mismo suma
- * cantidad en vez de abrir una segunda línea, salvo que lleven indicaciones
- * distintas (un "sin cebolla" no se puede fusionar con uno normal).
+ * No se guarda en `localStorage`: es una atención que empieza y termina en
+ * la mesa. Las líneas se fusionan si coinciden producto, variante, nota y
+ * personalizaciones; "Separar uno" las vuelve a abrir en unidades.
  */
 export function useStaffCart() {
   const [items, setItems] = useState<StaffCartItem[]>([]);
 
+  const addLine = useCallback((line: NewCartLine) => {
+    setItems((current) => {
+      const index = current.findIndex(
+        (i) =>
+          i.productId === line.productId &&
+          i.variantId === line.variantId &&
+          i.notes === line.notes &&
+          (i.modifiers ?? "") === (line.modifiers ?? "")
+      );
+      if (index === -1) return [...current, { ...line, id: crypto.randomUUID() }];
+      return current.map((i, k) =>
+        k === index ? { ...i, quantity: i.quantity + line.quantity } : i
+      );
+    });
+  }, []);
+
+  /** Atajo para productos sin variante (caja): suma una unidad. */
   const addItem = useCallback(
-    (product: { id: string; name: string; price: number }, notes = "") => {
-      setItems((current) => {
-        const index = current.findIndex(
-          (item) => item.productId === product.id && item.notes === notes
-        );
-
-        if (index === -1) {
-          return [
-            ...current,
-            {
-              id: crypto.randomUUID(),
-              productId: product.id,
-              name: product.name,
-              price: product.price,
-              quantity: 1,
-              notes,
-            },
-          ];
-        }
-
-        return current.map((item, i) =>
-          i === index ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      });
-    },
-    []
+    (product: { id: string; name: string; price: number }, notes = "") =>
+      addLine({ productId: product.id, name: product.name, price: product.price, quantity: 1, notes }),
+    [addLine]
   );
 
-  // Por id y no por índice: si se quita una línea mientras se edita otra,
-  // los índices se corren y el cambio caería en el plato equivocado.
+  const setNotes = useCallback((id: string, notes: string) => {
+    setItems((current) => current.map((i) => (i.id === id ? { ...i, notes } : i)));
+  }, []);
 
-  /** Bajar a cero quita la línea: es como se borra sin un botón aparte. */
+  /** Reemplaza el contenido de una línea (Editar), conservando su id. */
+  const replaceLine = useCallback((id: string, line: NewCartLine) => {
+    setItems((current) => current.map((i) => (i.id === id ? { ...line, id } : i)));
+  }, []);
+
+  /** Bajar a cero quita la línea. */
   const setQuantity = useCallback((id: string, quantity: number) => {
     setItems((current) =>
       quantity <= 0
-        ? current.filter((item) => item.id !== id)
-        : current.map((item) =>
-            item.id === id ? { ...item, quantity } : item
-          )
+        ? current.filter((i) => i.id !== id)
+        : current.map((i) => (i.id === id ? { ...i, quantity } : i))
     );
   }, []);
 
-  const setNotes = useCallback((id: string, notes: string) => {
+  const remove = useCallback((id: string) => {
+    setItems((current) => current.filter((i) => i.id !== id));
+  }, []);
+
+  const splitOne = useCallback((id: string) => {
     setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, notes } : item))
+      splitLineInList(current, id, () => crypto.randomUUID())
     );
   }, []);
 
@@ -78,24 +77,14 @@ export function useStaffCart() {
     [items]
   );
 
-  /** Cuántas unidades de un producto van ya en el pedido. */
   const quantityOf = useCallback(
     (productId: string) =>
       items.reduce(
-        (sum, item) => (item.productId === productId ? sum + item.quantity : sum),
+        (sum, i) => (i.productId === productId ? sum + i.quantity : sum),
         0
       ),
     [items]
   );
 
-  return {
-    items,
-    addItem,
-    setQuantity,
-    setNotes,
-    clear,
-    total,
-    count,
-    quantityOf,
-  };
+  return { items, addItem, setNotes, addLine, replaceLine, setQuantity, remove, splitOne, clear, total, count, quantityOf };
 }
