@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { Search, X, Flame, Pencil, Split, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -238,14 +237,9 @@ export function StaffOrderBuilder({
         </div>
       )}
 
-      <AnimatePresence>
       {cart.items.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 24 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card px-4 pt-3 shadow-sheet"
+        <div
+          className="animate-in fade-in slide-in-from-bottom-6 duration-200 fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card px-4 pt-3 shadow-sheet"
           style={{
             paddingBottom: "calc(0.875rem + env(safe-area-inset-bottom, 0px))",
           }}
@@ -348,9 +342,8 @@ export function StaffOrderBuilder({
               </span>
             </Button>
           </div>
-        </motion.div>
+        </div>
       )}
-      </AnimatePresence>
 
       {sheet && (
         <ProductSheet

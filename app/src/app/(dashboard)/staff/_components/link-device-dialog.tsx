@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import QRCode from "qrcode";
 import { CheckCircle2, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +65,7 @@ export function LinkDeviceDialog({ restaurantId }: { restaurantId: string }) {
   useEffect(() => {
     if (!link) return;
     let cancelled = false;
-    QRCode.toDataURL(link.url, { width: 512, margin: 2 }).then((png) => {
+    import("qrcode").then(({ default: QRCode }) => QRCode.toDataURL(link.url, { width: 512, margin: 2 })).then((png) => {
       if (!cancelled) setQr(png);
     });
     return () => {

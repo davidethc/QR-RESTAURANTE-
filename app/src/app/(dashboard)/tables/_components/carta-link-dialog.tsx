@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { AlertTriangle, Download, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +35,7 @@ export function CartaLinkDialog({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    QRCode.toDataURL(url, { width: 512, margin: 2 }).then((png) => {
+    import("qrcode").then(({ default: QRCode }) => QRCode.toDataURL(url, { width: 512, margin: 2 })).then((png) => {
       if (!cancelled) setDataUrl(png);
     });
     return () => {

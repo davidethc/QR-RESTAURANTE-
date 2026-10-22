@@ -3,7 +3,6 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { UtensilsCrossed, Trash2, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -56,14 +55,9 @@ export function ProductRow({
   }
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
+    <div
       className={cn(
-        "flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-secondary/60 md:px-5",
+        "animate-in fade-in duration-150 flex items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-secondary/60 md:px-5",
         isDragging && "opacity-40"
       )}
       onDragOver={(e) => e.preventDefault()}
@@ -157,6 +151,6 @@ export function ProductRow({
           onSuccess={() => router.refresh()}
         />
       </div>
-    </motion.div>
+    </div>
   );
 }

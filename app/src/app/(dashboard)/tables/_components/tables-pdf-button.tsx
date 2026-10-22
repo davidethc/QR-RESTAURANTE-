@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import QRCode from "qrcode";
 import { FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { notify } from "@/lib/notifications";
@@ -88,6 +87,7 @@ export function TablesPdfButton({
         });
 
         const qrSize = Math.min(cellW, cellH) - 28;
+        const { default: QRCode } = await import("qrcode");
         const dataUrl = await QRCode.toDataURL(buildScanUrl(table.qr_token), {
           width: 420,
           margin: 1,

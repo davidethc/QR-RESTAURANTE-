@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { PackageCheck } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,14 +45,7 @@ export function OrderCard({
   const deliverClassName = "mt-3 h-11 w-full rounded-control text-body font-semibold";
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.2 }}
-      className="rounded-card border border-border bg-card p-4"
-    >
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-200 rounded-card border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-lead font-semibold leading-tight text-foreground">
@@ -141,6 +133,6 @@ export function OrderCard({
             Entregado
           </Button>
         ))}
-    </motion.div>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
 import { getReportsBundle, type ReportsBundleResult } from "@/lib/actions/reports";
 import { notify } from "@/lib/notifications";
@@ -7,16 +8,29 @@ import type { RangePresetKey } from "@/lib/reports-dates";
 import type { ReportGranularity, ReportRange } from "@/types/reports";
 import { RangeSelector } from "./range-selector";
 import { KpiCards } from "./kpi-cards";
-import { SalesPeriodChart } from "./sales-period-chart";
 import { TopProductsTable } from "./top-products-table";
-import { CategoryBarChart } from "./category-bar-chart";
-import { PaymentMethodsChart } from "./payment-methods-chart";
 import { StaffTable } from "./staff-table";
 import { PeakHoursHeatmap } from "./peak-hours-heatmap";
 import { PrepTimesCards } from "./prep-times-cards";
 import { DiscountsTable } from "./discounts-table";
 import { ReportsExportButton } from "./reports-export-button";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// recharts pesa bastante y solo se usa aquí: se baja aparte (sin SSR, los
+// gráficos miden el contenedor en el navegador) mientras se ve el esqueleto.
+const chartFallback = () => <Skeleton className="h-64 w-full" />;
+const SalesPeriodChart = dynamic(
+  () => import("./sales-period-chart").then((m) => m.SalesPeriodChart),
+  { ssr: false, loading: chartFallback }
+);
+const CategoryBarChart = dynamic(
+  () => import("./category-bar-chart").then((m) => m.CategoryBarChart),
+  { ssr: false, loading: chartFallback }
+);
+const PaymentMethodsChart = dynamic(
+  () => import("./payment-methods-chart").then((m) => m.PaymentMethodsChart),
+  { ssr: false, loading: chartFallback }
+);
 
 function unwrapBundle(bundle: ReportsBundleResult) {
   return {
