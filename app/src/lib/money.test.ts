@@ -8,6 +8,10 @@ import {
   splitEqually,
   splitIncludedTax,
   toCents,
+  changeDue,
+  cashShortfall,
+  evaluateMultiMethod,
+  balanceDue,
 } from "./money";
 
 const sum = (values: number[]) => values.reduce((acc, v) => acc + toCents(v), 0);
@@ -155,5 +159,51 @@ describe("cashQuickAmounts", () => {
 
   it("no ofrece atajos si no se debe nada", () => {
     expect(cashQuickAmounts(0)).toEqual([]);
+  });
+});
+
+describe("changeDue / cashShortfall", () => {
+  it("calcula el cambio a 2 decimales", () => {
+    expect(changeDue(50, 23.4)).toBe(26.6);
+    expect(changeDue(0.3, 0.1)).toBe(0.2);
+  });
+  it("nunca es negativo", () => {
+    expect(changeDue(10, 23.4)).toBe(0);
+    expect(changeDue(23.4, 23.4)).toBe(0);
+  });
+  it("indica cuánto falta", () => {
+    expect(cashShortfall(10, 23.4)).toBe(13.4);
+    expect(cashShortfall(30, 23.4)).toBe(0);
+  });
+});
+
+describe("evaluateMultiMethod", () => {
+  it("cubre con tarjeta y efectivo, con cambio", () => {
+    const r = evaluateMultiMethod(30, { cash: 20, card: 15, transfer: 0 });
+    expect(r).toMatchObject({ cashPart: 15, change: 5, missing: 0, error: null, received: 35 });
+  });
+  it("avisa cuánto falta", () => {
+    const r = evaluateMultiMethod(30, { cash: 5, card: 10, transfer: 5 });
+    expect(r.missing).toBe(10);
+    expect(r.error).toMatch(/Faltan \$10\.00/);
+  });
+  it("rechaza tarjeta + transferencia por encima del monto", () => {
+    expect(evaluateMultiMethod(10, { cash: 0, card: 8, transfer: 5 }).error).not.toBeNull();
+  });
+  it("exige la propina en efectivo", () => {
+    const r = evaluateMultiMethod(10, { cash: 10, card: 0, transfer: 0 }, 2);
+    expect(r.missing).toBe(2);
+  });
+  it("sin errores de punto flotante", () => {
+    const r = evaluateMultiMethod(0.3, { cash: 0.2, card: 0.1, transfer: 0 });
+    expect(r.error).toBeNull();
+    expect(r.change).toBe(0);
+  });
+});
+
+describe("balanceDue", () => {
+  it("redondea y nunca baja de cero", () => {
+    expect(balanceDue(10.1, 0.2)).toBe(9.9);
+    expect(balanceDue(5, 7)).toBe(0);
   });
 });

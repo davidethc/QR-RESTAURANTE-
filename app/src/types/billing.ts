@@ -142,6 +142,25 @@ export type RecordPaymentResult = {
   bill: Bill;
 };
 
+export type RecordPaymentsResult = {
+  payments: { payment_id: string; method: PaymentMethod; payment_number: number | null }[];
+  change_amount: number;
+  replayed: boolean;
+  closed?: boolean;
+  bill: Bill;
+};
+
+/** Lectura complementaria a bill_json para la hoja de cobro (M07). */
+export type BillPaymentContext = {
+  /** payment id -> payments.number (#1, #2...). */
+  paymentNumbers: Record<string, number>;
+  /** Método que el cliente indicó al pedir ("Método preferido"). */
+  preferredMethod: "CASH" | "CARD" | "TRANSFER" | null;
+  paysWithAmount: number | null;
+  /** Todos los pedidos de la cuenta están cancelados: no se cobra. */
+  allOrdersCancelled: boolean;
+};
+
 /** Vista del cliente (anon). null si no hay cuenta o el cobro está apagado. */
 export type SessionBill = {
   bill_number: number;

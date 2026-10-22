@@ -10,10 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { notify } from "@/lib/notifications";
 import { cn, formatPrice } from "@/lib/utils";
-import { openBill, setBillSplit, removeBillDiscount, closeBill } from "@/lib/actions/billing";
+import { openBill, setBillSplit, removeBillDiscount, closeBill, getBillPaymentContext } from "@/lib/actions/billing";
 import { SPLIT_MODE } from "@/config/constants";
 import type { SplitMode } from "@/config/constants";
-import type { Bill, RecordPaymentResult } from "@/types/billing";
+import type { Bill, BillPaymentContext, RecordPaymentResult } from "@/types/billing";
 import { PaymentForm, type PaymentFormStatus } from "./payment-form";
 import { ChargeTicket } from "./charge-ticket";
 import { ChargeTotals } from "./charge-totals";
@@ -62,6 +62,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
   const [tab, setTab] = useState<ChargeTab>("account");
+  const [payContext, setPayContext] = useState<BillPaymentContext | null>(null);
   const [payStatus, setPayStatus] = useState<PaymentFormStatus>({ amount: 0, submitting: false });
   const [splitPending, startSplitTransition] = useTransition();
   const [closePending, startCloseTransition] = useTransition();
@@ -100,6 +101,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
       setTab("account");
     } else {
       setBill(null);
+      setPayContext(null);
       setLoadError(null);
     }
   }
@@ -113,6 +115,21 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
     if (open) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tableSessionId]);
+
+  // Lectura complementaria (número de pago, método preferido, pedidos
+  // cancelados). Se refresca al cambiar la cuenta o sus pagos.
+  const billId = bill?.id;
+  const paymentsCount = bill?.payments.length ?? 0;
+  useEffect(() => {
+    if (!open || !billId) return;
+    let alive = true;
+    getBillPaymentContext(billId).then((r) => {
+      if (alive && r.ok) setPayContext(r.data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [open, billId, paymentsCount]);
 
   function goToPay() {
     setTab("pay");
@@ -188,6 +205,12 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
     : "";
 
   const settled = bill?.status === "CLOSED";
+  const chargeBlockedReason =
+    bill?.status === "VOID"
+      ? "Cuenta anulada · no se puede cobrar"
+      : payContext?.allOrdersCancelled
+        ? "Pedido cancelado · no se puede cobrar"
+        : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -205,6 +228,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
               {bill ? `Cuenta #${bill.bill_number}` : "Cargando la cuenta…"}
               {bill?.status === "OPEN" && <Badge variant="secondary">Abierta</Badge>}
               {bill?.status === "PAID" && <Badge variant="outline">Pagada</Badge>}
+              {bill?.status === "VOID" && <Badge variant="outline">Anulada</Badge>}
             </SheetDescription>
           </div>
           {bill && !settled && (
@@ -287,7 +311,11 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
               )}
             >
               <TabsContent value="pay" forceMount className="p-4 data-[state=inactive]:hidden lg:p-6">
-                {bill.status === "OPEN" ? (
+                {chargeBlockedReason ? (
+                  <p className="rounded-control bg-warning-soft px-3 py-2.5 text-body-sm text-warning-soft-foreground">
+                    {chargeBlockedReason}
+                  </p>
+                ) : bill.status === "OPEN" ? (
                   <div className="flex flex-col gap-4">
                     {bill.split_mode === SPLIT_MODE.ITEMS && !paymentItems && (
                       <p className="rounded-control bg-warning-soft px-3 py-2.5 text-body-sm text-warning-soft-foreground">
@@ -306,6 +334,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                       idempotencyKey={idempotencyKey}
                       onPaid={handlePaid}
                       onStatusChange={setPayStatus}
+                      preferred={payContext}
                     />
                   </div>
                 ) : (
@@ -325,6 +354,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                   onChangeSplit={changeSplitMode}
                   onRemoveDiscount={handleRemoveDiscount}
                   onDiscountApplied={setBill}
+                  paymentContext={payContext}
                 />
               </TabsContent>
             </div>
@@ -375,6 +405,8 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
                 formId={PAYMENT_FORM_ID}
                 payAmount={payStatus.amount}
                 paySubmitting={payStatus.submitting}
+                payBlockReason={payStatus.blockReason}
+                chargeBlockedReason={chargeBlockedReason}
                 closePending={closePending}
                 onGoToPay={goToPay}
                 onCloseBill={handleCloseBill}

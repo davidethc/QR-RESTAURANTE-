@@ -97,6 +97,35 @@ export const voidPaymentSchema = z.object({
   reason: reason("el motivo de la anulación"),
 });
 
+const splitMethod = z.enum(["CASH", "CARD", "TRANSFER"]);
+
+/** "Varios métodos" (M07): de 1 a 3 métodos distintos, cada uno con lo recibido. */
+export const recordPaymentsSchema = z.object({
+  billId: uuid("Cuenta inválida"),
+  amount: money("Monto").refine((v) => v > 0, "El monto debe ser mayor que cero."),
+  tipAmount: money("Propina").refine((v) => v >= 0, "La propina no puede ser negativa.").default(0),
+  payments: z
+    .array(
+      z.object({
+        method: splitMethod,
+        received: money("Recibido").refine((v) => v > 0, "Cada monto debe ser mayor que cero."),
+        reference: z.string().trim().max(100).optional(),
+      })
+    )
+    .min(1, "Indica al menos un método de pago.")
+    .max(3)
+    .refine((list) => new Set(list.map((p) => p.method)).size === list.length, "Cada método se indica una sola vez."),
+  items: z.array(paymentItemSchema).max(200).optional(),
+  requestId: uuid("Falta la clave de idempotencia"),
+  autoClose: z.boolean().default(true),
+});
+
+export const voidPaymentWithRefundSchema = z.object({
+  paymentId: uuid("Pago inválido"),
+  reason: reason("el motivo de la anulación"),
+  refundMethod: z.enum(PAYMENT_METHOD).optional(),
+});
+
 export const voidBillSchema = z.object({
   billId: uuid("Cuenta inválida"),
   reason: reason("el motivo de la anulación"),
@@ -145,3 +174,5 @@ export type RecordPaymentInput = z.input<typeof recordPaymentSchema>;
 export type VoidPaymentInput = z.input<typeof voidPaymentSchema>;
 export type VoidBillInput = z.input<typeof voidBillSchema>;
 export type ForceCloseTableInput = z.input<typeof forceCloseTableSchema>;
+export type RecordPaymentsInput = z.input<typeof recordPaymentsSchema>;
+export type VoidPaymentWithRefundInput = z.input<typeof voidPaymentWithRefundSchema>;

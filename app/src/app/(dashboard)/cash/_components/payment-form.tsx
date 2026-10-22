@@ -1,22 +1,25 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Banknote, CreditCard, Landmark, CircleEllipsis } from "lucide-react";
+import { Banknote, CreditCard, Landmark, CircleEllipsis, Layers } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { notify } from "@/lib/notifications";
-import { recordPayment } from "@/lib/actions/billing";
+import { recordPayment, recordPayments } from "@/lib/actions/billing";
+import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
+import { Badge } from "@/components/ui/badge";
 import { recordPaymentSchema, type RecordPaymentInput } from "@/lib/validations/billing";
-import { calcChange, cashQuickAmounts } from "@/lib/money";
+import { cashQuickAmounts, cashShortfall, changeDue, evaluateMultiMethod } from "@/lib/money";
 import { cn, formatPrice } from "@/lib/utils";
 import { PAYMENT_METHOD } from "@/config/constants";
 import type { PaymentMethod } from "@/config/constants";
-import type { Bill, RecordPaymentResult } from "@/types/billing";
+import type { Bill, BillPaymentContext, RecordPaymentResult } from "@/types/billing";
 
 const METHODS: { value: PaymentMethod; label: string; icon: LucideIcon }[] = [
   { value: PAYMENT_METHOD.CASH, label: "Efectivo", icon: Banknote },
@@ -39,7 +42,19 @@ function emptyToUndefined(v: string) {
 
 const TIP_PERCENTS = [0, 5, 10] as const;
 
-export type PaymentFormStatus = { amount: number; submitting: boolean };
+export type PaymentFormStatus = {
+  amount: number;
+  submitting: boolean;
+  /** Por qué no se puede cobrar todavía (null = listo). El botón lo muestra. */
+  blockReason?: string | null;
+};
+
+const MULTI = "MULTI" as const;
+
+function num(v: string): number {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
 
 /**
  * Formulario de cobro dentro de la hoja de cuenta. La forma de pago, el
@@ -62,6 +77,7 @@ export function PaymentForm({
   idempotencyKey,
   onPaid,
   onStatusChange,
+  preferred,
 }: {
   formId: string;
   bill: Bill;
@@ -73,6 +89,8 @@ export function PaymentForm({
   idempotencyKey: string;
   onPaid: (result: RecordPaymentResult) => void;
   onStatusChange: (status: PaymentFormStatus) => void;
+  /** Lo que el cliente indicó al pedir (M07-T03): se precarga, editable. */
+  preferred?: Pick<BillPaymentContext, "preferredMethod" | "paysWithAmount"> | null;
 }) {
   // Ver la nota en product-dialog.tsx: RHF lee refs al invocar
   // handleSubmit, incompatible con el React Compiler.
@@ -95,6 +113,23 @@ export function PaymentForm({
       autoClose: true,
     },
   });
+
+  const [multi, setMulti] = useState(false);
+  const [multiCash, setMultiCash] = useState("");
+  const [multiCard, setMultiCard] = useState("");
+  const [multiTransfer, setMultiTransfer] = useState("");
+
+  // Método preferido: se aplica una vez por cuenta/preferencia, sin pisar
+  // lo que quien cobra ya haya cambiado.
+  const prefKey = preferred?.preferredMethod ? `${bill.id}:${preferred.preferredMethod}:${preferred.paysWithAmount ?? ""}` : "";
+  useEffect(() => {
+    if (!preferred?.preferredMethod) return;
+    setValue("method", preferred.preferredMethod);
+    if (preferred.preferredMethod === PAYMENT_METHOD.CASH && preferred.paysWithAmount) {
+      setValue("tenderedAmount", preferred.paysWithAmount);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefKey]);
 
   useEffect(() => {
     setValue("billId", bill.id);
@@ -119,21 +154,43 @@ export function PaymentForm({
   const amountValue = Number(amount) || 0;
   const tipValue = Number(tipAmount) || 0;
 
-  useEffect(() => {
-    onStatusChange({ amount: amountValue, submitting: isSubmitting });
-    // `onStatusChange` es un setState del padre: estable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amountValue, isSubmitting]);
-
+  const dueNow = amountValue + tipValue;
+  const tenderedNumber = Number(tenderedAmount) || 0;
+  const cashMissing =
+    method === PAYMENT_METHOD.CASH && tenderedNumber > 0 ? cashShortfall(tenderedNumber, dueNow) : 0;
   const change = useMemo(() => {
     if (method !== PAYMENT_METHOD.CASH) return null;
-    try {
-      const tenderedNum = Number(tenderedAmount) || amountValue + tipValue;
-      return calcChange(tenderedNum, amountValue, tipValue);
-    } catch {
-      return null;
-    }
-  }, [method, amountValue, tipValue, tenderedAmount]);
+    return changeDue(tenderedNumber > 0 ? tenderedNumber : dueNow, dueNow);
+  }, [method, dueNow, tenderedNumber]);
+
+  const multiEval = useMemo(
+    () =>
+      evaluateMultiMethod(
+        amountValue,
+        { cash: num(multiCash), card: num(multiCard), transfer: num(multiTransfer) },
+        tipValue
+      ),
+    [amountValue, multiCash, multiCard, multiTransfer, tipValue]
+  );
+
+  const multiCount = [multiCash, multiCard, multiTransfer].filter((v) => num(v) > 0).length;
+  let blockReason: string | null = null;
+  if (amountValue <= 0) blockReason = "Escribe el monto a cobrar.";
+  else if (multi) {
+    if (multiCount === 0) blockReason = "Indica cuánto se cobra en cada método.";
+    else blockReason = multiEval.error;
+  } else if (cashMissing > 0) {
+    blockReason = `Faltan ${formatPrice(cashMissing)}: el efectivo recibido no alcanza.`;
+  }
+
+  useEffect(() => {
+    onStatusChange({ amount: amountValue, submitting: isSubmitting, blockReason });
+    // `onStatusChange` es un setState del padre: estable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amountValue, isSubmitting, blockReason]);
+
+  const multiFingerprint = JSON.stringify([bill.id, amountValue, tipValue, multiCash, multiCard, multiTransfer, paymentItems]);
+  const multiKey = useIdempotencyKey(multiFingerprint);
 
   const quickCash = useMemo(() => {
     try {
@@ -159,6 +216,49 @@ export function PaymentForm({
       notify.error("Sin conexión: espera a que vuelva la red para cobrar.");
       return;
     }
+    if (multi) {
+      if (blockReason) {
+        notify.error(blockReason);
+        return;
+      }
+      const list = (
+        [
+          { method: "CASH", received: num(multiCash) },
+          { method: "CARD", received: num(multiCard) },
+          { method: "TRANSFER", received: num(multiTransfer) },
+        ] as const
+      ).filter((p) => p.received > 0);
+      return recordPayments({
+        billId: bill.id,
+        amount: values.amount,
+        tipAmount: values.tipAmount,
+        payments: [...list],
+        items: paymentItems && paymentItems.length > 0 ? paymentItems : undefined,
+        requestId: multiKey.get(),
+        autoClose: true,
+      }).then((result) => {
+        if (!result.ok) {
+          setError("root", { message: result.error });
+          notify.error(result.error);
+          return;
+        }
+        multiKey.renew();
+        setMultiCash("");
+        setMultiCard("");
+        setMultiTransfer("");
+        onPaid({
+          payment_id: result.data.payments[0]?.payment_id ?? "",
+          change_amount: result.data.change_amount || null,
+          replayed: result.data.replayed,
+          closed: result.data.closed,
+          bill: result.data.bill,
+        });
+      });
+    }
+    if (blockReason) {
+      notify.error(blockReason);
+      return;
+    }
     return recordPayment({
       ...values,
       billId: bill.id,
@@ -174,7 +274,8 @@ export function PaymentForm({
     });
   }
 
-  const tendered = Number(tenderedAmount) || 0;
+  const tendered = tenderedNumber;
+  const methodValue = multi ? MULTI : method;
 
   return (
     <form id={formId} onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
@@ -188,9 +289,17 @@ export function PaymentForm({
               <ToggleGroup
                 type="single"
                 variant="outline"
-                value={field.value}
-                onValueChange={(v) => v && field.onChange(v)}
-                className="grid w-full grid-cols-2 gap-2 lg:grid-cols-4"
+                value={methodValue}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  if (v === MULTI) {
+                    setMulti(true);
+                    return;
+                  }
+                  setMulti(false);
+                  field.onChange(v);
+                }}
+                className="grid w-full grid-cols-2 gap-2 lg:grid-cols-5"
               >
                 {METHODS.map((m) => (
                   <ToggleGroupItem
@@ -200,8 +309,20 @@ export function PaymentForm({
                   >
                     <m.icon aria-hidden className="size-5 shrink-0 lg:size-6" />
                     <span className="truncate">{m.label}</span>
+                    {preferred?.preferredMethod === m.value && (
+                      <Badge variant="secondary" className="ml-auto lg:ml-0">
+                        Método preferido
+                      </Badge>
+                    )}
                   </ToggleGroupItem>
                 ))}
+                <ToggleGroupItem
+                  value={MULTI}
+                  className="h-14 min-w-0 justify-start gap-2.5 rounded-control border-border/70 px-4 text-body-sm font-semibold data-[state=on]:border-primary data-[state=on]:bg-primary-soft data-[state=on]:text-primary lg:h-20 lg:flex-col lg:justify-center lg:gap-1.5 lg:px-2"
+                >
+                  <Layers aria-hidden className="size-5 shrink-0 lg:size-6" />
+                  <span className="truncate">Varios métodos</span>
+                </ToggleGroupItem>
               </ToggleGroup>
             )}
           />
@@ -275,9 +396,54 @@ export function PaymentForm({
           <FieldError errors={[errors.tipAmount]} />
         </Field>
 
-        {method === PAYMENT_METHOD.CASH && (
+        {multi && (
+          <Field>
+            <FieldLabel>Reparto entre métodos</FieldLabel>
+            <div className="grid gap-3">
+              {(
+                [
+                  ["multi-cash", "Recibido en efectivo", multiCash, setMultiCash],
+                  ["multi-card", "Cobrado en tarjeta", multiCard, setMultiCard],
+                  ["multi-transfer", "Cobrado en transferencia", multiTransfer, setMultiTransfer],
+                ] as const
+              ).map(([id, label, value, setter]) => (
+                <div key={id} className="flex flex-col gap-1.5">
+                  <Label htmlFor={id} className="text-body-sm font-semibold text-muted-foreground">
+                    {label}
+                  </Label>
+                  <Input
+                    id={id}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={value}
+                    onChange={(e) => setter(e.target.value)}
+                    className="h-12 rounded-control text-lead md:text-lead tabular-nums"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-baseline justify-between rounded-control bg-secondary px-4 py-3" aria-live="polite">
+              <span className="text-body-sm font-semibold text-muted-foreground">
+                {multiEval.error ? "Aviso" : "Cambio"}
+              </span>
+              <span
+                className={cn(
+                  "text-right leading-tight font-semibold tabular-nums",
+                  multiEval.error ? "text-body-sm text-warning-soft-foreground" : "text-2xl text-foreground"
+                )}
+              >
+                {multiEval.error && multiCount > 0 ? multiEval.error : formatPrice(multiEval.change)}
+              </span>
+            </div>
+          </Field>
+        )}
+
+        {!multi && method === PAYMENT_METHOD.CASH && (
           <Field data-invalid={!!errors.tenderedAmount || undefined}>
-            <FieldLabel htmlFor="pay-tendered">Efectivo recibido</FieldLabel>
+            <FieldLabel htmlFor="pay-tendered">Cantidad recibida</FieldLabel>
             <div className="grid grid-cols-4 gap-2" role="group" aria-label="Billete recibido">
               <Button
                 type="button"
@@ -323,7 +489,7 @@ export function PaymentForm({
               className="flex items-baseline justify-between rounded-control bg-secondary px-4 py-3"
               aria-live="polite"
             >
-              <span className="text-body-sm font-semibold text-muted-foreground">Vuelto</span>
+              <span className="text-body-sm font-semibold text-muted-foreground">Cambio:</span>
               <span className="text-2xl leading-none font-semibold tabular-nums text-foreground">
                 {change !== null ? formatPrice(change) : "—"}
               </span>
@@ -331,7 +497,7 @@ export function PaymentForm({
           </Field>
         )}
 
-        {method !== PAYMENT_METHOD.CASH && (
+        {!multi && method !== PAYMENT_METHOD.CASH && (
           <Field>
             <FieldLabel htmlFor="pay-reference">Referencia (opcional)</FieldLabel>
             <Input
