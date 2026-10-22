@@ -49,7 +49,14 @@ export const productVariantsSchema = z.array(productVariantSchema)
     });
   });
 
+export const serviceOptionsSchema = z.object({
+  pos: z.object({ tables: z.boolean(), dine_in_no_table: z.boolean(), takeaway: z.boolean(), delivery: z.boolean() }),
+  digital_menu: z.object({ tables: z.boolean(), pickup: z.boolean(), delivery: z.boolean() }),
+});
+export type ServiceOptions = z.infer<typeof serviceOptionsSchema>;
+
 export const productSchema = legacyProductSchema.extend({
+  service_options: serviceOptionsSchema.optional(),
   variants: productVariantsSchema.optional(),
 }).superRefine((product, ctx) => {
   if (product.variants?.length === 1 && product.variants[0].price !== product.price) {

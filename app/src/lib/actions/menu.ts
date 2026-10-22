@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { dbFailure } from "@/lib/db-errors";
 import { categorySchema, productSchema, catalogIdSchema, productVariantsSchema,
   modifierGroupSchema, modifierOptionSchema, productModifierGroupSchema } from "@/lib/validations/menu";
-import type { ProductInput, ProductVariantInput, ModifierGroupInput } from "@/lib/validations/menu";
+import type { ProductInput, ProductVariantInput, ModifierGroupInput, ServiceOptions } from "@/lib/validations/menu";
 import type { ActionResult } from "@/types/actions";
 
 /**
@@ -111,7 +111,8 @@ export async function createProduct(
 
   if (parsed.data.variants) {
     const supabase = await createClient();
-    return saveVariantProduct(supabase, restaurantId, parsed.data, parsed.data.variants);
+    const saved = await saveVariantProduct(supabase, restaurantId, parsed.data, parsed.data.variants);
+    return saved.ok ? withServiceOptions(supabase, saved.data, parsed.data.service_options, saved) : saved;
   }
   const access = await catalogAccess(restaurantId);
   if (!access.ok) return access;
@@ -134,9 +135,10 @@ export async function createProduct(
     .single();
 
   if (error) return dbFailure(error, "createProduct");
+  const withOptions = await withServiceOptions(supabase, data.id, parsed.data.service_options, { ok: true, data: data.id });
   revalidatePath("/menu");
   await refreshPublicMenuTag();
-  return { ok: true, data: data.id };
+  return withOptions;
 }
 
 export async function updateProduct(
@@ -153,7 +155,9 @@ export async function updateProduct(
   const supabase = access.supabase;
   if (parsed.data.variants) {
     const saved = await saveVariantProduct(supabase, access.product.restaurant_id, parsed.data, parsed.data.variants, productId);
-    return saved.ok ? { ok: true, data: undefined } : saved;
+    if (!saved.ok) return saved;
+    const options = await withServiceOptions(supabase, productId, parsed.data.service_options, { ok: true, data: undefined });
+    return options;
   }
   const relations = await checkProductRelations(supabase, access.product.restaurant_id, parsed.data);
   if (!relations.ok) return relations;
@@ -173,9 +177,10 @@ export async function updateProduct(
 
   if (error) return dbFailure(error, "updateProduct");
   if (!data?.length) return notFoundOrForbidden("el producto");
+  const withOptions = await withServiceOptions(supabase, productId, parsed.data.service_options, { ok: true, data: undefined });
   revalidatePath("/menu");
   await refreshPublicMenuTag();
-  return { ok: true, data: undefined };
+  return withOptions;
 }
 
 export async function deleteProduct(
@@ -321,6 +326,21 @@ type CatalogClient = Awaited<ReturnType<typeof createClient>>;
 async function refreshCatalog() {
   revalidatePath("/menu");
   await refreshPublicMenuTag();
+}
+
+/** Guarda products.service_options con el cliente con RLS (la RPC de variantes no lo recibe). */
+async function withServiceOptions<T>(
+  supabase: CatalogClient,
+  productId: string,
+  options: ServiceOptions | undefined,
+  result: ActionResult<T>,
+): Promise<ActionResult<T>> {
+  if (!options) return result;
+  const { data, error } = await supabase.from("products").update({ service_options: options }).eq("id", productId).select("id");
+  if (error) return dbFailure(error, "saveServiceOptions");
+  if (!data?.length) return notFoundOrForbidden("el producto");
+  await refreshCatalog();
+  return result;
 }
 
 async function saveVariantProduct(

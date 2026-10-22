@@ -58,8 +58,8 @@ type Channels = Record<string, boolean>;
 
 const POS_CHANNELS = [
   ["pos_tables", "Mesas"],
-  ["pos_dine_in", "En el local"],
-  ["pos_takeout", "Para llevar"],
+  ["pos_dine_in_no_table", "En el local"],
+  ["pos_takeaway", "Para llevar"],
   ["pos_delivery", "Domicilio"],
 ] as const;
 const DIGITAL_CHANNELS = [
@@ -70,6 +70,24 @@ const DIGITAL_CHANNELS = [
 const ALL_ON: Channels = Object.fromEntries(
   [...POS_CHANNELS, ...DIGITAL_CHANNELS].map(([k]) => [k, true]),
 );
+
+function toServiceOptions(c: Channels) {
+  return {
+    pos: { tables: c.pos_tables, dine_in_no_table: c.pos_dine_in_no_table, takeaway: c.pos_takeaway, delivery: c.pos_delivery },
+    digital_menu: { tables: c.menu_tables, pickup: c.menu_pickup, delivery: c.menu_delivery },
+  };
+}
+
+function fromServiceOptions(o: unknown): Channels | null {
+  const v = o as { pos?: Record<string, boolean>; digital_menu?: Record<string, boolean> } | null;
+  if (!v?.pos || !v.digital_menu) return null;
+  return {
+    pos_tables: v.pos.tables !== false, pos_dine_in_no_table: v.pos.dine_in_no_table !== false,
+    pos_takeaway: v.pos.takeaway !== false, pos_delivery: v.pos.delivery !== false,
+    menu_tables: v.digital_menu.tables !== false, menu_pickup: v.digital_menu.pickup !== false,
+    menu_delivery: v.digital_menu.delivery !== false,
+  };
+}
 
 let keySeq = 0;
 const newKey = () => `v${++keySeq}`;
@@ -156,6 +174,8 @@ export function ProductDialog({
               vs.map((v) => ({ key: v.id, id: v.id, name: v.name, price: String(v.price) })),
             );
           }
+          const saved = fromServiceOptions(row.service_options);
+          if (saved) setChannels(saved);
           const ids = [...row.product_modifier_groups]
             .sort((a, b) => a.position - b.position)
             .map((l) => l.group_id);
@@ -226,6 +246,7 @@ export function ProductDialog({
       available,
       featured,
       paired_drink_id: pairedDrinkId,
+      service_options: toServiceOptions(channels),
       variants: variants.map((v, i) => ({
         ...(v.id ? { id: v.id } : {}),
         name: multiple ? v.name.trim() : "",
@@ -603,9 +624,6 @@ export function ProductDialog({
                           Este producto no podrá pedirse.
                         </p>
                       )}
-                      <p className="text-caption text-muted-foreground">
-                        Los canales se aplicarán cuando el servidor los soporte; por ahora no se guardan.
-                      </p>
                     </fieldset>
 
                     <div className="flex flex-col gap-3">

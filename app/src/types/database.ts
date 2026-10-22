@@ -1149,6 +1149,7 @@ export type Database = {
           image_url: string | null
           name: string
           paired_drink_id: string | null
+          service_options: Json
           position: number
           price: number
           restaurant_id: string
@@ -1165,6 +1166,7 @@ export type Database = {
           image_url?: string | null
           name: string
           paired_drink_id?: string | null
+          service_options?: Json
           position?: number
           price: number
           restaurant_id: string
@@ -1181,6 +1183,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           paired_drink_id?: string | null
+          service_options?: Json
           position?: number
           price?: number
           restaurant_id?: string
