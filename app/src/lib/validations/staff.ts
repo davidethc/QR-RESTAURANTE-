@@ -26,6 +26,8 @@ export const resetPasswordSchema = z.object({
   memberId: z.uuid(),
   password,
 });
+export const unlockPinLoginSchema = z.object({ restaurantId: z.uuid() });
+
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 /** Clave temporal fácil de dictar: sin 0/O ni 1/l/I. */
