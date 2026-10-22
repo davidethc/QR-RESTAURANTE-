@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getPublicMenu } from "@/lib/queries/menu";
+import { getPublicProductDetails } from "@/lib/queries/public-product-details";
 import { MenuHeader } from "./[mesa]/_components/menu-header";
 import { MenuBrowser } from "./[mesa]/_components/menu-browser";
 
@@ -29,12 +30,14 @@ export default async function CartaPage({
 }) {
   const { slug } = await params;
   const menu = await getPublicMenu(slug);
+  const productDetails = await getPublicProductDetails(menu.restaurant.id, slug);
 
   return (
     <main className="min-h-full">
       <MenuHeader restaurant={menu.restaurant} tableNumber={null} />
       <MenuBrowser
         categories={menu.categories}
+        productDetails={productDetails}
         slug={slug}
         tableNumber={null}
         restaurantName={menu.restaurant.name}

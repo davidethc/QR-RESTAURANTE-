@@ -136,3 +136,10 @@ export function modifiersPrice(
     0
   );
 }
+
+/** El producto exige elegir algo (variante o grupo obligatorio) antes de pedirse. */
+export function needsChoice(detail: StaffProductDetail | undefined): boolean {
+  return (
+    variantRequired(detail) || (detail?.groups.some((g) => g.min_select > 0) ?? false)
+  );
+}

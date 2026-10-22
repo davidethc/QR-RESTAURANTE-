@@ -66,8 +66,11 @@ export function CartSheet({
     () =>
       items.map((item) => ({
         productId: item.product.id,
+        variantId: item.variantId,
         quantity: item.quantity,
         notes: item.notes || undefined,
+        // Siempre un arreglo (aun vacío): así la base exige los grupos obligatorios.
+        modifiers: item.modifierPicks ?? [],
       })),
     [items]
   );
@@ -162,6 +165,11 @@ export function CartSheet({
                       <p className="font-display truncate text-[15px] font-bold text-foreground">
                         {item.product.name}
                       </p>
+                      {(item.variantName || item.modifiers) && (
+                        <p className="mt-0.5 text-[12px] text-muted-foreground line-clamp-2">
+                          {[item.variantName, item.modifiers].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
                       {item.notes && (
                         <p className="mt-0.5 text-[12px] text-muted-foreground line-clamp-1">
                           {item.notes}

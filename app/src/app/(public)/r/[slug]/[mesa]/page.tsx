@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTableSession, getTableSessionExpiresAt } from "@/lib/session";
 import { getPublicMenu } from "@/lib/queries/menu";
+import { getPublicProductDetails } from "@/lib/queries/public-product-details";
 import { getTableStatus } from "@/lib/actions/table-status";
 import { getSessionChannelName } from "@/lib/session-channel";
 import { MenuHeader } from "./_components/menu-header";
@@ -40,6 +41,7 @@ export default async function MenuPage({
   const statusPromise = getTableStatus();
   const session = await getTableSession();
   const menu = await menuPromise;
+  const productDetails = await getPublicProductDetails(menu.restaurant.id, slug);
 
   /**
    * Dos modos, decididos por si hay sesión de mesa viva:
@@ -111,6 +113,7 @@ export default async function MenuPage({
           <ActiveOrderStrip slug={slug} tableNumber={session!.tableNumber} />
           <MenuBrowser
             categories={menu.categories}
+          productDetails={productDetails}
             slug={slug}
             tableNumber={session!.tableNumber}
             restaurantName={menu.restaurant.name}
@@ -120,6 +123,7 @@ export default async function MenuPage({
       ) : (
         <MenuBrowser
           categories={menu.categories}
+          productDetails={productDetails}
           slug={slug}
           tableNumber={null}
           restaurantName={menu.restaurant.name}

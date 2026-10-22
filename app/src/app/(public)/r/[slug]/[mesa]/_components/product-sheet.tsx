@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { PencilLine, ShoppingBag } from "lucide-react";
+import { Minus, PencilLine, Plus, ShoppingBag } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -13,7 +13,22 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { QuantityStepper } from "@/components/shared/quantity-stepper";
 import { cn, formatPrice } from "@/lib/utils";
-import type { PublicProduct } from "@/types/menu";
+import {
+  bumpOption,
+  groupError,
+  modifierPicks,
+  modifiersPrice,
+  modifiersSummary,
+  selectedCount,
+  variantRequired,
+} from "@/lib/order-lines";
+import type {
+  CustomerChoice,
+  PublicProduct,
+  StaffProductDetail,
+} from "@/types/menu";
+
+const EMPTY_DETAIL: StaffProductDetail = { variants: [], groups: [] };
 
 /**
  * Detalle de producto.
@@ -33,17 +48,42 @@ import type { PublicProduct } from "@/types/menu";
  */
 export function ProductSheet({
   product,
+  detail = EMPTY_DETAIL,
   onOpenChange,
   onAdd,
 }: {
   product: PublicProduct | null;
+  detail?: StaffProductDetail;
   onOpenChange: (open: boolean) => void;
-  onAdd: (product: PublicProduct, quantity: number, notes: string) => void;
+  onAdd: (
+    product: PublicProduct,
+    quantity: number,
+    notes: string,
+    choice?: CustomerChoice
+  ) => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
+  const [variantId, setVariantId] = useState<string | null>(null);
+  const [selections, setSelections] = useState<
+    Record<string, Record<string, number>>
+  >({});
+
+  const required = variantRequired(detail);
+  // Con una sola variante se usa sola (igual que la base).
+  const effectiveVariantId =
+    variantId ?? (detail.variants.length === 1 ? detail.variants[0].id : null);
+  const variant = detail.variants.find((v) => v.id === effectiveVariantId);
+  const groups = detail.groups;
+  const unitPrice =
+    (variant?.price ?? product?.price ?? 0) + modifiersPrice(groups, selections);
+  const groupsInvalid = groups.some((g) =>
+    groupError(g, selections[g.id] ?? {})
+  );
+  const blocked = (required && !variantId) || groupsInvalid;
+  const hasChoices = detail.variants.length > 1 || groups.length > 0;
 
   // Reiniciar el formulario al abrir otro plato, comparando contra el
   // anterior DURANTE el render. Antes era un useEffect, que obliga a
@@ -59,11 +99,26 @@ export function ProductSheet({
     setQuantity(1);
     setNotes("");
     setNotesOpen(false);
+    setVariantId(null);
+    setSelections({});
   }
 
   function handleAdd() {
-    if (!product) return;
-    onAdd(product, quantity, notes.trim());
+    if (!product || blocked) return;
+    onAdd(
+      product,
+      quantity,
+      notes.trim(),
+      hasChoices || detail.variants.length === 1
+        ? {
+            unitPrice,
+            variantId: effectiveVariantId ?? undefined,
+            variantName: variant?.name || undefined,
+            modifiers: modifiersSummary(groups, selections) || undefined,
+            modifierPicks: modifierPicks(groups, selections),
+          }
+        : undefined
+    );
     onOpenChange(false);
   }
 
@@ -132,9 +187,143 @@ export function ProductSheet({
                   Precio
                 </span>
                 <span className="font-display text-[20px] font-bold tabular-nums text-wine">
-                  {formatPrice(product.price)}
+                  {required && !variant ? "Desde " : ""}
+                  {formatPrice(
+                    required && !variant
+                      ? Math.min(...detail.variants.map((v) => v.price))
+                      : unitPrice
+                  )}
                 </span>
               </div>
+
+              {detail.variants.length > 1 && (
+                <fieldset>
+                  <legend className="mb-2 text-[13px] font-semibold">
+                    Variante <span className="text-wine">(obligatoria)</span>
+                  </legend>
+                  <div role="radiogroup" className="flex flex-col gap-2">
+                    {detail.variants.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={v.id === variantId}
+                        onClick={() => setVariantId(v.id)}
+                        className={cn(
+                          "flex min-h-11 items-center justify-between rounded-2xl border px-3.5 text-left text-[15px]",
+                          v.id === variantId
+                            ? "border-primary bg-secondary font-semibold"
+                            : "border-border bg-card"
+                        )}
+                      >
+                        <span>{v.name || product.name}</span>
+                        <span className="tabular-nums text-wine">
+                          {formatPrice(v.price)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              {groups.map((group) => {
+                const sel = selections[group.id] ?? {};
+                const single = group.max_select === 1;
+                const setGroup = (next: Record<string, number>) =>
+                  setSelections((s) => ({ ...s, [group.id]: next }));
+                return (
+                  <fieldset key={group.id}>
+                    <legend className="mb-2 text-[13px] font-semibold">
+                      {group.name}{" "}
+                      <span className="font-normal text-muted-foreground">
+                        {group.min_select > 0
+                          ? `(obligatorio) elige ${group.min_select === group.max_select ? group.min_select : `${group.min_select}–${group.max_select}`}`
+                          : `hasta ${group.max_select}`}
+                        {" · "}
+                        {selectedCount(sel)}/{group.max_select}
+                      </span>
+                    </legend>
+                    <ul className="flex flex-col gap-2">
+                      {group.options.map((o) => {
+                        const n = sel[o.id] ?? 0;
+                        return (
+                          <li key={o.id} className="flex items-center gap-2">
+                            {single ? (
+                              <button
+                                type="button"
+                                aria-pressed={n > 0}
+                                onClick={() =>
+                                  setGroup(
+                                    n > 0 && group.min_select === 0
+                                      ? {}
+                                      : { [o.id]: 1 }
+                                  )
+                                }
+                                className={cn(
+                                  "flex min-h-11 flex-1 items-center justify-between rounded-2xl border px-3.5 text-left text-[15px]",
+                                  n > 0
+                                    ? "border-primary bg-secondary font-semibold"
+                                    : "border-border bg-card"
+                                )}
+                              >
+                                <span>{o.name}</span>
+                                {o.price > 0 && (
+                                  <span className="tabular-nums text-muted-foreground">
+                                    +{formatPrice(o.price)}
+                                  </span>
+                                )}
+                              </button>
+                            ) : (
+                              <>
+                                <span className="min-w-0 flex-1 truncate text-[15px]">
+                                  {o.name}
+                                </span>
+                                {o.price > 0 && (
+                                  <span className="tabular-nums text-muted-foreground">
+                                    +{formatPrice(o.price)}
+                                  </span>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-11 rounded-full"
+                                  aria-label={`Quitar ${o.name}`}
+                                  disabled={n === 0}
+                                  onClick={() =>
+                                    setGroup(bumpOption(group, sel, o.id, -1))
+                                  }
+                                >
+                                  <Minus className="size-4" />
+                                </Button>
+                                <span className="w-5 text-center font-semibold tabular-nums">
+                                  {n}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-11 rounded-full"
+                                  aria-label={`Agregar ${o.name}`}
+                                  disabled={
+                                    selectedCount(sel) >= group.max_select ||
+                                    (!group.allow_repeat && n >= 1)
+                                  }
+                                  onClick={() =>
+                                    setGroup(bumpOption(group, sel, o.id, 1))
+                                  }
+                                >
+                                  <Plus className="size-4" />
+                                </Button>
+                              </>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </fieldset>
+                );
+              })}
 
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[15px] font-semibold text-foreground">
@@ -186,19 +375,27 @@ export function ProductSheet({
               <Button
                 size="lg"
                 onClick={handleAdd}
+                disabled={blocked}
                 className={cn(
                   "clay clay-primary h-13 w-full justify-between rounded-2xl px-5 text-[15px]"
                 )}
-                aria-label={`Agregar ${quantity} ${product.name} al pedido - Total: ${formatPrice(product.price * quantity)}`}
+                aria-label={`Agregar ${quantity} ${product.name} al pedido - Total: ${formatPrice(unitPrice * quantity)}`}
               >
                 <span className="flex items-center gap-2">
                   <ShoppingBag className="h-4 w-4" strokeWidth={2.25} />
                   Agregar al pedido
                 </span>
                 <span className="font-display text-[20px] font-bold tabular-nums">
-                  {formatPrice(product.price * quantity)}
+                  {formatPrice(unitPrice * quantity)}
                 </span>
               </Button>
+              {blocked && (
+                <p className="mt-2 text-center text-[12px] text-muted-foreground">
+                  {required && !variantId
+                    ? "Elige una variante para continuar."
+                    : "Completa las opciones obligatorias."}
+                </p>
+              )}
             </div>
           </>
         )}

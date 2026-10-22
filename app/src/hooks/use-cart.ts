@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CartItem, PublicProduct } from "@/types/menu";
+import type { CartItem, CustomerChoice, PublicProduct } from "@/types/menu";
+
+function unitOf(item: { product: PublicProduct; unitPrice?: number }): number {
+  return item.unitPrice ?? item.product.price;
+}
+
+type Entry = {
+  product: PublicProduct;
+  quantity: number;
+  notes: string;
+  choice?: CustomerChoice;
+};
 
 /**
  * Carrito en localStorage (decisión V2 §57 — no se persiste en Postgres
@@ -82,18 +93,34 @@ export function useCart(slug: string, tableNumber: number) {
    * "sin cebolla" y un "normal" son platos distintos para el cocinero y
    * tienen que viajar en líneas separadas.
    */
-  function mergeInto(
-    list: CartItem[],
-    entry: { product: PublicProduct; quantity: number; notes: string }
-  ): CartItem[] {
+  function mergeInto(list: CartItem[], entry: Entry): CartItem[] {
+    const c = entry.choice;
     const i = list.findIndex(
       (item) =>
-        item.product.id === entry.product.id && item.notes === entry.notes
+        item.product.id === entry.product.id &&
+        item.notes === entry.notes &&
+        item.variantId === c?.variantId &&
+        (item.modifiers ?? "") === (c?.modifiers ?? "")
     );
     if (i === -1) {
+      const unitPrice = c?.unitPrice ?? entry.product.price;
       return [
         ...list,
-        { ...entry, subtotal: entry.product.price * entry.quantity },
+        {
+          product: entry.product,
+          quantity: entry.quantity,
+          notes: entry.notes,
+          subtotal: unitPrice * entry.quantity,
+          ...(c
+            ? {
+                unitPrice,
+                variantId: c.variantId,
+                variantName: c.variantName,
+                modifiers: c.modifiers,
+                modifierPicks: c.modifierPicks,
+              }
+            : {}),
+        },
       ];
     }
     const merged = [...list];
@@ -101,14 +128,19 @@ export function useCart(slug: string, tableNumber: number) {
     merged[i] = {
       ...merged[i],
       quantity,
-      subtotal: entry.product.price * quantity,
+      subtotal: unitOf(merged[i]) * quantity,
     };
     return merged;
   }
 
   const addItem = useCallback(
-    (product: PublicProduct, quantity: number, notes: string) => {
-      persist(mergeInto(items, { product, quantity, notes }));
+    (
+      product: PublicProduct,
+      quantity: number,
+      notes: string,
+      choice?: CustomerChoice
+    ) => {
+      persist(mergeInto(items, { product, quantity, notes, choice }));
     },
     [items, persist]
   );
@@ -118,7 +150,7 @@ export function useCart(slug: string, tableNumber: number) {
   // ambas llamadas parten del mismo `items` capturado en el cierre
   // antes de que la primera termine de actualizar el estado.
   const addItems = useCallback(
-    (entries: { product: PublicProduct; quantity: number; notes: string }[]) => {
+    (entries: Entry[]) => {
       persist(entries.reduce(mergeInto, items));
     },
     [items, persist]
@@ -137,7 +169,7 @@ export function useCart(slug: string, tableNumber: number) {
       persist(
         items.map((item, i) =>
           i === index
-            ? { ...item, quantity, subtotal: item.product.price * quantity }
+            ? { ...item, quantity, subtotal: unitOf(item) * quantity }
             : item
         )
       );
