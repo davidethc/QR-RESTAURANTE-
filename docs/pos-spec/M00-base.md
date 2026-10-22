@@ -40,7 +40,7 @@ Ninguna — es el módulo raíz. Todos los demás módulos dependen de M00 para 
 
 | Tipo de evento | Valor de `audit_action` | Estado |
 |---|---|---|
-| Cancelar pedido | `REJECT_ORDER` (y `VOID_BILL` si se anula la cuenta) | Parcial: no hay valor para cancelar un pedido ya aceptado |
+| Cancelar pedido | `REJECT_ORDER` (pedido sin aceptar); `cancel_order` registra el pedido ya aceptado como `UPDATE` con `metadata.action = 'CANCEL_ORDER'`; `VOID_BILL` si se anula la cuenta | Parcial: el pedido aceptado no tiene un valor propio en el enum |
 | Reembolso | `VOID_PAYMENT` | Parcial: hoy se anula un pago; no existe el reembolso como tal |
 | Retiro de efectivo | `CASH_MOVEMENT` (filtrar por salida o motivo) | Existe |
 | Corte con diferencia | `CLOSE_CASH_SESSION` (filtrar diferencia ≠ 0 en el detalle) | Existe; verificar que el detalle guarda la diferencia |
