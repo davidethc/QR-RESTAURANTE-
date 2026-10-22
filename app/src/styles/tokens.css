@@ -121,6 +121,18 @@
     /* Unidad de toda la escala de Tailwind (p-4 = 4 × --spacing).
        Subirla o bajarla cambia la densidad de la interfaz entera. */
     --spacing: 0.25rem;
+
+    /* Densidad de controles: escritorio y objetivos táctiles. */
+    --control-height-compact: 2rem;
+    --control-height-default: 2.5rem;
+    --control-icon-default: 2.25rem;
+    --control-target-touch: 2.75rem;
+    --control-height-keypad: 3.5rem;
+    --control-gap-touch: 0.5rem;
+    --control-choice-indicator: 1rem;
+    --control-switch-width: 2rem;
+    --control-switch-height: 1.15rem;
+    --control-switch-thumb: 1rem;
 }
 
 /* Derivados: se recalculan dentro de cada tema. */

@@ -94,13 +94,13 @@ body:has([data-theme="admin"]) .clay:active {
       transition: background-color 150ms, border-color 150ms, color 150ms;
     }
     & [data-slot="button"][data-size="default"] {
-      height: 2.5rem;
+      height: var(--control-height-default);
       padding-inline: 1rem;
       gap: 0.5rem;
     }
-    & [data-slot="button"][data-size="lg"] { height: 2.75rem; padding-inline: 1.25rem; gap: 0.5rem; }
-    & [data-slot="button"][data-size="sm"] { height: 2rem; padding-inline: 0.75rem; }
-    & [data-slot="button"][data-size="icon"] { width: 2.25rem; height: 2.25rem; }
+    & [data-slot="button"][data-size="lg"] { height: var(--control-target-touch); padding-inline: 1.25rem; gap: 0.5rem; }
+    & [data-slot="button"][data-size="sm"] { height: var(--control-height-compact); padding-inline: 0.75rem; }
+    & [data-slot="button"][data-size="icon"] { width: var(--control-icon-default); height: var(--control-icon-default); }
     & [data-slot="button"][data-variant="default"]:hover {
       background-image: none;
       background-color: var(--primary-dark);
@@ -114,7 +114,7 @@ body:has([data-theme="admin"]) .clay:active {
     & [data-slot="button"][data-variant="ghost"]:hover { color: var(--foreground); background-color: var(--secondary); }
 
     & :is([data-slot="input"], [data-slot="select-trigger"]) {
-      height: 2.5rem;
+      height: var(--control-height-default);
       padding-inline: 0.75rem;
       background-color: var(--card);
       border-color: var(--input);
@@ -183,4 +183,127 @@ body:has([data-theme="admin"]) :is([data-slot="dialog-overlay"], [data-slot="she
    utilidad. */
 body:has([data-theme="admin"]) [data-slot="tabs-trigger"]:not([data-state="active"]) {
     color: var(--muted-foreground);
+}
+
+/* Los mínimos quedan fuera de capas para resistir h-8/size-9 locales.
+   any-pointer incluye tablets grandes y equipos híbridos; body cubre portales. */
+@media screen and (max-width: 64rem), screen and (any-pointer: coarse) {
+  :is([data-theme="admin"], body:has([data-theme="admin"])) {
+    & :is(
+      button, [data-slot="button"],
+      input:not([type="hidden"]):not([aria-hidden="true"]):not([type="file"]),
+      select, textarea, summary,
+      [role="tab"], [role="radio"], [role="switch"], [role="checkbox"],
+      [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"],
+      [role="option"], nav a,
+      input[type="file"] + label
+    ) {
+      min-height: var(--control-target-touch);
+      min-width: var(--control-target-touch);
+    }
+
+    & [data-slot="button"][data-size="keypad"] {
+      min-height: var(--control-height-keypad);
+    }
+
+    & :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
+      font-size: var(--font-size-body-lg);
+    }
+
+    & :is([data-slot="tabs-list"], [data-slot="toggle-group"], [role="radiogroup"].inline-flex, nav.inline-flex) {
+      height: auto;
+      max-width: 100%;
+      flex-wrap: wrap;
+      row-gap: var(--control-gap-touch);
+    }
+
+    & :is([data-slot="tabs-trigger"], [data-slot="toggle-group-item"], [role="radiogroup"] > [role="radio"]) {
+      height: auto;
+      white-space: normal;
+    }
+
+    & .flex:has(> [data-slot="switch"]) {
+      flex-wrap: wrap;
+    }
+
+    & .flex:has(> [data-slot="switch"]) > .min-w-0.flex-1 {
+      min-width: min(100%, 8rem);
+    }
+
+    /* El botón ocupa espacio real; la pista mantiene su tamaño visual. */
+    & [data-slot="switch"] {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    & [data-slot="switch"][data-size="sm"] {
+      --control-switch-width: 1.5rem;
+      --control-switch-height: 0.875rem;
+      --control-switch-thumb: 0.75rem;
+    }
+
+    & [data-slot="switch"]::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      translate: -50% -50%;
+      width: var(--control-switch-width);
+      height: var(--control-switch-height);
+      border-radius: var(--radius-role-badge);
+      background-color: var(--input);
+    }
+
+    & [data-slot="switch"][data-state="checked"]::before {
+      background-color: var(--primary);
+    }
+
+    & [data-slot="switch-thumb"] {
+      position: absolute;
+      width: var(--control-switch-thumb);
+      height: var(--control-switch-thumb);
+      inset-inline-start: calc(50% - var(--control-switch-width) / 2 + (var(--control-switch-height) - var(--control-switch-thumb)) / 2);
+      translate: 0;
+    }
+
+    & [data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
+      inset-inline-start: calc(50% + var(--control-switch-width) / 2 - (var(--control-switch-height) + var(--control-switch-thumb)) / 2);
+    }
+
+    & :is([data-slot="checkbox"], [data-slot="radio-group-item"]) {
+      align-items: center;
+      justify-content: center;
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    & :is([data-slot="checkbox"], [data-slot="radio-group-item"])::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      translate: -50% -50%;
+      width: var(--control-choice-indicator);
+      height: var(--control-choice-indicator);
+      border: 1px solid var(--input);
+      border-radius: calc(var(--radius-role-control) / 2);
+    }
+
+    & [data-slot="radio-group-item"]::before {
+      border-radius: var(--radius-role-badge);
+    }
+
+    & :is([data-slot="checkbox"], [data-slot="radio-group-item"]):is([data-state="checked"], [data-state="indeterminate"])::before {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    & :is([data-slot="checkbox-indicator"], [data-slot="radio-group-indicator"]) {
+      position: relative;
+    }
+
+    & :is([data-slot="switch"], [data-slot="checkbox"], [data-slot="radio-group-item"])::after {
+      inset: 0;
+    }
+  }
 }
