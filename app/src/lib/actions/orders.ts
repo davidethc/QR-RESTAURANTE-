@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTableSession } from "@/lib/session";
 import { dbFailure } from "@/lib/db-errors";
+import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import {
   addTicketSchema,
   cancelOrderItemSchema,
   cancelOrderWithReasonSchema,
+  editOrderItemSchema,
+  reopenTableSchema,
   openTableSchema,
   transferOrderSchema,
   type AddTicketInput,
@@ -27,13 +30,27 @@ function firstIssue(error: { issues: { message: string }[] }): string {
 }
 
 function toRpcItems(
-  items: { productId: string; variantId?: string; quantity: number; notes: string | null }[]
+  items: {
+    productId: string;
+    variantId?: string;
+    quantity: number;
+    notes: string | null;
+    modifiers?: { optionId: string; qty?: number }[];
+  }[]
 ) {
   return items.map((item) => ({
     product_id: item.productId,
     ...(item.variantId ? { variant_id: item.variantId } : {}),
     quantity: item.quantity,
     notes: item.notes,
+    ...(item.modifiers
+      ? {
+          modifiers: item.modifiers.map((m) => ({
+            option_id: m.optionId,
+            ...(m.qty ? { qty: m.qty } : {}),
+          })),
+        }
+      : {}),
   }));
 }
 
@@ -314,6 +331,41 @@ export async function transferOrder(
     p_target_table_id: parsed.data.targetTableId,
   });
   if (error) return dbFailure(error, "transferOrder");
+
+  revalidateTables();
+  return { ok: true, data: undefined };
+}
+
+/** Cambia variante y/o nota de un producto ya enviado (no la cantidad). */
+export async function editOrderItem(
+  orderItemId: string,
+  changes: { variantId?: string; notes?: string }
+): Promise<ActionResult> {
+  const parsed = editOrderItemSchema.safeParse({ orderItemId, ...changes });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { error } = await callUntypedRpc(supabase, "edit_order_item", {
+    p_order_item_id: parsed.data.orderItemId,
+    p_variant_id: parsed.data.variantId ?? null,
+    p_notes: parsed.data.notes ?? null,
+  });
+  if (error) return dbFailure(error, "editOrderItem");
+
+  revalidateTables();
+  return { ok: true, data: undefined };
+}
+
+/** Vuelve a activa una mesa en estado cuenta (solo antes de cobrar). */
+export async function reopenTable(tableSessionId: string): Promise<ActionResult> {
+  const parsed = reopenTableSchema.safeParse({ tableSessionId });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { error } = await callUntypedRpc(supabase, "reopen_table", {
+    p_table_session_id: parsed.data.tableSessionId,
+  });
+  if (error) return dbFailure(error, "reopenTable");
 
   revalidateTables();
   return { ok: true, data: undefined };
