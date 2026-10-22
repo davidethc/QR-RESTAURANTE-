@@ -18,6 +18,19 @@ const notes = z
   .optional()
   .transform((v) => (v ? v : null));
 
+export const MAX_LINE_MODIFIERS = 30;
+
+/** Personalización elegida (M01). El precio sale siempre de la base. */
+export const orderModifierSchema = z.object({
+  optionId: z.uuid({ message: "Personalización inválida." }),
+  qty: z
+    .number({ message: "Cantidad inválida." })
+    .int("La cantidad debe ser un número entero.")
+    .min(1, "La cantidad mínima es 1.")
+    .max(MAX_LINE_QUANTITY)
+    .optional(),
+});
+
 export const orderLineSchema = z.object({
   productId: z.uuid({ message: "Producto inválido." }),
   /** Variante elegida (M01). Sin ella la base cobra products.price. */
@@ -28,6 +41,8 @@ export const orderLineSchema = z.object({
     .min(1, "La cantidad mínima es 1.")
     .max(MAX_LINE_QUANTITY, `La cantidad máxima por plato es ${MAX_LINE_QUANTITY}.`),
   notes,
+  /** Personalizaciones con precio (M01). Ausente = sin validar grupos obligatorios. */
+  modifiers: z.array(orderModifierSchema).max(MAX_LINE_MODIFIERS).optional(),
 });
 
 const orderBase = {
@@ -77,6 +92,24 @@ export const addTicketSchema = z
 export const cancelOrderItemSchema = z.object({
   orderItemId: z.uuid({ message: "Producto inválido." }),
   reason,
+});
+
+export const editOrderItemSchema = z
+  .object({
+    orderItemId: z.uuid({ message: "Producto inválido." }),
+    variantId: z.uuid({ message: "Variante inválida." }).optional(),
+    notes: z
+      .string()
+      .trim()
+      .max(MAX_NOTES_LENGTH, `Las indicaciones admiten hasta ${MAX_NOTES_LENGTH} caracteres.`)
+      .optional(),
+  })
+  .refine((v) => v.variantId !== undefined || v.notes !== undefined, {
+    message: "No hay cambios que guardar.",
+  });
+
+export const reopenTableSchema = z.object({
+  tableSessionId: z.uuid({ message: "Mesa inválida." }),
 });
 
 export const cancelOrderWithReasonSchema = z.object({
