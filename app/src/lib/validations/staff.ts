@@ -26,6 +26,8 @@ export const resetPasswordSchema = z.object({
   memberId: z.uuid(),
   password,
 });
+export const unlockPinLoginSchema = z.object({ restaurantId: z.uuid() });
+
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 /** Clave temporal fácil de dictar: sin 0/O ni 1/l/I. */
@@ -35,3 +37,48 @@ export function generateTempPassword(length = 10): string {
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
+
+
+export const MEMBER_ROLES = ["ADMIN", "MEMBERS_ADMIN", "BRANCH_MANAGER", "MENU_MANAGER", "CASHIER", "WAITER", "KITCHEN"] as const;
+export type MemberRole = typeof MEMBER_ROLES[number];
+const memberId = z.string({ error: "Identificador inválido" }).uuid("Identificador inválido");
+
+export const saveMemberSchema = z.object({
+  memberId: memberId.optional(),
+  fullName: z.string({ error: "Escribe el nombre de la persona" }).trim().min(2, "Escribe el nombre de la persona").max(100, "Usa hasta 100 caracteres"),
+  roles: z.array(z.enum(MEMBER_ROLES, "Elige roles válidos"), { error: "Elige roles válidos" }),
+  active: z.boolean({ error: "Indica si el miembro está activo" }),
+  emailLoginEnabled: z.boolean({ error: "Indica si permite acceso con correo" }),
+  cashRegisterIds: z.unknown().optional(),
+  email: z.unknown().optional(),
+  password: z.unknown().optional(),
+  /** El PIN lo genera la base; el cliente solo pide generarlo (en el alta siempre se genera). */
+  generatePin: z.boolean().optional(),
+}, { error: "Ingresa los datos del miembro" }).transform((input, ctx) => {
+  const roles = [...new Set(input.roles)];
+  let cashRegisterIds: string[] = [];
+  let email: string | undefined;
+  let memberPassword: string | undefined;
+  if (roles.includes("CASHIER")) {
+    const parsed = z.array(memberId, { error: "Selecciona las cajas asignadas" }).min(1, "Asigna al menos una caja al cajero").safeParse(input.cashRegisterIds ?? []);
+    if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ code: "custom", path: ["cashRegisterIds", ...issue.path], message: issue.message });
+    else cashRegisterIds = [...new Set(parsed.data)];
+  }
+  if (input.emailLoginEnabled) {
+    const parsed = z.string({ error: "Escribe el correo de acceso" }).trim().toLowerCase().email("Correo inválido").safeParse(input.email);
+    if (!parsed.success) ctx.addIssue({ code: "custom", path: ["email"], message: parsed.error.issues[0].message });
+    else email = parsed.data;
+    if (!input.memberId || (input.password !== undefined && input.password !== "")) {
+      const parsedPassword = password.safeParse(input.password);
+      if (!parsedPassword.success) ctx.addIssue({ code: "custom", path: ["password"], message: "La clave debe tener entre 8 y 72 caracteres" });
+      else memberPassword = parsedPassword.data;
+    }
+  }
+  if (!roles.length && input.active) {
+    ctx.addIssue({ code: "custom", path: ["roles"], message: "Un miembro sin roles debe quedar inactivo durante la transición" });
+  }
+  return { memberId: input.memberId, fullName: input.fullName, roles, active: input.active,
+    emailLoginEnabled: input.emailLoginEnabled, cashRegisterIds, email, password: memberPassword,
+    generatePin: !input.memberId || input.generatePin === true };
+});
+export type SaveMemberInput = z.output<typeof saveMemberSchema>;

@@ -1,3 +1,4 @@
+import { readMemberSession } from "@/lib/auth/member-session";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
@@ -27,10 +28,7 @@ import type {
  */
 export const getMyRestaurant = cache(async (): Promise<MyRestaurant> => {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_my_restaurant");
-
-  if (error) throw error;
-  return data as unknown as MyRestaurant;
+  return readMemberSession(supabase);
 });
 
 export async function getStaffOrders(
@@ -194,12 +192,35 @@ export async function getTopProducts(
 /** Personal del restaurante (solo OWNER/ADMIN; la RPC lo exige). */
 export async function getRestaurantStaff(restaurantId: string): Promise<StaffMember[]> {
   const supabase = await createClient();
-  const { data, error } = await callUntypedRpc<StaffMember[]>(supabase, "get_restaurant_staff", {
+  const { data, error } = await callUntypedRpc<Omit<StaffMember, "roles" | "cash_register_ids" | "has_pin">[]>(supabase, "get_restaurant_staff", {
     p_restaurant_id: restaurantId,
   });
 
+  // La RPC autoriza a quien lista antes de leer los campos nuevos.
   if (error) throw error;
-  return data ?? [];
+  if (!data?.length) return [];
+  // Con el cliente de sesión: la RPC SECURITY DEFINER autoriza a OWNER/ADMIN. Nunca el cliente admin.
+  const [membersResult, pinResult] = await Promise.all([
+    supabase.from("restaurant_members")
+      .select("id, roles, cash_register_ids")
+      .eq("restaurant_id", restaurantId)
+      .in("id", data.map((member) => member.member_id)),
+    supabase.rpc("get_staff_pin_status", { p_restaurant_id: restaurantId }),
+  ]);
+  if (membersResult.error) throw membersResult.error;
+  if (pinResult.error) throw pinResult.error;
+  const byId = new Map((membersResult.data ?? []).map((member) => [member.id, member]));
+  const pinById = new Map((pinResult.data ?? []).map((row) => [row.member_id, row.has_pin]));
+  return data.map((member) => {
+    const details = byId.get(member.member_id);
+    if (!details) throw new Error("El personal cambió durante la consulta. Recarga Personal e intenta de nuevo.");
+    return {
+      ...member,
+      roles: details.roles,
+      cash_register_ids: details.cash_register_ids,
+      has_pin: pinById.get(member.member_id) === true,
+    };
+  });
 }
 
 /** Ventas de hoy, 7 o 30 días de negocio (solo OWNER/ADMIN; la RPC lo exige). */

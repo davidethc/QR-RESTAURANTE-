@@ -1,10 +1,13 @@
+import { readMemberSession } from "@/lib/auth/member-session";
+import { getLandingPath, getRouteRedirect } from "@/lib/permissions";
+import type { Database } from "@/types/database";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -31,12 +34,32 @@ export async function proxy(request: NextRequest) {
   const user = data?.claims;
 
   const path = request.nextUrl.pathname;
-  const isStaffArea = STAFF_PREFIXES.some((prefix) => path.startsWith(prefix));
+  const isStaffArea = STAFF_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+
+  function redirectTo(destination: string) {
+    const url = request.nextUrl.clone();
+    url.pathname = destination;
+    url.search = "";
+    const redirected = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirected.cookies.set(cookie));
+    return redirected;
+  }
 
   if (!user && isStaffArea) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return redirectTo("/login");
+  }
+
+  if (user && isStaffArea) {
+    // Los errores de carga siguen el manejo recuperable del layout; no conceden permisos.
+    let member;
+    try {
+      member = await readMemberSession(supabase);
+    } catch {
+      return response;
+    }
+    const destination = path === "/today" && request.nextUrl.searchParams.has("entrada")
+      ? getLandingPath(member) : getRouteRedirect(member, path);
+    if (destination) return redirectTo(destination);
   }
 
   return response;
@@ -57,6 +80,10 @@ const STAFF_PREFIXES = [
   "/today",
   "/reports",
   "/inventory",
+  "/disponibilidad",
+  "/ajustes",
+  "/security",
+  "/availability",
 ];
 
 export const config = {
@@ -76,5 +103,9 @@ export const config = {
     "/today/:path*",
     "/reports/:path*",
     "/inventory/:path*",
+    "/disponibilidad/:path*",
+    "/ajustes/:path*",
+    "/security/:path*",
+    "/availability/:path*",
   ],
 };

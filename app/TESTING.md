@@ -2227,3 +2227,224 @@ Resultado: **0 Critical/Serious en todas las vistas** (axe vacío en todas).
 
 Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (están fuera del repo).
 
+
+## 2026-10-21 — M01-T04: acciones del catálogo
+
+Worktree `.claude/worktrees/M01-T04`, rama `feat/M01-T04-catalog-actions`. Referencias: `docs/pos-spec/M01-catalogo.md` y `M00-base.md`; esquema tomado exclusivamente de las migraciones `20261020150000_m01_product_variants.sql` y `20261020160000_m01_modifier_groups.sql`.
+
+- Ejecutado: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Resultado: typegen, TypeScript y ESLint sin errores; **110/110 tests en 11 archivos**. Catálogo: 13 casos Zod, 20 de acciones con Supabase simulado; traducciones de errores: 10 casos (incluye prueba de 22023/23514 sin exponer texto interno).
+- Compatibilidad: `createProduct`/`updateProduct` aceptan los mismos campos de precio único sin `variants`; `deleteProduct`, acciones de categorías, reordenado, disponibilidad y subida de imágenes conservan sus contratos. `updateProduct` omite `price` si el producto tiene múltiples variantes; con una sola, el trigger sigue copiando el precio legacy a la variante. No se cambió el formulario de producción ni se añadieron dependencias.
+- Alta con `variants`: valida lista no vacía, nombres, precios y regla de único precio; rechaza IDs externos en el alta. Se toma el ID de la variante creada por el trigger y se reutiliza en la primera fila del upsert del lote, evitando una variante ficticia adicional. `products.price` inicial es el mínimo y luego lo mantienen los triggers. Si falla la escritura de variantes, se intenta borrar el producto nuevo y se comprueba la limpieza; si falla también, se informa explícitamente.
+- `saveProductVariants(productId, variants)` reemplaza el conjunto completo: IDs opcionales, solo del producto autorizado; upsert antes de borrar IDs retirados para conservar siempre alguna variante. El orden del array determina `position`. `createProduct`/`updateProduct` también admiten `variants` opcional; con exactamente una se exige `name=''` y precio igual al del producto.
+- Lecturas: `getCatalog(restaurantId)` retorna `{categories, products}` (también productos sin categoría), con variantes y vínculos por producto; `getModifierGroups(restaurantId)` incluye opciones, vínculos y `usage_count`, utilizable por el filtro «Sin usar». La UI debe ordenar las relaciones anidadas por `position`.
+- Personalizaciones: `createModifierGroup(restaurantId, input)` y `updateModifierGroup(groupId, input)` reciben `{name, internal_label?, min_select, max_select, allow_repeat, options}`. Cada opción recibe `{id?, name, price, position?}`. Se exige `0 <= min_select <= max_select <= options.length`, `max_select >= 1` y precios no negativos de hasta dos decimales; se rechazan IDs duplicados/ajenos. Al actualizar se agregan/actualizan opciones, se guardan los límites y finalmente se retiran opciones anteriores, evitando reducir el número antes de ajustar el máximo.
+- Opciones individuales: `createModifierOption(groupId, input)`, `updateModifierOption(groupId, optionId, input)`, `deleteModifierOption(groupId, optionId)`; no permiten quitar opciones si el máximo supera las restantes. Padres y columnas `legacy_*` no se toman del payload.
+- Vínculos: `linkProductModifierGroup({product_id, group_id, position?})` crea o reordena por la clave única; `unlinkProductModifierGroup(productId, groupId)` elimina acotando ambos IDs. Se valida que producto y grupo sean del mismo restaurante y que el grupo tenga límites cumplibles antes de vincularlo.
+- Borrado de grupos: obtener `getModifierGroupUsage(groupId)`, mostrar la cantidad y pasarla a `deleteModifierGroup(groupId, confirmedUsageCount)`. Si hay uso y el conteo actual difiere del confirmado, se rechaza el borrado con la nueva cantidad. Las relaciones se eliminan por cascada del esquema existente.
+- Seguridad: las acciones nuevas comprueban sesión y membresía ACTIVE OWNER/ADMIN; categorías y operaciones legacy conservan además sus políticas RLS. Se comprueban pertenencia de variantes/opciones, categoría y bebida del mismo restaurante y cero filas en escrituras. `dbFailure` traduce 22023/23514 con mensajes controlados en español.
+- Límites y dudas para el siguiente paso: no hay RPC transaccional en T02/T03; son llamadas REST separadas dentro de una misma acción, con limpieza compensatoria en las altas. Actualizaciones de producto/grupo pueden quedar parcialmente guardadas ante un fallo entre llamadas; sin una RPC tampoco hay garantía conjunta frente a modificaciones concurrentes de opciones o del conteo de uso. Resolver atomicidad requiere una entrega de BD, no SQL inventado en estas acciones. Los grupos espejo `legacy_option_id` pueden ser sobrescritos por una posterior sincronización legacy, tal como documenta T03. Las columnas de horarios/canales de T01 no se añadieron: esta rama solo contiene T02/T03 y se respetó ese esquema.
+- Alcance: pruebas locales automatizadas; sin SQL nuevo, sin escrituras en Supabase ni QA de navegador. Sin commit, push ni PR.
+
+## 2026-10-21 — M01-T04: alta y edición con variantes mediante RPC atómica
+
+- Referencia: migración aprobada `20261021100000_m01_save_product_with_variants.sql`, leída sin modificar ni aplicar.
+- `createProduct` y `updateProduct`, al recibir `variants`, delegan todas las escrituras de producto/variantes y la validación de sus relaciones a `supabase.rpc("save_product_with_variants", …)`. Se preservan los IDs opcionales de variantes y el orden del array; el payload solo contiene `{id?, name, price}`, sin `position` ni un precio de producto contradictorio. Alta envía `p_product_id=null`; edición, el ID actual y su restaurante autorizado.
+- Eliminada la limpieza compensatoria del producto incompleto y el uso de `writeVariants` en estas dos acciones. Las rutas sin `variants` conservan su comportamiento anterior, incluidas las comprobaciones de relaciones y la edición del precio único. `checkProductRelations` se conserva solo para ellas. Por la alternativa permitida en el encargo, `writeVariants` se conserva exclusivamente para `saveProductVariants`; esa acción independiente mantiene su limitación de escrituras REST múltiples y no se presenta como atómica.
+- Añadido tipo manual de la RPC a `database.ts`. `dbFailure` traduce 42501 a «No tienes permiso para realizar esta operación.» y conserva los mensajes controlados en español para 22023 y 23514, sin exponer errores internos.
+- Pruebas actualizadas: payload exacto y una llamada RPC en el alta; edición sin escrituras REST adicionales; ausencia de borrado compensatorio o fallback ante errores 42501/22023/23514; rechazo de validación previa, respuesta sin ID y caché solo tras éxito. Siguen cubiertos los flujos legacy y personalizaciones.
+- Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`; todo en verde. **115/115 tests en 11 archivos**, incluidos 25 casos de acciones de catálogo.
+- Alcance: pruebas locales con Supabase simulado; sin escrituras en Supabase, sin SQL nuevo, sin commit, push ni PR.
+
+## 2026-10-21 — M01-T04: saveProductVariants mediante RPC específica
+
+- `saveProductVariants` valida el ID y las variantes con Zod, y llama una sola vez a `supabase.rpc('save_product_variants', {p_product_id, p_variants})` con el cliente de sesión. No lee ni reenvía nombre, categoría, descripción, disponibilidad u otros campos del producto. Solo manda `{id?, name, price}` por variante, conservando el orden.
+- Eliminado `writeVariants` y su escritura manual en varios pasos. El resultado void se considera correcto cuando no hay error, tanto si data es null como undefined. Se mantiene `ActionResult<void>` y el refresco de caché solo después del éxito.
+- Añadido a mano el tipo de `save_product_variants` en `database.ts`. Errores 42501, 22023 y 23514 pasan por las traducciones existentes de `dbFailure` en español, sin exponer mensajes internos al usuario.
+- Pruebas actualizadas: una sola RPC sin consultas REST ni campos ajenos; IDs y orden de variantes; respuesta void; validaciones antes de abrir cliente; los tres errores sin escrituras de respaldo ni invalidación de caché.
+- Verificación ejecutada: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todo en verde: **120/120 tests en 11 archivos**, incluidos 30 casos de acciones del catálogo.
+- La limitación anterior de atomicidad de `saveProductVariants` queda sustituida por esta integración. Referencia: `20261021120000_m01_save_product_variants.sql`, leída sin modificar ni aplicar. No se tocó ningún archivo bajo `app/supabase/`; pruebas con mocks, sin escrituras en la base, sin commit ni push.
+
+
+## 2026-10-21 — M00-T05: esqueleto visual del formulario de miembro
+
+- Worktree `M00-T05`, rama `feat/M00-T05-member-form-ui`. Componente nuevo `staff/_components/member-form-sheet.tsx`; `add-staff-dialog` permanece intacto.
+- Datos ficticios por props: Alex Rivera, sucursales Centro/Norte/Sur y cajas de ejemplo. Alta vacía con sucursal actual; edición recibe únicamente indicadores de credenciales existentes, nunca su valor. `usado@example.com` simula duplicado local.
+- Playwright Chromium: alta con errores asociados y foco al primer error; PIN de cuatro dígitos con ceros iniciales, teclado, borrar/limpiar, cancelación y retorno de foco; contraseña existente conservada y correo opcional; Super administrador deshabilitado; roles combinables y cero roles permitido.
+- Cajero: cajas obligatorias solo mientras está marcado; quitar sucursal elimina sus selecciones; quitar Cajero retira campo/error. Sucursal sin cajas ofrece explicación. Cero sucursales requiere confirmación «Guardar sin acceso», conservando selección en el resumen local.
+- Cancelar/Escape: intacto cierra; con cambios pide descartar; seguir editando conserva borrador; foco vuelve al disparador al cerrar. Tab permanece en Sheet. Estados loading/error bloquean edición hasta recuperar datos; saving bloquea controles; error de guardado conserva borrador.
+- Responsive: 390×844, 768×1024, 1024×900, 1440×1000; overflow horizontal **0** en documento y panel. Vista previa lateral desde 1024; enlace con foco a vista previa en móvil/tablet. Objetivos táctiles **≥44×44 px**, directamente o mediante etiqueta asociada.
+- axe-core: **0 violaciones** WCAG 2 A/AA, 2.1 A/AA y 2.2 AA en Sheet y diálogo PIN a 390/1440. Sin errores JS ni peticiones Supabase.
+- Capturas y reportes: `_capturas/M00-T05/` en la carpeta principal del proyecto (fuera del worktree), archivos `miembro-*.png`, `pin-*.png`, `sucursales-cajas-*.png`, `vista-previa-*.png`, `report.json`, `accessibility.json`. El indicador dev de Next se oculta solo en las capturas.
+- Comprobaciones: `next typegen`, `tsc --noEmit`, `npm run lint`. No se prueba persistencia: el envío solo muestra confirmación de ejemplo; no hay server actions, SQL, zod ni integración al flujo existente.
+## 2026-10-21 — M00-T04: saveMember y validación condicional
+
+Worktree `.claude/worktrees/M00-T04`, rama `feat/M00-T04-save-member`, basada en M00-T01 (#13). Esquema tomado de `20261020120000_restaurant_members_roles_pin.sql`; sin SQL nuevo ni cambios de permisos de BD.
+
+- Ejecutado: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todo en verde: **105/105 tests en 11 archivos**. Personal: 15 casos de validación (incluye los 5 legacy), 18 de acciones con Supabase simulado y uno de hash real con sal. El caso de roles recorre las 127 combinaciones no vacías del catálogo.
+- Se extendieron `lib/actions/staff.ts` y `lib/validations/staff.ts`; `staff-admin.ts`, sus acciones de producción y los schemas `createStaffSchema`/`updateStaffSchema`/`resetPasswordSchema` conservan sus contratos. Se añadieron a Row/Insert/Update los cuatro campos de #13: `pin_hash`, `roles`, `cash_register_ids`, `email_login_enabled`.
+- Contrato: `saveMember(restaurantId, input): ActionResult<string>` devuelve solo el ID del miembro. Input: `{memberId?, fullName, roles, active, emailLoginEnabled, cashRegisterIds?, email?, password?, pin?}`. Sin `memberId` es alta; con ID, edición. `restaurantId` es la sucursal elegida: nunca se toma un padre ni un user_id del payload.
+- Cajas: solo se validan si `roles` incluye CASHIER. Se exige al menos una y se comprueba existencia, actividad y pertenencia a la sucursal. Al quitar CASHIER se guardan `cash_register_ids=[]`, ignorando los valores del campo oculto. Se eliminan roles/cajas duplicados; OWNER y SUPER_ADMIN no son asignables.
+- PIN: obligatorio en toda alta, también si usa correo. En edición se permite omitirlo o enviar vacío para conservarlo, pero la acción exige que ya exista `pin_hash` en BD; un `hasPin` del cliente no evita esa comprobación. Un PIN nuevo debe ser texto de cuatro dígitos ASCII, conservando ceros iniciales. Solo se lee el hash con el cliente privilegiado después de comprobar permisos y target. Nunca se devuelve ni se registra, ni se reenvía a Auth/RPCs. Los errores SQL de esa lectura/escritura se sanitizan antes de registrarlos.
+- Hash: helper server-only con scrypt de Node, sal aleatoria de 16 bytes, N=32768/r=8/p=1 y derivado de 32 bytes; representación `$scrypt$32768$8$1$<sal-hex>$<derivado-hex>`. Prueba de sal distinta para el mismo PIN y de derivación verificable. La especificación no fija algoritmo: M00-T03 debe acordar/verificar este formato; no se implementa autenticación por PIN aquí. Referencia técnica: https://nodejs.org/api/crypto.html#cryptoscryptpassword-salt-keylen-options-callback.
+- Correo: si está oculto, email y password no se validan ni modifican en Auth. Si se activa, se valida y normaliza el email; clave obligatoria solo al crear o al reemplazarla explícitamente. Duplicados de Auth se traducen al español. Altas nuevas dejan `email_confirm=false` según el estado de correo no confirmado de la spec; enviar la confirmación no forma parte de esta acción. El alta legacy sigue confirmando como antes.
+- Permisos: sesión válida, membresía ACTIVE OWNER/ADMIN y RPCs existentes `can_manage_staff_role`/`assert_can_manage_member` antes de usar la llave secreta. Se conserva la restricción legacy: ADMIN no asigna/gestiona administradores, nadie modifica su propia cuenta y OWNER no se asigna ni edita. También se protege un target con ADMIN en `roles` aunque su `role` legacy sea operativo. Escrituras filtradas por miembro/sucursal/user autorizado y, al editar, `updated_at` y rol anterior para detectar cambios concurrentes.
+- Alta: cuenta Auth nueva → `add_staff_member` con la sucursal seleccionada → UPDATE de `restaurant_members` con roles, cajas, flag de correo y hash. Si falla el vínculo o guardar los campos nuevos, se intenta retirar la cuenta recién creada y se comprueba la limpieza; un fallo de limpieza se informa. Edición actualiza el nombre en `profiles`/metadata y bloqueo Auth según estado. Si una etapa posterior falla, el error informa de que parte del miembro ya se guardó; no se afirma atomicidad entre Auth y REST.
+
+### Decisiones y dudas de la especificación / fase expand
+
+- M00-T01 mantiene `role` como fuente de permisos actual. Al ser representable se elige ADMIN, luego WAITER, luego KITCHEN como rol de compatibilidad y se envían `role` y `roles` en la misma escritura. No se inventa un mapeo para CASHIER/MENU_MANAGER/etc. puros: en edición se conserva un rol operativo anterior; altas sin equivalente legacy se rechazan con explicación. No se conserva ADMIN activo tras quitarlo sin tener un equivalente operativo definido. Un estado desalineado que hiciera que el trigger recalculara y perdiera roles se rechaza antes de escribir. La unión efectiva de permisos nuevos corresponde a M00-T06.
+- La spec permite cero roles, pero el rol legacy sigue otorgando acceso. Se admite una lista vacía solo con `active=false` durante esta transición para no dejar privilegios invisibles; el tratamiento definitivo de miembros activos sin roles requiere decisión de producto/BD.
+- La propia migración deja el alta solo-PIN para M00-T03. `saveMember` rechaza el alta con `emailLoginEnabled=false` con explicación; no crea cuentas con correos ficticios. Editar el flag sí se permite, pero el login actual todavía no lo aplica: hacer efectiva esa restricción pertenece al flujo de autenticación pendiente.
+- §7 separa nombre/apellido; el esquema existente solo tiene `profiles.full_name`. Se conserva `fullName`, sin inventar columnas ni dividir nombres automáticamente.
+- La spec describe varias sucursales; #13 conserva una sola relación `restaurant_members.restaurant_id`. Esta acción guarda exactamente esa sucursal; no inventa una tabla/array de asignaciones multi-sucursal.
+- No existe RPC de agregado para estos campos. La escritura privilegiada está protegida en servidor y por comprobaciones de target, pero la transacción y autorización atómicas de todo el flujo necesitan una futura RPC; las modificaciones concurrentes de permisos del actor o cajas no quedan serializadas con la escritura.
+- Alcance de QA: pruebas locales con mocks y crypto real; sin escrituras en Supabase, sin QA de navegador. Sin commit, push ni PR.
+
+## 2026-10-21 — M00-T04: correcciones de seguridad (sustituye decisiones previas de PIN/correo)
+
+- `saveMember` crea cuentas con `email_confirm: true`, como `staff-admin.ts`. Rechaza `emailLoginEnabled=false` tanto en alta como en edición antes de acceder a clientes o escribir: «El acceso por correo no se puede desactivar hasta M00-T03.».
+- Eliminados `lib/server/member-pin.ts` y su test: no hay hashing de PIN en Node ni `pin_hash` en el UPDATE. Tras guardar `restaurant_members`, si se proporcionó PIN se llama `supabase.rpc('set_member_pin', {p_member_id, p_pin})` con el cliente de sesión. Respuesta void: solo se comprueba el error. Se añadió a mano el tipo de esa función en `database.ts`.
+- Para conservar un PIN existente, se consulta únicamente `id` filtrando `pin_hash IS NOT NULL`, con miembro, sucursal y user_id autorizados; el valor del hash no sale de la base. No se acepta `hasPin` del cliente como prueba.
+- PIN nuevo: texto de 4–6 dígitos ASCII, conservando ceros iniciales. En edición sin cambio se conserva la comprobación de presencia en BD; el alta sigue exigiéndolo.
+- Errores de `set_member_pin`: traducción mediante `dbFailure` con fallback controlado para 42501 («No tienes permiso para cambiar el PIN de este miembro.») y 22023 («El PIN debe tener entre 4 y 6 dígitos.»). Antes de registrar se sustituye el mensaje original por uno fijo. También se capturan excepciones de transporte sin registrar ni devolver su contenido. Si el PIN falla en un alta, se intenta retirar la cuenta nueva; en edición se informa del error y se invalida Personal, pues el resto del miembro ya se guardó.
+- Antes de editar se consulta el correo actual con `admin.auth.admin.getUserById`, después de comprobar permisos y el target. `updateUserById` recibe `email` únicamente si el correo normalizado cambió; la clave solo si se envió una nueva.
+- Ejecutado: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todo en verde: **112/112 tests en 10 archivos** (26 de acciones y 15 de validación de personal). Incluye orden UPDATE → RPC de sesión, ausencia de hash en payloads/SELECT, errores y excepciones con PIN en el mensaje, correo sin cambios, bloqueo de desactivación y longitudes 4/5/6.
+- Coordinación: ningún archivo bajo `app/supabase/` fue modificado; la migración de `set_member_pin` la prepara otro agente. Las pruebas de esta ronda usan Supabase simulado y no ejecutan esa RPC contra la base. Sin commit ni push.
+
+## 2026-10-21 — M00-T04: decisión final de PIN exactamente de cuatro dígitos
+
+- Se sustituye la regla de 4–6 de la revisión anterior: el PIN acepta exactamente cuatro dígitos ASCII (`/^\d{4}$/`), incluidos ceros iniciales. Mensaje unificado del schema, comprobación de presencia y error 22023 de la RPC: «El PIN debe tener 4 dígitos».
+- Pruebas: cinco y seis dígitos rechazados en alta y edición; `saveMember` los rechaza antes de abrir clientes o llamar a RPCs. Las pruebas de errores/secretos de RPC usan ahora un PIN válido de cuatro dígitos para seguir ejercitando esa ruta.
+- Ejecutado: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`; todo en verde, **115/115 tests en 10 archivos** (16 de validación y 28 de acciones de personal).
+- Sin cambios en `app/supabase/`, sin escrituras en la base, sin commit ni push.
+
+## 2026-10-21 — M00-T05 fase 2: conexión del Sheet a saveMember
+
+Esta ronda sustituye el comportamiento de prototipo descrito en la fase 1. Solo cambios del worktree `M00-T05`, rama `feat/M00-T05-member-form-ui`; sin commit, push ni PR.
+
+- `staff/page.tsx` añade «Agregar miembro» con el nuevo Sheet junto al `AddStaffDialog` existente, sin modificarlo. Reutiliza `getCashRegisters(restaurantId)`: consulta existente que devuelve solo cajas activas del restaurante. Los administradores no pueden marcar Administrador en el nuevo formulario.
+- El Sheet llama a `saveMember(restaurantId, input)` dentro de `useTransition`. Envía nombre/apellido unidos, roles del catálogo compartido, `active`, correo siempre habilitado, correo de acceso y cajas solo con `CASHIER`. Alta requiere PIN exacto de cuatro dígitos y contraseña conforme al schema compartido; edición incluye `memberId` y omite PIN/contraseña hasta que cambien. No recupera credenciales ni hashes.
+- Retirados el switch de correo, las sucursales y la ruta temporal de prototipo. El formulario consume el schema existente sin cambiarlo. El servidor continúa siendo la autoridad de permisos y validación.
+- Error: mensaje exacto de `result.error` en el resumen y, cuando se reconoce el campo, también asociado al control; conserva borrador y selecciones. Excepción de transporte muestra un mensaje prudente sin afirmar que no hubo escritura. Éxito: cierra, `notify.success` y `router.refresh`. Controles y cierre bloqueados mientras guarda; guardia síncrona adicional contra doble envío.
+- Validación automatizada: `next typegen`, `tsc --noEmit`, `npm run lint` en verde; **131/131 tests en 11 archivos**, incluidos 16 casos nuevos del límite UI/API. Se eliminaron tipos generados obsoletos de `.next/dev/types` que aún referían a la ruta retirada; no se cambió configuración TS.
+- Playwright Chromium con el componente real empaquetado localmente: `saveMember`, `notify` y router sustituidos por mocks antes del empaquetado. No se monta el servidor Next ni se importan clientes Supabase. **0 peticiones HTTP/HTTPS y 0 errores JS; ninguna lectura o escritura en la base de producción.** No es una prueba de persistencia.
+- Navegador: alta válida y errores; PIN `0012`; edición sin cambios omite credenciales; edición con cambio envía PIN `0000` y contraseña nueva; cancelar cambios de credenciales los omite; error duplicado y error PIN asociados; excepción de transporte conserva borrador; quitar Cajero omite cajas; cero roles exige inactivo; éxito notifica/refresca; cierre y doble envío bloqueados durante la transición.
+- Capturas: `_capturas/M00-T05/` **dentro de este worktree**, a 390×844, 768×1024, 1024×900 y 1440×1000. Sin overflow horizontal; vista lateral desde 1024 px; objetivos ≥44 px directamente o por etiqueta de fila completa (inputs auxiliares invisibles de Radix excluidos). axe-core sin violaciones en el Sheet a 390/1440. El harness usa la fuente de sistema; importa los tokens y componentes reales.
+
+### Huecos y límites de la API observados, sin modificarlos
+
+- `getRestaurantStaff`/`StaffMember` solo exponen el rol legacy y `full_name`; faltan roles combinados, cajas asignadas y presencia de PIN, además de nombre/apellido separados. Por eso solo se conecta la entrada de alta; la edición queda soportada con `MemberFormInitial` completo, sin inventar datos ni reconstruir permisos a partir del rol legacy.
+- El alta exige al menos un rol compatible (`ADMIN`, `WAITER` o `KITCHEN`); roles nuevos puros siguen siendo rechazados por `saveMember`. El schema exige `active=false` cuando no hay roles, y editar ciertos roles administrativos también tiene restricciones de compatibilidad.
+- `ActionResult` devuelve un único texto, sin errores estructurados por campo: el resumen conserva el mensaje original y la asociación de campo se hace por coincidencias. Los mensajes desconocidos permanecen en el resumen.
+- Sin contrato multi-sucursal: se envía únicamente el `restaurantId` de la página. El acceso solo-PIN sigue pendiente; el formulario siempre envía `emailLoginEnabled=true`. El servidor crea el correo confirmado, por lo que se retiró el aviso de envío de confirmación del prototipo.
+- La acción puede informar escrituras parciales. La UI conserva esos avisos y no reintenta automáticamente ni cierra ante un fallo. No se validó persistencia ni estado de despliegue de la RPC en esta ronda.
+## 2026-10-21 — M00-T04 (#21): datos de edición y errores estructurados
+
+- `getRestaurantStaff` conserva la autorización OWNER/ADMIN de `get_restaurant_staff` antes de cualquier lectura adicional. Añade `roles` y `cash_register_ids` mediante una consulta de sesión con selección explícita, filtrada por restaurante y los IDs devueltos por esa RPC. Une por ID y conserva orden, estado y `can_manage`; no inventa arrays vacíos si una fila desaparece o falla la lectura.
+- `StaffMember.has_pin?: boolean` queda como TODO explícito: ausente significa desconocido, nunca `false`. Revisadas M00-T01 (`20261020120000_restaurant_members_roles_pin.sql`), `20261021110000_m00_set_member_pin.sql` y las definiciones existentes del listado. No hay columna generada, vista ni función legible por authenticated que devuelva esa presencia. El listado no lee/filtra `pin_hash` ni usa el cliente admin.
+- **Solicitud exacta para db-architect**: ampliar la RPC existente `public.get_restaurant_staff(p_restaurant_id uuid) returns jsonb` para incluir en cada fila `has_pin` como booleano calculado dentro de la función a partir de la presencia del hash. Conservar autorización del actor OWNER/ADMIN activo, alcance de `p_restaurant_id`, `can_manage` y campos actuales. No devolver el PIN/hash ni conceder SELECT de `pin_hash` a authenticated/anon. Una vez disponible, hacer `has_pin` obligatorio en el contrato de listado y quitar el TODO. Sin SQL nuevo en esta entrega.
+- `ActionResult` amplía el fallo con `field?: string` y `code?: string`, manteniendo `ok/error` y la rama de éxito. `saveMember` atribuye validaciones a `fullName`, `roles`, `cashRegisterIds`, `email`, `password`, `pin` o `emailLoginEnabled`; IDs/estado/errores generales no inventan un campo del formulario.
+- Códigos de validación: `FULL_NAME_INVALID`, `ROLES_INVALID`, `CASH_REGISTER_INVALID`, `EMAIL_INVALID`, `PASSWORD_INVALID`, `PIN_INVALID`, `EMAIL_LOGIN_INVALID`. Casos de negocio: `EMAIL_EXISTS`, `EMAIL_LOGIN_REQUIRED`, `ROLES_FORBIDDEN`, `ROLE_COMPATIBILITY_REQUIRED`; RPC de PIN: `PIN_INVALID`, `PIN_FORBIDDEN`, `PIN_SAVE_FAILED`. Errores generales conservan código estable sin atribución arbitraria a un campo. No se devuelven ni registran mensajes de Auth/SQL con PIN/hash.
+- Ejecutado: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todo en verde: **140/140 tests en 11 archivos** (47 de acciones, 6 de listado). Pruebas de autorización previa, sucursal/IDs, orden, arrays vacíos reales, ausencia de PIN/hash, datos concurrentes y fallos de lectura; errores por campo, correo repetido en alta/edición, contraseña débil y errores sanitizados de PIN.
+- Verificación local con mocks; sin QA en navegador ni escrituras en Supabase. `git diff --check` limpio. Sin tocar `app/supabase/`, sin commit ni push.
+
+## 2026-10-21 — M00-T06: permisos y navegación por roles
+
+- Worktree `M00-T06`, rama `feat/M00-T06-permissions`. Verificación local, sin conexiones ni cambios en datos de producción.
+- Matriz de M00 §6: pantallas de WAITER/CASHIER/KITCHEN, permisos administrativos parciales, combinaciones por unión, prioridad de `roles[]`, respaldo legacy solo cuando falta, OWNER implícito, rutas anidadas y filtro del sidebar.
+- Sesión: miembro activo de la misma sucursal/usuario del RPC, selección explícita sin `pin_hash`; errores de red/permisos no recuperan permisos legacy. Proxy: entrada, URLs no permitidas, Inicio, combinación de roles, ausencia de sesión y fallo transitorio.
+- Comandos: `npx next typegen && npx tsc --noEmit && npm run lint && npm test` desde `app/` → todos en verde: 12 archivos de pruebas, 153 tests (77 nuevos); `git diff --check` sin incidencias.
+- Sin QA en navegador ni verificación de las RPC contra la base. `app/supabase/` intacto.
+
+### Decisiones y dependencias de la spec
+
+- El primer rol operativo es el primero guardado en `roles[]` (§8); OWNER/ADMIN van a Inicio. Los gestores parciales conservan sus capacidades de §6, sin elevarse a ADMIN por la frase «panel completo» de §8.
+- Inicio de WAITER y KITCHEN no consulta ventas ni muestra importes. §6 no aclara las cifras visibles a KITCHEN; se conserva el criterio de mínima exposición. CASHIER tiene capacidad de resumen de ventas, pero no acceso a Ventas/Reportes; su resumen monetario queda pendiente de autorización backend específica.
+- Disponibilidad (`/disponibilidad`, M02), Impresión (`/ajustes/impresion`, M16) y Menú digital son capacidades definidas en la matriz. Sus pantallas no existen en esta rama: no se agregan enlaces a páginas inexistentes ni se inventa una ruta de administración de Menú digital.
+- M00-T01 agrega/backfillea `roles[]`, pero deja explícitamente las RPC/RLS legacy. Las pantallas y acciones que todavía exigen OWNER/ADMIN/WAITER/KITCHEN en la base necesitan una entrega backend para funcionar con roles nuevos sin errores. Este trabajo no modifica ni elude esas autorizaciones. Por ello, los tests de frontend no certifican el criterio completo de §6 contra la base (por ejemplo Caja con CASHIER cuyo `role` legacy es WAITER).
+- La matriz declara `members.manage` separado de `members.manageAdmins` y `branch.edit` separado de crear/eliminar sucursales; su enforcement de escritura corresponde a las acciones/RPC de esos módulos. La condición de caja asignada para cobrar corresponde al backend; no se sustituye por el permiso de navegar a Caja.
+
+## 2026-10-21 — M01-T06: UI de personalizaciones
+
+Worktree `.claude/worktrees/M01-T06`, rama `feat/M01-T06-modifiers-ui`, sobre M01-T04. Alcance: `/menu` → Personalizaciones; lista, búsqueda por nombre/etiqueta sin tildes, Todas/Sin usar por `usage_count`, menú Editar/Duplicar/Borrar y formulario Sheet con opciones ordenables, límites, repetición y vista previa. Componentes UI/shared y tokens existentes; controles nuevos con objetivo táctil de al menos 44 px (checkbox/switch mediante etiqueta/área de toque).
+
+- Contratos reutilizados, sin modificar actions ni validaciones: `getModifierGroups`, `getModifierGroupUsage`, `createModifierGroup`, `updateModifierGroup`, `deleteModifierGroup` y `modifierGroupSchema`. Edición conserva IDs; duplicado añade « (copia)», elimina IDs persistidos y no copia vínculos. Antes del borrado se lee el conteo actual; si falla o cambia, la confirmación permanece abierta y exige consultar de nuevo. No se retira la fila antes del éxito del servidor.
+- **Lectura real en monky-qa:** `getModifierGroups` falla con **PGRST205**, «Could not find the table 'public.modifier_groups' in the schema cache». Se presenta el error recuperable con Reintentar; nunca se convierte un fallo de lectura en lista vacía. Capturas reales `live-390/768/1024/1440.png`. No se aplicó SQL ni se crearon datos.
+- **Navegador con respuestas simuladas:** vacío, lista, uso, búsqueda, duplicación independiente, campos requeridos y foco en primer error, reordenamiento, mínimo, máximo, repetición, ocultación de etiqueta interna en vista previa, conservación de filtros al cerrar, conservación de datos tras fallo de guardado y rechazo de borrado por cambio de conteo. Las respuestas de crear/actualizar/borrar se interceptan localmente: **cero escrituras de catálogo enviadas al servidor**. Se usa únicamente la sesión QA de `monky-qa`; las credenciales permanecen en `.env.qa.local`.
+- **Responsive:** capturas de lista, vacío, editor, validación, búsqueda sin resultados, vista previa con repetición, error de guardado y confirmación de borrado a **390/768/1024/1440 px**. Medición `scrollWidth - innerWidth = 0`; Sheet sin overflow horizontal. Editor en una columna en móvil/tablet, vista previa lateral desde 1024 px; acciones de opción accesibles con teclado/tacto.
+- **Pruebas unitarias nuevas:** 7 casos en `modifier-model.test.ts`: duplicado sin IDs/vínculos, orden y conservación de IDs en edición, campos numéricos vacíos, precio cero/coma decimal/negativo/precisión, máximo con repetición según contrato, error junto a máximo y filtro/búsqueda.
+- **Verificación local:** `npx next typegen`, `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`. TypeScript y ESLint sin errores; **127/127 pruebas en 12 archivos**; build de producción correcto.
+- **Discrepancias reportadas:** el schema limita `max_select <= options.length` incluso con repetición (la maqueta propone permitir excederlo); la UI respeta el schema y muestra el error junto a Máximo. Las actions permiten solo OWNER/ADMIN, no Gestor de Menú. CRUD real no verificable mientras la tabla no esté disponible; se conservan las limitaciones de atomicidad de grupos documentadas en M01-T04.
+- **Evidencia:** `_capturas/M01-T06/README.md`, `report.json`, scripts de QA y PNG dentro del worktree; Git los ignora. Sin cambios en actions, SQL, Zod ni wiki; sin commit, push o PR.
+- **Cierre de accesibilidad y teclado:** axe-core sobre lista y Sheet en los cuatro anchos (WCAG 2 A/AA, 2.1 AA y 2.2 AA): **0 violaciones en 8 auditorías**. Foco inicial en Nombre del grupo, 25 pulsaciones de Tab permanecen dentro del Sheet, Escape devuelve el foco al disparador. Cero errores JavaScript de página. Evidencia final: **38 PNG** (34 simulados + 4 de lectura real). Estado de autenticación temporal retirado y servidor dev de esta tarea detenido.
+
+## 2026-10-21 — M01-T07: horarios básicos
+
+Worktree `.claude/worktrees/M01-T07`, rama `feat/M01-T07-horarios`.
+
+- Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`.
+- Resultado: typegen, TypeScript y ESLint sin errores; Vitest **96/96** (11 archivos), incluidos 10 casos de reglas de horarios y 10 de acciones con Supabase simulado.
+- A1: cero turnos abre 24 h toda la semana; con algún turno, los demás días sin turnos quedan cerrados. B2: turno nocturno pertenece al día de inicio, continúa al siguiente y excluye el instante de cierre; probado sábado → domingo. C1: UI lunes → domingo conservando domingo = 0. Solapamientos: duplicados, contención y cruce nocturno rechazados en el mismo día; extremos contiguos permitidos.
+- Acciones: sesión requerida, membresía ACTIVE, OWNER/ADMIN, pertenencia del horario al restaurante, nombre duplicado en español, validación contra turnos persistidos y detección de escrituras con cero filas.
+- Editor reutilizable: `src/components/schedules/schedule-editor.tsx`; props `restaurantId`, `initialSchedule?`, `onSaved?`. Usar `key={initialSchedule?.id ?? "new"}` al seleccionar otro horario. Crea el horario vacío y guarda/agrega/quita cada turno por separado; controles con altura mínima de 44 px y tokens existentes. Sin integración en rutas ni cambios al layout del admin.
+- Límite: las lecturas y escrituras REST separadas no evitan una carrera de solapamientos entre sesiones concurrentes. La migración existente no tiene exclusión de intervalos ni RPC transaccional; esta entrega no modifica SQL. El editor bloquea cambios simultáneos dentro de su propia instancia.
+- Alcance de QA: pruebas automatizadas locales; sin pruebas visuales en navegador ni escrituras en Supabase.
+
+## 2026-10-21 — M01-T07: segunda pasada según maqueta
+
+- Referencia de solo lectura: `_capturas/diseno-sprint1/M01-T07-horarios/README.md` y `maqueta.html` del repo principal.
+- Editor: + Turno por día, tiempos apilados en móvil y en pareja desde 768 px, resumen semanal que refleja la edición y queda lateral desde 1024 px; confirmación antes de borrar el último turno persistido. Sin cambios al layout del admin.
+- Textos exactos: «Termina al día siguiente» bajo Hasta; igualdad de horas «La hora final no puede ser igual al inicio.» junto a Hasta; superposición «Este turno se superpone con otro, incluido el que termina al día siguiente.» junto a Desde. Se conserva el aviso completo de 24 horas sin turnos.
+- Solapamientos: ahora se comparan intervalos semanales con sus continuaciones nocturnas; regresiones para los siete cambios de día, domingo → lunes y sábado → domingo incluidos, en ambos órdenes de entrada. Intervalos contiguos al cierre nocturno siguen siendo válidos. La acción usa la misma validación contra turnos persistidos.
+- Verificación ejecutada: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todos en verde: **99/99 tests**, 11 archivos (12 casos de validación de horarios y 11 de acciones).
+- Sin QA visual en navegador ni escrituras en Supabase. Se mantiene el límite documentado de concurrencia entre sesiones.
+
+## 2026-10-21 — M01-T07: página Horarios y correcciones de revisión
+
+- Ruta `/menu/horarios`, enlazada desde la cabecera de Menú, sin modificar el layout del dashboard. Carga mediante `getSchedules` con el restaurante de la sesión; exige OWNER/ADMIN. Permite seleccionar horarios existentes o abrir el editor de uno nuevo.
+- Estados: lista vacía con «Todavía no hay horarios» y CTA «Crear horario»; `loading.tsx` y esqueleto de reintento sin datos de disponibilidad provisionales; error esperado con Reintentar y sin editor, más `error.tsx` para fallos inesperados. El reintento vuelve a consultar `getSchedules`.
+- Editor nuevo: bajo «Turnos de la semana», «Crea el horario para agregar turnos.»; los siete botones + Turno están explícitamente deshabilitados hasta crear. Se añade «Cada turno se guarda por separado.».
+- Resumen: muestra únicamente nombre y turnos persistidos. Los borradores y las ediciones marcan «Cambios sin guardar» en el día y el resumen; volver a las horas originales elimina el estado pendiente. El resumen de un horario aún no creado explica que primero hay que crearlo.
+- Feedback persistente en `role=status`: «Turno guardado» / «Turno quitado», también tras desmontarse la fila guardada o retirada. Inputs con `step={60}` y valores HH:mm; resumen recorta los TIME de PostgreSQL a minutos.
+- Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`, todo en verde. **107/107 tests, 12 archivos**. Ocho casos nuevos de helpers y renderizado SSR de editor, contenedor y esqueleto; incluyen que el error no monte un editor y que carga no muestre 24 h. Las pruebas de reglas y acciones siguen pasando.
+- Alcance de esta ronda: sin QA interactivo de navegador ni escrituras en Supabase; sin commit ni push.
+
+## 2026-10-21 — M03-T01: migración de zonas y plano (solo local)
+
+Worktree `.claude/worktrees/M03-T01`, rama `feat/M03-T01-zones`, base M00-T01
+`228fcc5`. No se conectó a Supabase, no se aplicó nada a producción y no se
+creó commit, push ni PR. Datos sintéticos exclusivamente para `monky-qa`.
+
+- `npx next typegen && npx tsc --noEmit && npm run lint && npm test`: **OK**;
+  Vitest: **76 pruebas**, 9 archivos. Tipos de zones/tables editados a mano.
+- `app/supabase/tests/m03_zones.sql`: **80/80 comprobaciones** en PGlite;
+  transacción `BEGIN…ROLLBACK`, fixtures de roles generadas sin credenciales.
+  Cubre OWNER/ADMIN, WAITER/KITCHEN, miembro inactivo, usuario sin membresía,
+  lectura/escritura permitida o rechazada, WITH CHECK, constraints, defaults,
+  backfill idempotente, QR intactos y rechazo real de SELECT/INSERT/UPDATE/DELETE
+  para anon. FK compuesta comprobada por catálogo; no se crea un segundo tenant.
+- Migración real ejecutada sobre **40 mesas + 1 COUNTER** preexistentes:
+  41 asignadas a Salón, `qr_token` y `updated_at` idénticos antes/después,
+  posiciones null. Reejecutar sus sentencias de backfill no cambia zonas,
+  asignaciones ni tokens. La cuadrícula 7×5 no limita el backfill a 35 mesas.
+- El harness comprueba también que el ROLLBACK restaura las mesas originales.
+  Revisión estática por `security-reviewer`: aprobada. Se agregó GRANT EXECUTE
+  explícito al helper temporal de tests por el default privilege real que
+  revoca EXECUTE de PUBLIC para nuevas funciones.
+
+Harness local: desde `app`, `node node_modules/.cache/m03-zones/run.mjs`.
+Este auxiliar no versionado reutiliza PGlite/pgcrypto y `pin/base_pin.sql` del
+harness de ejemplo suministrado por el usuario. Añade las migraciones reales
+011 (tables/sessions), counter_kind, M00-T01 y default_privileges_public, las
+políticas originales de tables y los grants/revokes de los helpers. Simula
+además grants heredados de tablas para comprobar que zones revoca TRUNCATE.
+No reproduce todo el historial, Supabase Auth/REST, Realtime ni concurrencia;
+no equivale a una validación remota ni a probar la UI.
+
+Decisiones de alcance documentadas en la cabecera SQL: coordenadas base cero
+nullable (la spec no fija origen); orden `sort_order` con empates; sin máximos
+arbitrarios ni distribución automática. Nombres únicos exactos por restaurante.
+RESTRICT impide borrar zonas con mesas vinculadas; validar movimientos de mesas
+con sesiones activas y el flujo de borrado corresponde a M03-T03. Solapamiento y
+límites respecto a la cuadrícula corresponden a M03-T02/T03. RLS sigue el `role`
+legado OWNER/ADMIN solicitado; BRANCH_MANAGER requiere la transición de M00.

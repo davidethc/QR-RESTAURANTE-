@@ -1,3 +1,4 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import Link from "next/link";
@@ -12,6 +13,11 @@ import {
   getTopProducts,
 } from "@/lib/queries/staff";
 import { getPublicMenu } from "@/lib/queries/menu";
+import {
+  getActiveOrderForTable,
+  getStaffProductDetails,
+} from "@/lib/queries/staff-catalog";
+import { TicketsDetail } from "./_components/tickets-detail";
 
 // Igual que el resto del panel: fuera del alcance de la migración a
 // navegación instantánea, que por ahora solo cubre la ruta del comensal.
@@ -36,10 +42,7 @@ export default async function TakeOrderPage({
   await connection();
   const { id } = await params;
   const session = await getMyRestaurant();
-
-  // Cocina no toma pedidos en las mesas. El RPC lo rechazaría igual; esto
-  // evita que llegue siquiera a ver una pantalla que no puede usar.
-  if (session.role === "KITCHEN") notFound();
+  requireRouteAccess(session, "/tables");
 
   const table = await getTableForOrder(id);
 
@@ -49,9 +52,11 @@ export default async function TakeOrderPage({
   if (!table || table.restaurant_id !== session.restaurant.id) notFound();
   if (table.status === "INACTIVE") notFound();
 
-  const [menu, topProducts] = await Promise.all([
+  const [menu, topProducts, details, order] = await Promise.all([
     getPublicMenu(session.restaurant.slug),
     getTopProducts(session.restaurant.id),
+    getStaffProductDetails(session.restaurant.id),
+    getActiveOrderForTable(table.id),
   ]);
 
   const tableLabel = table.name ?? `Mesa ${table.number}`;
@@ -69,12 +74,20 @@ export default async function TakeOrderPage({
           </Button>
         }
       />
+      {order && (
+        <TicketsDetail
+          tableLabel={tableLabel}
+          tickets={order.tickets}
+          tableSessionId={order.billRequested ? order.tableSessionId : null}
+          details={details}
+        />
+      )}
       <StaffOrderBuilder
         categories={menu.categories}
         topProducts={topProducts}
+        details={details}
         tableId={table.id}
-        tableNumber={table.number}
-        tableLabel={tableLabel}
+        orderId={order?.id ?? null}
       />
     </main>
   );

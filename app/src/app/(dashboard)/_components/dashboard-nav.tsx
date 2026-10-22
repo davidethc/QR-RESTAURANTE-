@@ -1,5 +1,7 @@
 "use client";
 
+import { canAccessRoute, filterAllowedLinks, getRoles, type PermissionSource, type PermissionRole } from "@/lib/permissions";
+
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,7 +17,9 @@ import {
   TrendingUp,
   Users,
   BarChart3,
+  ShieldCheck,
   Menu,
+  PackageX,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -35,38 +39,41 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
-import type { UserRole } from "@/config/constants";
 import type { MyRestaurant } from "@/types/staff";
 
-const ROLE_LABEL: Record<UserRole, string> = {
+const ROLE_LABEL: Record<PermissionRole, string> = {
   OWNER: "Dueño",
   ADMIN: "Administrador",
   WAITER: "Mesero",
   KITCHEN: "Cocina",
+  CASHIER: "Cajero",
+  MEMBERS_ADMIN: "Administrador de miembros",
+  BRANCH_MANAGER: "Gestor de sucursal",
+  MENU_MANAGER: "Gestor de menú",
 };
 
-const MANAGERS: UserRole[] = ["OWNER", "ADMIN"];
-
-type NavLink = { href: string; label: string; icon: LucideIcon; roles: UserRole[] };
+type NavLink = { href: string; label: string; icon: LucideIcon };
 
 const NAV_GROUPS: { label: string; links: NavLink[] }[] = [
   {
     label: "Operación",
     links: [
-      { href: "/today", label: "Hoy", icon: Home, roles: MANAGERS },
-      { href: "/orders", label: "Pedidos", icon: ClipboardList, roles: ["OWNER", "ADMIN", "WAITER"] },
-      { href: "/kitchen", label: "Cocina", icon: ChefHat, roles: ["OWNER", "ADMIN", "KITCHEN"] },
-      { href: "/tables", label: "Mesas", icon: LayoutGrid, roles: ["OWNER", "ADMIN", "WAITER"] },
-      { href: "/cash", label: "Caja", icon: Wallet, roles: MANAGERS },
+      { href: "/today", label: "Hoy", icon: Home },
+      { href: "/orders", label: "Pedidos", icon: ClipboardList },
+      { href: "/kitchen", label: "Cocina", icon: ChefHat },
+      { href: "/tables", label: "Mesas", icon: LayoutGrid },
+      { href: "/cash", label: "Caja", icon: Wallet },
+      { href: "/availability", label: "Disponibilidad", icon: PackageX },
     ],
   },
   {
     label: "Negocio",
     links: [
-      { href: "/sales", label: "Ventas", icon: TrendingUp, roles: MANAGERS },
-      { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: MANAGERS },
-      { href: "/reports", label: "Reportes", icon: BarChart3, roles: MANAGERS },
-      { href: "/staff", label: "Personal", icon: Users, roles: MANAGERS },
+      { href: "/sales", label: "Ventas", icon: TrendingUp },
+      { href: "/menu", label: "Carta", icon: UtensilsCrossed },
+      { href: "/reports", label: "Reportes", icon: BarChart3 },
+      { href: "/staff", label: "Personal", icon: Users },
+      { href: "/security", label: "Historial de seguridad", icon: ShieldCheck },
     ],
   },
 ];
@@ -75,7 +82,6 @@ const SETTINGS_LINK: NavLink = {
   href: "/settings",
   label: "Configuración",
   icon: Settings,
-  roles: MANAGERS,
 };
 
 const ALL_LINKS = [...NAV_GROUPS.flatMap((g) => g.links), SETTINGS_LINK];
@@ -98,7 +104,7 @@ function NavItem({
       aria-current={active ? "page" : undefined}
       title={compact ? link.label : undefined}
       className={cn(
-        "relative flex h-9 items-center gap-2.5 rounded-control px-2.5 text-body-sm font-medium transition-colors duration-150",
+        "relative flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-body-sm font-medium transition-colors duration-150",
         compact && "xl:justify-start justify-center",
         active
           ? "bg-primary-soft text-primary before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-primary"
@@ -117,16 +123,16 @@ function NavList({
   compact,
   onNavigate,
 }: {
-  role: UserRole;
+  role: PermissionSource;
   pathname: string;
   compact?: boolean;
   onNavigate?: () => void;
 }) {
   const groups = NAV_GROUPS.map((g) => ({
     ...g,
-    links: g.links.filter((l) => l.roles.includes(role)),
+    links: filterAllowedLinks(role, g.links),
   })).filter((g) => g.links.length > 0);
-  const showSettings = SETTINGS_LINK.roles.includes(role);
+  const showSettings = canAccessRoute(role, SETTINGS_LINK.href);
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -175,7 +181,7 @@ function Brand({ session, compact }: { session: MyRestaurant; compact?: boolean 
         <p className="truncate text-body-sm font-semibold leading-tight text-foreground">
           {session.restaurant.name}
         </p>
-        <p className="text-caption text-muted-foreground">{ROLE_LABEL[session.role]}</p>
+        <p className="text-caption text-muted-foreground">{getRoles(session).map((role) => ROLE_LABEL[role]).join(" · ")}</p>
       </div>
     </div>
   );
@@ -198,7 +204,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
       {/* Escritorio: barra completa. Tablet: solo iconos. Móvil: cajón. */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col gap-6 border-r border-border bg-card px-3 py-4 md:flex xl:w-60 print:hidden">
         <Brand session={session} compact />
-        <NavList role={session.role} pathname={pathname} compact />
+        <NavList role={session} pathname={pathname} compact />
       </aside>
 
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-card px-4 md:px-7 print:hidden">
@@ -216,7 +222,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
             <SheetContent side="left" className="w-72 gap-6 px-3 py-4" showCloseButton={false}>
               <SheetTitle className="sr-only">Menú del panel</SheetTitle>
               <Brand session={session} />
-              <NavList role={session.role} pathname={pathname} onNavigate={() => setOpen(false)} />
+              <NavList role={session} pathname={pathname} onNavigate={() => setOpen(false)} />
             </SheetContent>
           </Sheet>
           <p className="truncate text-meta text-muted-foreground">
@@ -243,7 +249,7 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
             <DropdownMenuLabel className="flex flex-col gap-0.5">
               <span className="text-body-sm font-medium">{session.user.full_name ?? "Usuario"}</span>
               <span className="text-caption font-normal text-muted-foreground">
-                {ROLE_LABEL[session.role]} · {session.restaurant.name}
+                {getRoles(session).map((role) => ROLE_LABEL[role]).join(" · ")} · {session.restaurant.name}
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

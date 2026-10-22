@@ -1,9 +1,8 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { canHandleMoney } from "@/lib/permissions";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
 import { getReportsTimezoneSettings } from "@/lib/queries/reports";
 import { getReportsBundle } from "@/lib/actions/reports";
@@ -20,10 +19,7 @@ export default async function ReportsPage() {
   await connection();
 
   const session = await getMyRestaurant();
-  // Reportes muestra dinero: mismo candado que /cash (lib/permissions.ts).
-  if (!canHandleMoney(session.role)) {
-    redirect("/orders");
-  }
+  requireRouteAccess(session, "/reports");
 
   const restaurantId = session.restaurant.id;
 

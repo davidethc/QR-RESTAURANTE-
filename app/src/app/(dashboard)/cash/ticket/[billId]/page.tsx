@@ -1,7 +1,6 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { canHandleMoney } from "@/lib/permissions";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
 import { getBill } from "@/lib/actions/billing";
 import { fromCents, splitIncludedTax, toCents } from "@/lib/money";
@@ -31,11 +30,9 @@ export default async function TicketPage({
   const { print } = await searchParams;
 
   const session = await getMyRestaurant();
-  // Solo cobra el administrador/dueño (lib/permissions.ts): el mesero que
-  // llegue a esta URL a mano se va a Pedidos, igual que en /cash.
-  if (!canHandleMoney(session.role)) {
-    redirect("/orders");
-  }
+  requireRouteAccess(session, "/cash");
+  // Solo quien tiene `cash.manage` (lib/permissions.ts) entra aquí; el resto
+  // se redirige según su rol, igual que en /cash.
 
   const [billResult, settings] = await Promise.all([
     getBill(billId),

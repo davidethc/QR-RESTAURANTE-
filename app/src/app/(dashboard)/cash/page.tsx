@@ -1,9 +1,8 @@
-import { canHandleMoney } from "@/lib/permissions";
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
@@ -41,11 +40,8 @@ export default async function CashPage() {
   await connection();
 
   const session = await getMyRestaurant();
+  requireRouteAccess(session, "/cash");
   const role = session.role;
-  // Cobra el administrador/dueño (ver lib/permissions.ts).
-  if (!canHandleMoney(role)) {
-    redirect("/orders");
-  }
   const restaurantId = session.restaurant.id;
 
   const settings = await getRestaurantSettings(restaurantId);

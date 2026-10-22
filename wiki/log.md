@@ -1,8 +1,11 @@
 ---
 title: "Activity Log"
-type: "log"
+type: "reference"
 created: "2026-09-01"
-updated: "2026-09-01"
+sources: ["docs/pos-spec/M03-zonas-mesas.md", "docs/pos-spec/M00-base.md"]
+tags: ["registro", "desarrollo"]
+aliases: ["log"]
+updated: "2026-10-21"
 ---
 
 # Activity Log
@@ -382,3 +385,112 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 ---
 
 *Este log usa formato consistente `## [FECHA] operacion | descripcion` para ser parseable.*
+
+## [2026-10-21] código | M01-T04: acciones de catálogo y validación
+
+- **Resumen**: extensión de `actions/menu.ts` para productos con variantes, grupos de personalización, opciones y vínculos; tipos manuales de las cuatro tablas de T02/T03 y traducciones controladas de 22023/23514 vía `dbFailure`. Se conserva el contrato de precio único de producción.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, `docs/pos-spec/M00-base.md`, migraciones `20261020150000_m01_product_variants.sql` y `20261020160000_m01_modifier_groups.sql`.
+- **Páginas actualizadas**: ninguna página conceptual; contrato de acciones, decisiones y limitaciones registrados en `app/TESTING.md`.
+- **Verificación**: next typegen, tsc y lint sin errores; Vitest 110/110 (11 archivos). Supabase simulado; sin SQL ni escrituras en producción.
+- **Decisiones y dudas**: reutilizar la variante generada por el trigger en el lote de alta; no mandar `price` inconsistente en productos con múltiples variantes; exigir conteo confirmado al borrar grupos usados. Sin RPC de agregado en las migraciones existentes, las operaciones REST múltiples no son una transacción única y pueden requerir revisión tras errores parciales. La atomicidad y concurrencia completas requieren una entrega de BD posterior.
+- **Contradicciones detectadas**: ninguna; los grupos legacy sin opciones de T03 se pueden leer, pero las nuevas escrituras y vínculos exigen límites cumplibles.
+- **Duración**: sesión M01-T04.
+
+## [2026-10-21] código | M01-T04: integración de save_product_with_variants
+
+- **Resumen**: createProduct/updateProduct con variantes pasan a la RPC aprobada, con tipo manual en database.ts y errores 42501/22023/23514 traducidos por dbFailure. Se elimina la limpieza compensatoria del alta del producto; flujos sin variantes preservados.
+- **Referencias**: `app/supabase/migrations/20261021100000_m01_save_product_with_variants.sql`, `docs/pos-spec/M01-catalogo.md` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: next typegen, tsc y lint sin errores; Vitest 115/115 (11 archivos). Sin aplicar migraciones ni escrituras en producción.
+- **Decisión**: mantener writeVariants únicamente para saveProductVariants, conforme a la alternativa permitida; su límite de atomicidad sigue documentado. La RPC resuelve la atomicidad del alta y la edición del producto con variantes.
+- **Contradicciones detectadas**: ninguna.
+- **Duración**: cambio final M01-T04.
+
+## [2026-10-21] código | M01-T04: variantes aisladas por RPC atómica
+
+- **Resumen**: saveProductVariants pasa a save_product_variants con cliente de sesión, sin reenviar otros campos del producto. Se elimina writeVariants y se añade el tipo manual de la función.
+- **Referencias**: `app/supabase/migrations/20261021120000_m01_save_product_variants.sql`, `docs/pos-spec/M01-catalogo.md` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 120/120 en 11 archivos. Tests de RPC void, payload aislado, validación previa y traducción 42501/22023/23514.
+- **Contradicciones resueltas**: queda retirada la limitación anterior de saveProductVariants con múltiples escrituras REST; la función aprobada se encarga de la transacción sin actualizar otros campos del producto.
+- **Duración**: último ajuste M01-T04; sin modificar app/supabase/, sin commit ni push.
+
+## [2026-10-21] código | M00-T04: guardado de miembros con roles combinables
+
+- **Resumen**: nueva `saveMember` en `actions/staff.ts`, schema condicional añadido a `validations/staff.ts`, hash de PIN server-only y tipos manuales de los cuatro campos de #13. Flujos legacy de personal intactos.
+- **Referencias**: `docs/pos-spec/M00-base.md`, `app/supabase/migrations/20261020120000_restaurant_members_roles_pin.sql` y contrato/decisiones en `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro técnico de QA ampliado.
+- **Verificación**: next typegen, tsc y lint sin errores; Vitest 105/105 en 11 archivos. La validación recorre las 127 combinaciones de roles asignables; también se prueban aislamiento, RPCs de permisos, PIN y compensación de altas fallidas.
+- **Decisiones y dudas**: cajas solo con CASHIER; PIN obligatorio en alta y conservación en edición solo si hay hash real en BD. El alta solo-PIN, roles sin equivalente legacy, miembros activos sin roles, multi-sucursal y confirmación de correo necesitan completar los flujos de la spec. No se inventaron columnas ni SQL; se documentaron límites de la fase expand y del hash scrypt para M00-T03.
+- **Contradicciones detectadas**: la spec de cero o más roles y la unión de permisos nuevos todavía convive con `role` legacy como fuente de autorización; se evita conceder equivalencias implícitas a nuevos roles.
+- **Duración**: sesión M00-T04.
+
+## [2026-10-21] seguridad | M00-T04: PIN por RPC y compatibilidad del correo
+
+- **Resumen**: `saveMember` confirma correo al crear, bloquea desactivar su acceso hasta M00-T03 y solo envía email a Auth si cambió. PIN de 4–6 dígitos mediante set_member_pin con sesión de usuario; helper de hashing Node eliminado. Se comprueba presencia sin leer el hash y se sanitizan errores antes de dbFailure.
+- **Referencias**: correcciones de seguridad del encargo, `docs/pos-spec/M00-base.md`, contrato `set_member_pin(p_member_id uuid, p_pin text) returns void` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 112/112 en 10 archivos. Sin escrituras en Supabase y sin modificar archivos bajo app/supabase/ (trabajo paralelo de otro agente).
+- **Contradicciones resueltas**: quedan sustituidas las decisiones previas de hashing scrypt en Node, correo no confirmado en nuevas altas y edición con acceso por correo desactivado. La revisión exige RPC de PIN, email_confirm=true y bloqueo de esa desactivación en ambos flujos.
+- **Duración**: corrección de seguridad M00-T04.
+
+## [2026-10-21] código | M00-T04: PIN exactamente de cuatro dígitos
+
+- **Resumen**: regla Zod, mensajes y pruebas alineados con la decisión final de PIN de exactamente cuatro dígitos; cinco y seis quedan rechazados antes de llamar a la RPC.
+- **Referencias**: decisión del encargo, `docs/pos-spec/M00-base.md` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 115/115 en 10 archivos.
+- **Contradicciones resueltas**: la decisión final de cuatro dígitos sustituye la regla temporal de 4–6. No se modificó app/supabase/.
+- **Duración**: ajuste final M00-T04.
+
+## [2026-10-21] código | M00-T04 (#21): contrato para edición de miembros
+
+- **Resumen**: listado con roles y cajas, manteniendo autorización OWNER/ADMIN; errores de saveMember con field/code opcionales compatibles con ActionResult.
+- **Archivos**: acciones/consultas de personal y sus tests, types/actions.ts, types/staff.ts, app/TESTING.md.
+- **Pendiente de BD**: no existe lectura segura de has_pin para authenticated. Tipo opcional y TODO claro; se requiere ampliar get_restaurant_staff para devolver solo el booleano de presencia, manteniendo permisos y sin exponer pin_hash. Petición detallada en app/TESTING.md.
+- **Verificación**: typegen, tsc --noEmit y lint en verde; Vitest 140/140 en 11 archivos. Sin cambios en app/supabase/, sin commit ni push.
+- **Páginas conceptuales actualizadas**: ninguna.
+
+## [2026-10-21] code | M00-T06: matriz de permisos y navegación combinable
+
+- **Resumen**: matriz pura y unión de roles, sesión enriquecida desde restaurant_members, redirección de entrada y guard por página/proxy, filtro del sidebar sin cambios visuales y separación de Inicio de las consultas de ventas.
+- **Archivos**: app/src/lib/permissions.ts, lib/auth/, queries/staff.ts, proxy.ts, tipos, login y páginas del dashboard; pruebas Vitest y app/TESTING.md.
+- **Decisiones/dudas**: primer rol operativo según el orden guardado; gestores parciales no reciben ADMIN; módulos M02/M12/M16 aún sin páginas; las autorizaciones backend legacy requieren otra entrega para garantizar toda §6 en vivo. No se modifica app/supabase ni se hacen commits.
+- **Páginas wiki actualizadas**: ninguna; registro técnico en app/TESTING.md.
+- **Verificación**: next typegen, tsc --noEmit, lint y Vitest en verde (12 archivos, 153 tests); git diff --check sin incidencias. No se ejecutó QA contra la base.
+
+## [2026-10-21] código | M01-T07: editor reutilizable de horarios básicos
+
+- **Resumen**: tipos manuales de `schedules`/`schedule_shifts` según la migración M01-T01, validación Zod con A1/B2/C1 y solapamientos, acciones OWNER/ADMIN y editor reutilizable con tokens existentes y controles de al menos 44 px. Sin cambios SQL ni al layout del admin.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, `app/supabase/migrations/20261020130000_m01_schedules_service_options.sql`, `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro técnico en `app/TESTING.md`.
+- **Verificación**: typegen, tsc, lint; Vitest 96/96. No se verificó UI en navegador. La validación de solapamientos no es atómica entre sesiones concurrentes con la API y el SQL existentes.
+- **Contradicciones detectadas**: A1 del encargo precisa que un día sin turnos queda cerrado cuando hay turnos en otros días; cero turnos en todo el horario significa 24 h.
+- **Duración**: sesión M01-T07.
+
+## [2026-10-21] código | M01-T07: segunda pasada de horarios según diseño
+
+- **Resumen**: editor ajustado a la maqueta de horarios, mensajes exactos por campo, resumen semanal durante la edición y confirmación del último turno. La validación detecta la cola nocturna sobre el día siguiente, incluido el cruce semanal.
+- **Referencias**: `_capturas/diseno-sprint1/M01-T07-horarios/README.md` y `maqueta.html` del repo principal (solo lectura); `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; se amplía el registro de QA.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 99/99 (11 archivos). Sin QA visual ni cambios SQL.
+- **Contradicciones detectadas**: ninguna; el encargo confirma que la superposición también incluye intervalos que empiezan en días distintos.
+- **Duración**: segunda pasada M01-T07.
+
+## [2026-10-21] código | M01-T07: acceso a Horarios y estados de guardado
+
+- **Resumen**: página `/menu/horarios` con getSchedules y enlace desde Menú, lista vacía, esqueleto y errores recuperables. Editor con explicación previa al alta, resumen de datos guardados, distintivos de cambios pendientes, feedback accesible por turno y horas HH:mm.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, revisión de diseño del encargo y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 107/107 (12 archivos). Ocho pruebas nuevas de presentación y estados; sin QA interactivo ni escrituras en Supabase.
+- **Contradicciones detectadas**: ninguna; el resumen ahora distingue datos persistidos de las ediciones locales.
+- **Duración**: revisión de diseño M01-T07.
+
+
+## [2026-10-21] code | M03-T01: zonas y columnas del plano (solo local)
+
+- **Resumen**: Preparada la migración EXPAND `20261021140000_m03_zones.sql`, prueba SQL transaccional y tipos manuales. Zona Salón para mesas existentes, QR intactos, FK compuesta por restaurante y acceso de escritura OWNER/ADMIN. Sin aplicar a producción ni commit, push o PR.
+- **Fuentes**: [M03, datos/reglas/casos límite](../docs/pos-spec/M03-zonas-mesas.md), [M00, transición de roles](../docs/pos-spec/M00-base.md).
+- **Decisiones y dudas**: Coordenadas base cero y nullable, sin inventar distribución física; `sort_order` admite empates. La spec no fija origen de coordenadas, máximos ni normalización de nombres. RESTRICT bloquea borrar zonas con mesas; la gestión de esas mesas y sesiones queda para M03-T03. BRANCH_MANAGER queda pendiente de M00; este encargo exige OWNER/ADMIN.
+- **Páginas actualizadas**: [[Wiki Index]], [[Activity Log]]. Sin páginas nuevas.
+- **Verificación**: Evidencia y límites en [app/TESTING.md](../app/TESTING.md).

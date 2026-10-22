@@ -32,6 +32,12 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        touch:
+          "h-auto min-h-(--control-target-touch) min-w-(--control-target-touch) gap-2 px-4 py-2 whitespace-normal",
+        "icon-touch":
+          "size-(--control-target-touch) min-h-(--control-target-touch) min-w-(--control-target-touch)",
+        keypad:
+          "h-auto min-h-(--control-height-keypad) min-w-(--control-target-touch) gap-2 px-4 py-2 text-xl",
       },
     },
     defaultVariants: {

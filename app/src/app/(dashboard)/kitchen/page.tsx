@@ -1,3 +1,4 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import {
@@ -21,6 +22,7 @@ export default async function KitchenPage() {
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
   const session = await getMyRestaurant();
+  requireRouteAccess(session, "/kitchen");
   const restaurantId = session.restaurant.id;
 
   const settings = await getRestaurantSettings(restaurantId);

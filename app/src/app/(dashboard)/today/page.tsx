@@ -1,7 +1,7 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
 import { ChefHat, ClipboardList, LayoutGrid, TrendingUp, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -12,7 +12,7 @@ import {
   getSalesReport,
 } from "@/lib/queries/staff";
 import { getOpenCashSessionId } from "@/lib/queries/cash";
-import { isManager } from "@/lib/permissions";
+import { canAccessRoute, hasPermission } from "@/lib/permissions";
 import { cn, formatPrice } from "@/lib/utils";
 
 // Ver la nota en (dashboard)/layout.tsx.
@@ -66,22 +66,20 @@ function Tile({
 }
 
 /**
- * Inicio del panel. El dueño/administrador ve el día de un vistazo y salta a
- * donde haga falta; mesero y cocina van directo a su pantalla de trabajo.
+ * Inicio compartido: se consultan ventas únicamente con su permiso específico.
  */
 export default async function TodayPage() {
   await connection();
   const session = await getMyRestaurant();
-  if (session.role === "KITCHEN") redirect("/kitchen");
-  if (!isManager(session.role)) redirect("/orders");
+  requireRouteAccess(session, "/today");
 
   const restaurantId = session.restaurant.id;
   const [summary, settings, sales] = await Promise.all([
     getDashboardSummary(restaurantId),
     getRestaurantSettings(restaurantId),
-    getSalesReport(restaurantId, 1),
+    hasPermission(session, "sales.view") ? getSalesReport(restaurantId, 1) : Promise.resolve(null),
   ]);
-  const cashOpen = settings.billing_enabled ? !!(await getOpenCashSessionId(restaurantId)) : null;
+  const cashOpen = settings.billing_enabled && hasPermission(session, "cash.manage") ? !!(await getOpenCashSessionId(restaurantId)) : null;
 
   const waiting = summary.pending_orders + summary.pending_calls;
   const inKitchen = summary.accepted_orders + summary.preparing_orders;
@@ -96,33 +94,41 @@ export default async function TodayPage() {
             cashOpen !== null ? "lg:grid-cols-5" : "lg:grid-cols-4"
           )}
         >
-          <Tile
-            href="/orders"
-            icon={ClipboardList}
-            label="Por atender"
-            value={String(waiting)}
-            detail={`${summary.pending_orders} pedidos · ${summary.pending_calls} llamadas`}
-          />
-          <Tile
-            href="/kitchen"
-            icon={ChefHat}
-            label="En cocina"
-            value={String(inKitchen)}
-            detail={`${summary.ready_orders} listos para llevar`}
-          />
-          <Tile
-            href="/tables"
-            icon={LayoutGrid}
-            label="Mesas ocupadas"
-            value={`${summary.occupied_tables}/${summary.total_tables}`}
-          />
-          <Tile
-            href="/sales"
-            icon={TrendingUp}
-            label="Vendido hoy"
-            value={formatPrice(Number(sales.summary.total_sold))}
-            detail={`${sales.summary.tickets} ${sales.source === "bills" ? "cuentas" : "pedidos"}`}
-          />
+          {canAccessRoute(session, "/orders") && (
+            <Tile
+              href="/orders"
+              icon={ClipboardList}
+              label="Por atender"
+              value={String(waiting)}
+              detail={`${summary.pending_orders} pedidos · ${summary.pending_calls} llamadas`}
+            />
+          )}
+          {canAccessRoute(session, "/kitchen") && (
+            <Tile
+              href="/kitchen"
+              icon={ChefHat}
+              label="En cocina"
+              value={String(inKitchen)}
+              detail={`${summary.ready_orders} listos para llevar`}
+            />
+          )}
+          {canAccessRoute(session, "/tables") && (
+            <Tile
+              href="/tables"
+              icon={LayoutGrid}
+              label="Mesas ocupadas"
+              value={`${summary.occupied_tables}/${summary.total_tables}`}
+            />
+          )}
+          {sales && (
+            <Tile
+              href="/sales"
+              icon={TrendingUp}
+              label="Vendido hoy"
+              value={formatPrice(Number(sales.summary.total_sold))}
+              detail={`${sales.summary.tickets} ${sales.source === "bills" ? "cuentas" : "pedidos"}`}
+            />
+          )}
           {cashOpen !== null && (
             <Tile
               href="/cash"
@@ -130,10 +136,10 @@ export default async function TodayPage() {
               label="Caja"
               pill={{
                 text: cashOpen ? "Abierta" : "Cerrada",
-                tone: cashOpen ? "success" : !cashOpen && (sales.open_bills?.count ?? 0) > 0 ? "warning" : "muted",
+                tone: cashOpen ? "success" : !cashOpen && (sales?.open_bills?.count ?? 0) > 0 ? "warning" : "muted",
               }}
               detail={
-                sales.open_bills && sales.open_bills.count > 0
+                sales?.open_bills && sales.open_bills.count > 0
                   ? `${sales.open_bills.count} por cobrar · ${formatPrice(Number(sales.open_bills.total))}`
                   : "Sin cuentas por cobrar"
               }
@@ -141,7 +147,7 @@ export default async function TodayPage() {
           )}
         </div>
 
-        {sales.top_products.length > 0 && (
+        {sales && sales.top_products.length > 0 && (
           <section className="flex flex-col gap-3">
             <h2 className="text-body font-semibold text-foreground">Lo más pedido hoy</h2>
             <ol className="flex flex-col divide-y divide-border rounded-card border border-border bg-card">

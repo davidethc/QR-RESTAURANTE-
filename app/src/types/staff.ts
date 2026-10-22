@@ -15,6 +15,8 @@ import type {
 export interface MyRestaurant {
   user: { id: string; full_name: string | null; avatar_url: string | null };
   role: UserRole;
+  roles?: string[];
+  cash_register_ids?: string[];
   restaurant: {
     id: string;
     name: string;
@@ -218,6 +220,10 @@ export interface StaffMember {
   full_name: string | null;
   email: string;
   role: UserRole;
+  roles: string[];
+  cash_register_ids: string[];
+  /** Si la persona tiene PIN (get_staff_pin_status, solo OWNER/ADMIN). Nunca el hash. */
+  has_pin: boolean;
   status: MemberStatus;
   created_at: string;
   is_me: boolean;

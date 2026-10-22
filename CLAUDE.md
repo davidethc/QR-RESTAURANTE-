@@ -346,18 +346,29 @@ Varias sesiones de Claude trabajan a la vez. **En reposo solo existe la carpeta 
 | Sesión | Carpeta | Qué hace |
 |---|---|---|
 | `[jefe general]` | `QR-RESTAURANTE-` (principal, siempre en `main`, nunca se edita directo) | Orquesta, revisa y fusiona PRs, aplica migraciones, vigila producción |
-| `{jefe diseno}` | `QR-RESTAURANTE--diseno` (temporal) | UI/UX y estilos (tokens, componentes visuales) |
-| `[jefe funcionalidades]` | `QR-RESTAURANTE--funcionalidades` (temporal) | Funcionalidades nuevas; tablero en Notion y especificación en `docs/pos-spec/` |
+| `{jefe diseno}` | `QR-RESTAURANTE--<Mxx-Tyy>` (temporal, una por tarea) | UI/UX y estilos (tokens, componentes visuales) |
+| `[jefe funcionalidades]` | `QR-RESTAURANTE--<Mxx-Tyy>` (temporal, una por tarea) | Funcionalidades nuevas; tablero en Notion y especificación en `docs/pos-spec/` |
 
-- Para empezar una tarea:
+- Para empezar una tarea (la ruta tiene un espacio: va siempre entre comillas):
   ```bash
-  cd /Users/d/Desktop/monky.dev/QR-RESTAURANTE- && git fetch
-  git worktree add -b <rama> ../QR-RESTAURANTE--<nombre> origin/main
-  cp app/.env.local app/.env.qa.local ../QR-RESTAURANTE--<nombre>/app/
-  cd ../QR-RESTAURANTE--<nombre>/app && npm ci   # Turbopack no acepta node_modules como enlace simbólico
+  REPO="/Users/d/Desktop/monky.dev/strawcode/PROYECTO RESTAURANTE/QR-RESTAURANTE-"
+  cd "$REPO" && git fetch
+  git worktree add -b <rama> "$REPO/../QR-RESTAURANTE--<nombre>" origin/main
+  cp "$REPO/app/.env.local" "$REPO/app/.env.qa.local" "$REPO/../QR-RESTAURANTE--<nombre>/app/"
+  cd "$REPO/../QR-RESTAURANTE--<nombre>/app" && npm ci   # Turbopack no acepta node_modules como enlace simbólico
   ```
 - Al fusionarse el PR: `git worktree remove ../QR-RESTAURANTE--<nombre>` y `git branch -D <rama>`. No quedan carpetas ni ramas sueltas.
-- Los subagentes de un jefe usan `Agent` con `isolation: "worktree"` (rama y carpeta propias en `.claude/worktrees/`, que git ignora). El jefe revisa y fusiona su trabajo en su rama con `git merge --no-ff`.
+- Los mini agentes de un jefe trabajan solo dentro del worktree de su tarea. El jefe revisa su entrega, hace el commit y abre el PR.
+
+### Equipo de agentes (tmux)
+
+Definiciones en `.claude/agents/` (configuración local, git la ignora). Se abre con `.claude/equipo.sh` (sesión tmux `monky`).
+
+- **Líder:** `jefe-general` (Opus), en el panel principal. Lanza a los jefes como compañeros de equipo, cada uno en su panel.
+- **Compañeros:** `jefe-funcionalidades` (Opus) y `jefe-diseno` (Sonnet). No pueden crear compañeros, pero sí lanzan mini agentes.
+- **Mini agentes:** Opus para migraciones, dinero y seguridad (`db-architect`, `money-backend`, `security-reviewer`); Sonnet para implementar y probar (`frontend-dev`, `ui-caja`, `reports-builder`, `test-writer`, `qa-e2e`, `ui-disenador`); Haiku para lo mecánico (`scribe-ops`). El modelo de cada tarea lo fija su campo "Modelo" en Notion.
+- **UX/UI visual e interactiva:** la hace Codex (`gpt-6-astra`) como agente de herdr llamado `codex`. Solo el jefe de diseño y el jefe general le pasan encargos; el jefe de diseño revisa su entrega antes del PR.
+- Solo los jefes escriben en Notion. Solo el jefe general fusiona a `main` y da el OK de migraciones.
 - **Una rama por entrega**, creada desde `origin/main`. GitHub borra la rama al fusionar el PR.
 - Para ponerse al día: `git fetch && git merge origin/main`. No se hace rebase de ramas ya publicadas.
 
