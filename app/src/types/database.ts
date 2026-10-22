@@ -1356,9 +1356,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      set_member_pin: {
-        Args: { p_member_id: string; p_pin: string }
-        Returns: undefined
+      generate_member_pin: {
+        Args: { p_member_id: string }
+        Returns: string
       }
       accept_and_prepare_order: {
         Args: { p_order_id: string }

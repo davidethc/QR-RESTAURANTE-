@@ -92,7 +92,7 @@ begin
   from ins join _ctx c on c.v = ins.user_id and c.k like 'u\_%';
 
   -- Mesero con PIN, cocina sin PIN; el ajeno con PIN (no debe salir).
-  -- Escritura directa como postgres: la prueba no depende de set_member_pin.
+  -- Escritura directa como postgres: la prueba no depende de generate_member_pin.
   update public.restaurant_members
      set pin_hash = extensions.crypt('1234', extensions.gen_salt('bf', 4))
    where id in ((select v from _ctx where k = 'm_waiter'), (select v from _ctx where k = 'm_foreign'));
