@@ -12,7 +12,7 @@
 -- Reglas:
 --   * Quien llama: sesión (auth.uid()) con rol OWNER o ADMIN ACTIVO en
 --     p_restaurant_id; si no, error P0001 (mismo estilo que
---     get_restaurant_staff y set_member_pin).
+--     get_restaurant_staff y generate_member_pin).
 --   * Devuelve solo member_id y has_pin (pin_hash is not null) de los
 --     miembros de ese restaurante. El hash nunca sale de la base.
 --   * Solo lectura (STABLE), sin auditoría.

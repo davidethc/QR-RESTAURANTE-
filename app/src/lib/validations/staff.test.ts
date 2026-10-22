@@ -69,29 +69,19 @@ describe("saveMemberSchema: roles combinables y campos visibles", () => {
     if (!result.success) expect(result.error.issues[0].path).toEqual(["cashRegisterIds"]);
     expect(saveMemberSchema.safeParse({ ...edit, roles: ["CASHIER"], cashRegisterIds: ["otra"] }).success).toBe(false);
   });
-  it("el PIN siempre se exige al crear, con correo o sin él", () => {
+  it("al crear el PIN siempre se genera (con correo o sin él) y nunca se acepta uno del cliente", () => {
     for (const emailLoginEnabled of [true, false]) {
       const create = { ...edit, memberId: undefined, emailLoginEnabled, email: "ana@correo.com", password: "clave1234" };
-      expect(saveMemberSchema.safeParse(create).success).toBe(false);
-      expect(saveMemberSchema.parse({ ...create, pin: "0123" }).pin).toBe("0123");
+      const parsed = saveMemberSchema.parse({ ...create, pin: "0123" });
+      expect(parsed.generatePin).toBe(true);
+      expect(parsed).not.toHaveProperty("pin");
     }
   });
-  it("edición admite conservar el PIN o cambiarlo por exactamente cuatro dígitos", () => {
-    expect(saveMemberSchema.parse(edit).pin).toBeUndefined();
-    expect(saveMemberSchema.parse({ ...edit, pin: "" }).pin).toBeUndefined();
-    for (const pin of ["0123", "0000", "9999"]) expect(saveMemberSchema.parse({ ...edit, pin }).pin).toBe(pin);
-    for (const pin of ["123", "01234", "012345", "1234567", "12ab", 1234, "１２３４"]) expect(saveMemberSchema.safeParse({ ...edit, pin }).success).toBe(false);
-  });
-  it("rechaza cinco o seis dígitos en alta y edición con el mensaje exacto", () => {
-    for (const pin of ["01234", "012345"]) {
-      for (const existingMember of [memberId, undefined]) {
-        const result = saveMemberSchema.safeParse({ ...edit, memberId: existingMember, pin });
-        expect(result.success).toBe(false);
-        if (!result.success) expect(result.error.issues).toContainEqual(expect.objectContaining({
-          path: ["pin"], message: "El PIN debe tener 4 dígitos",
-        }));
-      }
-    }
+  it("en edición conserva el PIN salvo que se pida generar uno nuevo", () => {
+    expect(saveMemberSchema.parse(edit).generatePin).toBe(false);
+    expect(saveMemberSchema.parse({ ...edit, generatePin: true }).generatePin).toBe(true);
+    expect(saveMemberSchema.parse({ ...edit, pin: "0123" })).not.toHaveProperty("pin");
+    expect(saveMemberSchema.safeParse({ ...edit, generatePin: "sí" }).success).toBe(false);
   });
   it("ignora correo y clave ocultos si el acceso con correo está desactivado", () => {
     const result = saveMemberSchema.parse({ ...edit, email: "incorrecto", password: "x" });
