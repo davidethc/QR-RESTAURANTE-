@@ -57,7 +57,7 @@ describe("producto legacy y variantes", () => {
     expect(await createProduct(restaurantId, { ...input, price: 99, variants, category_id: groupId, paired_drink_id: otherId, description: " Caliente " })).toEqual({ ok: true, data: productId });
     expect(db.rpc).toHaveBeenCalledExactlyOnceWith("save_product_with_variants", {
       p_restaurant_id: restaurantId, p_name: "Café", p_variants: variants,
-      p_product_id: null, p_category_id: groupId, p_description: "Caliente", p_paired_drink_id: otherId,
+      p_product_id: undefined, p_category_id: groupId, p_description: "Caliente", p_paired_drink_id: otherId,
       p_available: true, p_featured: false,
     });
     expect(db.from).not.toHaveBeenCalled();
@@ -71,7 +71,7 @@ describe("producto legacy y variantes", () => {
     expect(db.rpc).toHaveBeenCalledExactlyOnceWith("save_product_with_variants", {
       p_restaurant_id: restaurantId, p_product_id: productId, p_name: "Café",
       p_variants: [{ id: variantId, name: "Grande", price: 3 }, { name: "Pequeño", price: 2 }],
-      p_category_id: null, p_description: null, p_paired_drink_id: null, p_available: true, p_featured: false,
+      p_category_id: undefined, p_description: undefined, p_paired_drink_id: undefined, p_available: true, p_featured: false,
     });
     expect(db.from).toHaveBeenCalledTimes(2);
     for (const query of db.queries) {
