@@ -893,6 +893,15 @@ export type Database = {
           table_session_id: string | null
           total: number
           updated_at: string
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_address: Json | null
+          delivery_provider: string | null
+          external_order_id: string | null
+          general_comment: string | null
+          pays_with_amount: number | null
+          preferred_payment_method: string | null
+          shipping_cost: number | null
         }
         Insert: {
           accepted_at?: string | null
@@ -920,6 +929,15 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: Json | null
+          delivery_provider?: string | null
+          external_order_id?: string | null
+          general_comment?: string | null
+          pays_with_amount?: number | null
+          preferred_payment_method?: string | null
+          shipping_cost?: number | null
         }
         Update: {
           accepted_at?: string | null
@@ -947,6 +965,15 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: Json | null
+          delivery_provider?: string | null
+          external_order_id?: string | null
+          general_comment?: string | null
+          pays_with_amount?: number | null
+          preferred_payment_method?: string | null
+          shipping_cost?: number | null
         }
         Relationships: [
           {
@@ -1044,6 +1071,8 @@ export type Database = {
           void_reason: string | null
           voided_at: string | null
           voided_by: string | null
+          cash_register_id: string | null
+          number: number | null
         }
         Insert: {
           amount: number
@@ -1066,6 +1095,8 @@ export type Database = {
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
+          cash_register_id?: string | null
+          number?: number | null
         }
         Update: {
           amount?: number
@@ -1088,6 +1119,8 @@ export type Database = {
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
+          cash_register_id?: string | null
+          number?: number | null
         }
         Relationships: [
           {
@@ -1500,6 +1533,9 @@ export type Database = {
           status: Database["public"]["Enums"]["restaurant_status"]
           timezone: string
           updated_at: string
+          kds_alert_minutes: number
+          kds_enabled: boolean
+          kds_warn_minutes: number
         }
         Insert: {
           address?: string | null
@@ -1519,6 +1555,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
+          kds_alert_minutes?: number
+          kds_enabled?: boolean
+          kds_warn_minutes?: number
         }
         Update: {
           address?: string | null
@@ -1538,6 +1577,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
+          kds_alert_minutes?: number
+          kds_enabled?: boolean
+          kds_warn_minutes?: number
         }
         Relationships: []
       }
@@ -2706,6 +2748,75 @@ export type Database = {
       }
       void_payment: {
         Args: { p_payment_id: string; p_reason: string }
+        Returns: Json
+      }
+      complete_ticket: { Args: { p_ticket_id: string }; Returns: Json }
+      return_ticket_to_preparation: { Args: { p_ticket_id: string }; Returns: Json }
+      set_kds_settings: {
+        Args: {
+          p_alert_minutes?: number
+          p_enabled?: boolean
+          p_restaurant_id: string
+          p_warn_minutes?: number
+        }
+        Returns: Json
+      }
+      get_kitchen_tickets: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_restaurant_id: string
+          p_since?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      create_counter_order: {
+        Args: {
+          p_client_request_id: string
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_delivery_address?: Json
+          p_delivery_provider?: string
+          p_external_order_id?: string
+          p_general_comment?: string
+          p_items: Json
+          p_pay_later?: boolean
+          p_pays_with_amount?: number
+          p_preferred_payment_method?: string
+          p_restaurant_id?: string
+          p_service_type: string
+          p_shipping_cost?: number
+        }
+        Returns: Json
+      }
+      update_counter_order: {
+        Args: {
+          p_changes: Json
+          p_confirm_total_increase?: boolean
+          p_order_id: string
+        }
+        Returns: Json
+      }
+      record_payments: {
+        Args: {
+          p_amount: number
+          p_auto_close?: boolean
+          p_bill_id: string
+          p_cash_session_id?: string
+          p_items?: Json
+          p_payments: Json
+          p_request_id: string
+          p_tip_amount?: number
+        }
+        Returns: Json
+      }
+      void_payment_with_refund: {
+        Args: {
+          p_payment_id: string
+          p_reason: string
+          p_refund_method?: Database["public"]["Enums"]["payment_method"]
+        }
         Returns: Json
       }
     }

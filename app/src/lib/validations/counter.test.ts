@@ -29,7 +29,7 @@ describe("createCounterSaleSchema", () => {
   });
 
   it("rechaza cantidades fuera de rango o no enteras", () => {
-    for (const quantity of [0, -1, 1000, 1.5]) {
+    for (const quantity of [0, -1, 100, 1.5]) {
       const r = createCounterSaleSchema.safeParse({
         items: [{ productId: PRODUCT, quantity }],
         idempotencyKey: KEY,
