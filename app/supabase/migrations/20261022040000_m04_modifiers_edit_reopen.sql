@@ -667,6 +667,10 @@ begin
                where b.table_session_id = v_order.table_session_id and b.status in ('PAID', 'CLOSED')) then
       raise exception 'La cuenta ya fue cobrada: no se puede agregar productos';
     end if;
+    if exists (select 1 from public.waiter_calls w
+               where w.table_id = v_table.id and w.type = 'BILL' and w.status in ('PENDING', 'ACCEPTED')) then
+      raise exception 'La mesa pidió la cuenta. Reábrela para agregar productos.';
+    end if;
 
     update public.orders
     set subtotal = subtotal + v_subtotal,

@@ -109,6 +109,9 @@ begin
     insert into _m04c values (default, 'reopen: exige estado cuenta', false);
   exception when others then insert into _m04c values (default, 'reopen: exige estado cuenta', sqlerrm like '%estado cuenta%'); end;
   perform public.request_bill_as_staff(v_t1);
+  begin perform public.add_ticket(v_o, jsonb_build_array(jsonb_build_object('product_id', v_p, 'variant_id', v_v1, 'quantity', 1)), gen_random_uuid(), null);
+    insert into _m04c values (default, 'add_ticket: rechaza con cuenta pedida', false);
+  exception when others then insert into _m04c values (default, 'add_ticket: rechaza con cuenta pedida', sqlerrm like '%pidió la cuenta%'); end;
   perform set_config('role', 'postgres', true);
   insert into _m04c values (default, 'reopen: mesa en BILL_REQUESTED', public.table_effective_status(v_t1) = 'BILL_REQUESTED');
   perform set_config('role', 'authenticated', true);
@@ -116,6 +119,8 @@ begin
   perform set_config('role', 'postgres', true);
   insert into _m04c values (default, 'reopen: vuelve a activa', public.table_effective_status(v_t1) <> 'BILL_REQUESTED'
      and (select status from public.table_sessions where id = v_session) = 'ACTIVE');
+  perform public.add_ticket(v_o, jsonb_build_array(jsonb_build_object('product_id', v_p, 'variant_id', v_v1, 'quantity', 1)), gen_random_uuid(), null);
+  insert into _m04c values (default, 'add_ticket: acepta tras reabrir', true);
   insert into _m04c values (default, 'reopen: auditado', exists (select 1 from public.audit_logs where entity_id = v_session and metadata ->> 'action' = 'REOPEN_TABLE'));
 
   -- anon no ejecuta las nuevas RPC.
