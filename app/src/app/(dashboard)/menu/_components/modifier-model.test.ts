@@ -41,9 +41,12 @@ describe("Borradores de personalizaciones", () => {
     draft.options[1].price = "0.001";
     expect(validateModifier(draft).errors["options.1.price"]).toBe("Usa hasta dos decimales");
   });
-  it("respeta el contrato actual: máximo limitado incluso con repetición", () => {
+  it("con repetición el máximo puede superar las opciones; sin repetición no", () => {
     const draft = modifierDraft(group);
     draft.max_select = "3";
+    draft.allow_repeat = true;
+    expect(validateModifier(draft).parsed.success).toBe(true);
+    draft.allow_repeat = false;
     expect(validateModifier(draft).errors.max_select).toBe("El máximo no puede superar la cantidad de opciones");
   });
   it("muestra la relación inválida también junto al máximo", () => {
