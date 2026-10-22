@@ -1,9 +1,9 @@
 import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/shared/page-header";
 import { getMyRestaurant, getAdminMenu } from "@/lib/queries/staff";
 import { MenuAdminBoard } from "./_components/menu-admin-board";
+import { CatalogTabs } from "./_components/catalog-tabs";
 import { CategoryDialog } from "./_components/category-dialog";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
@@ -24,16 +24,17 @@ export default async function MenuAdminPage() {
 
   return (
     <main>
-      <PageHeader
-        title="Carta"
+      <CatalogTabs
+        restaurantId={session.restaurant.id}
         description={`${menu.categories.length} categorías · ${menu.products.length} productos`}
         action={<CategoryDialog restaurantId={session.restaurant.id} />}
-      />
-      <MenuAdminBoard
-        restaurantId={session.restaurant.id}
-        categories={menu.categories}
-        products={menu.products}
-      />
+      >
+        <MenuAdminBoard
+          restaurantId={session.restaurant.id}
+          categories={menu.categories}
+          products={menu.products}
+        />
+      </CatalogTabs>
     </main>
   );
 }
