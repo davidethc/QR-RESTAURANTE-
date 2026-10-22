@@ -233,6 +233,11 @@ describe("saveMember: correcciones de seguridad", () => {
     expect(mocks.updateUser).not.toHaveBeenCalled();
     expect(mocks.revalidate).toHaveBeenCalledWith("/staff");
   });
+  it("PIN repetido (23505) se atribuye al campo pin con mensaje claro", async () => {
+    setup({ newPin: true, rpcReplies: [reply(true), reply(userId), failure("23505", "PIN_IN_USE")] });
+    const result = await saveMember(restaurantId, { ...input, pin: "0987" });
+    expect(result).toMatchObject({ ok: false, error: "Ese PIN ya lo usa otro miembro", field: "pin", code: "PIN_IN_USE" });
+  });
   it("oculta también excepciones inesperadas de transporte que incluyan el PIN", async () => {
     const { rpc } = setup({ newPin: true });
     rpc.mockResolvedValueOnce(reply(true)).mockResolvedValueOnce(reply(userId)).mockRejectedValueOnce(new Error("PIN recibido: 0987"));

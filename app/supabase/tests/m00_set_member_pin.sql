@@ -19,6 +19,9 @@
 --   P06 miembro de otro restaurante: rechazado (OWNER y ADMIN de monky-qa)
 --   P07 pin_hash no es legible por authenticated ni anon
 --   P08 audit_logs: una fila UPDATE por cambio, sin el PIN ni el hash
+--   P10 PIN único por restaurante: repetir el PIN de otro miembro del mismo
+--       restaurante da 23505 PIN_IN_USE y no cambia el hash; reponer el propio
+--       PIN del miembro sí es válido
 --   P09 firma: returns void, SECURITY DEFINER, search_path vacío, EXECUTE
 --       solo para authenticated (ni anon, ni PUBLIC, ni service_role)
 -- ---------------------------------------------------------------------------
@@ -265,6 +268,24 @@ begin
 
   insert into _r (test, ok, detail) values
     ('P06z el miembro ajeno sigue sin PIN', pg_temp.hash_of('m_foreign') is null, '');
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- P10 · PIN único por restaurante (m_waiter = 0987, m_admin2 = 2468)
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_res text;
+  v_before text := pg_temp.hash_of('m_kitchen');
+begin
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_kitchen', '0987');
+  insert into _r (test, ok, detail) values
+    ('P10a PIN ya usado por otro miembro del restaurante: 23505 PIN_IN_USE',
+     v_res like '23505: PIN_IN_USE%' and pg_temp.hash_of('m_kitchen') is not distinct from v_before, v_res);
+
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_admin2', '2468');
+  insert into _r (test, ok, detail) values
+    ('P10b reponer el propio PIN del miembro es válido', v_res = 'OK', v_res);
 end $$;
 
 -- ---------------------------------------------------------------------------

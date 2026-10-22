@@ -16,6 +16,11 @@
 --   * pin_hash = bcrypt de pgcrypto (esquema extensions en Supabase), coste
 --     10, sal aleatoria por llamada. Se puede verificar en SQL con
 --     extensions.crypt(pin, pin_hash) = pin_hash (M00-T03).
+--   * PIN ÚNICO por restaurante (lo necesita check_member_pin, M00-T03): si
+--     otro miembro del mismo restaurante ya tiene ese PIN, se lanza SQLSTATE
+--     23505 con mensaje 'PIN_IN_USE' (genérico: no dice de quién es). Se
+--     compara con crypt(pin, pin_hash) sobre los demás miembros con pin_hash.
+--     pg_advisory_xact_lock por restaurante serializa dos altas simultáneas.
 --   * No devuelve nada: ni el PIN ni el hash salen de la base.
 --   * audit_logs: UPDATE sobre RESTAURANT_MEMBER, metadata sin PIN ni hash.
 --
@@ -59,6 +64,22 @@ begin
   end if;
 
   perform public.assert_can_manage_member(p_member_id);
+
+  -- Un solo guardado de PIN a la vez por restaurante (evita la carrera entre
+  -- dos altas con el mismo PIN). Va después del for update de la fila: todos
+  -- los llamadores siguen el orden fila -> candado de restaurante.
+  perform pg_advisory_xact_lock(hashtextextended('set_member_pin:' || v_member.restaurant_id::text, 0));
+
+  if exists (
+    select 1
+      from public.restaurant_members m
+     where m.restaurant_id = v_member.restaurant_id
+       and m.id <> v_member.id
+       and m.pin_hash is not null
+       and extensions.crypt(p_pin, m.pin_hash) = m.pin_hash
+  ) then
+    raise exception 'PIN_IN_USE' using errcode = '23505', hint = 'Ese PIN ya lo usa otro miembro';
+  end if;
 
   v_had_pin := v_member.pin_hash is not null;
 

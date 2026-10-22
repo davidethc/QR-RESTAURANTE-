@@ -210,10 +210,11 @@ function memberAuthFailure(error: { code?: string } | null, fallback = "No se pu
 function memberPinFailure(error: { code?: string }): MemberFailure {
   const fallback = error.code === "42501" ? "No tienes permiso para cambiar el PIN de este miembro."
     : error.code === "22023" ? "El PIN debe tener 4 dígitos"
+    : error.code === "23505" ? "Ese PIN ya lo usa otro miembro"
     : "No se pudo guardar el PIN. Revisa el miembro antes de reintentar.";
   return {
     ...dbFailure({ code: error.code, message: "Error al asignar el PIN del miembro" }, "set_member_pin", fallback),
     field: "pin",
-    code: error.code === "22023" ? "PIN_INVALID" : error.code === "42501" ? "PIN_FORBIDDEN" : "PIN_SAVE_FAILED",
+    code: error.code === "22023" ? "PIN_INVALID" : error.code === "23505" ? "PIN_IN_USE" : error.code === "42501" ? "PIN_FORBIDDEN" : "PIN_SAVE_FAILED",
   };
 }
