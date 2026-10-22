@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import {
   createStaffSchema,
   resetPasswordSchema,
@@ -40,7 +39,7 @@ export async function createStaffMember(
   const { fullName, email, role, password } = parsed.data;
 
   const supabase = await createClient();
-  const allowed = await callUntypedRpc<boolean>(supabase, "can_manage_staff_role", {
+  const allowed = await supabase.rpc("can_manage_staff_role", {
     p_restaurant_id: restaurantId,
     p_role: role,
   });
@@ -65,7 +64,7 @@ export async function createStaffMember(
   }
 
   const userId = created.data.user.id;
-  const linked = await callUntypedRpc<string>(supabase, "add_staff_member", {
+  const linked = await supabase.rpc("add_staff_member", {
     p_restaurant_id: restaurantId,
     p_user_id: userId,
     p_role: role,
@@ -87,14 +86,14 @@ export async function updateStaffMember(input: unknown): Promise<ActionResult> {
   const { memberId, role, active } = parsed.data;
 
   const supabase = await createClient();
-  const target = await callUntypedRpc<string>(supabase, "assert_can_manage_member", {
+  const target = await supabase.rpc("assert_can_manage_member", {
     p_member_id: memberId,
   });
   if (target.error || !target.data) {
     return { ok: false, error: target.error ? rpcError("assert_can_manage_member", target.error) : GENERIC_ERROR };
   }
 
-  const updated = await callUntypedRpc<null>(supabase, "update_staff_member", {
+  const updated = await supabase.rpc("update_staff_member", {
     p_member_id: memberId,
     p_role: role,
     p_status: active ? "ACTIVE" : "INACTIVE",
@@ -120,7 +119,7 @@ export async function resetStaffPassword(input: unknown): Promise<ActionResult> 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const target = await callUntypedRpc<string>(supabase, "assert_can_manage_member", {
+  const target = await supabase.rpc("assert_can_manage_member", {
     p_member_id: parsed.data.memberId,
   });
   if (target.error || !target.data) {
@@ -150,7 +149,7 @@ export async function unlockPinLogin(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Sucursal inválida." };
 
   const supabase = await createClient();
-  const { error } = await callUntypedRpc<unknown>(supabase, "unlock_pin_login", {
+  const { error } = await supabase.rpc("unlock_pin_login", {
     p_restaurant_id: parsed.data.restaurantId,
   });
   if (error) return { ok: false, error: rpcError("unlock_pin_login", error) };

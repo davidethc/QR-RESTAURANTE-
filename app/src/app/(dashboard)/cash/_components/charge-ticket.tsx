@@ -66,9 +66,16 @@ export function ChargeTicket({
                   <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3 text-body leading-snug">
                     <span className={cn("min-w-0 text-foreground", paid && "text-muted-foreground line-through decoration-1")}>
                       <span className="font-semibold tabular-nums">{item.quantity}×</span> {item.product_name}
+                      {item.variant_name ? <span className="text-muted-foreground"> · {item.variant_name}</span> : null}
                       {remaining > 0 && remaining < item.quantity && (
                         <span className="text-meta text-muted-foreground"> · quedan {remaining}</span>
                       )}
+                      {(item.options ?? []).map((o, k) => (
+                        <span key={k} className="block text-caption text-muted-foreground">
+                          + {o.qty > 1 ? `${o.qty}× ` : ""}{o.value_name}
+                          {o.price_modifier ? ` (${formatPrice(o.price_modifier * o.qty)})` : ""}
+                        </span>
+                      ))}
                       {item.notes && (
                         <span className="block text-caption text-muted-foreground">{item.notes}</span>
                       )}

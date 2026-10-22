@@ -121,8 +121,10 @@ export function ProductRow({
         {product.name}
       </p>
 
-      <p className="w-20 shrink-0 text-right text-body-sm text-foreground tabular-nums">
-        {formatPrice(product.price)}
+      <p className="w-24 shrink-0 text-right text-body-sm text-foreground tabular-nums">
+        {product.min_variant_price !== undefined
+          ? `Desde ${formatPrice(product.min_variant_price)}`
+          : formatPrice(product.price)}
       </p>
 
       <Switch
