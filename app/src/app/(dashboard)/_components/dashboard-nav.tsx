@@ -16,6 +16,7 @@ import {
   Users,
   BarChart3,
   Menu,
+  PackageX,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -58,6 +59,7 @@ const NAV_GROUPS: { label: string; links: NavLink[] }[] = [
       { href: "/kitchen", label: "Cocina", icon: ChefHat, roles: ["OWNER", "ADMIN", "KITCHEN"] },
       { href: "/tables", label: "Mesas", icon: LayoutGrid, roles: ["OWNER", "ADMIN", "WAITER"] },
       { href: "/cash", label: "Caja", icon: Wallet, roles: MANAGERS },
+      { href: "/availability", label: "Disponibilidad", icon: PackageX, roles: ["OWNER", "ADMIN", "WAITER", "KITCHEN"] },
     ],
   },
   {
