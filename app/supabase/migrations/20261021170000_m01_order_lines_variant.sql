@@ -6,8 +6,9 @@
 --   [{"product_id": uuid, "quantity": int, "notes": text?, "variant_id": uuid?}]
 --   · con variant_id: debe ser variante de ese producto (y por tanto del
 --     restaurante); el precio cobrado es el de la variante.
---   · sin variant_id (o null): products.price, igual que hoy. La app actual
---     sigue funcionando sin cambios.
+--   · sin variant_id (o null): si el producto tiene exactamente 1 variante se
+--     usa esa (y su precio); con 0 o varias se rechaza con 'Elige una variante'.
+--   · una variante marcada agotada en public.availability se rechaza.
 -- order_items gana variant_id (FK, on delete set null) y snapshots
 -- variant_name / variant_price, todas nullable. No se toca ninguna columna
 -- existente. unit_price sigue siendo el precio cobrado.
@@ -113,8 +114,9 @@ begin
     v_unit_price := v_product.price;
 
     -- Con variant_id: la variante debe ser de ESTE producto (que ya es del
-    -- restaurante) y se cobra su precio. Sin variant_id: products.price
-    -- (caché de la más barata), igual que antes.
+    -- restaurante) y se cobra su precio. Sin variant_id: si el producto tiene
+    -- exactamente 1 variante se usa esa; con 0 o más de 1 hay que elegir (así
+    -- nadie paga el precio mínimo cacheado en products.price).
     if v_variant_id is not null then
       select * into v_variant
       from public.product_variants
@@ -124,8 +126,25 @@ begin
       if not found then
         raise exception 'La variante elegida no corresponde al producto';
       end if;
-      v_unit_price := v_variant.price;
+    else
+      if (select count(*) from public.product_variants where product_id = v_product.id) <> 1 then
+        raise exception 'Elige una variante';
+      end if;
+      select * into v_variant
+      from public.product_variants
+      where product_id = v_product.id;
     end if;
+
+    if exists (
+      select 1 from public.availability a
+      where a.item_type = 'variant'
+        and a.item_id = v_variant.id
+        and a.available = false
+    ) then
+      raise exception 'Uno de los productos no está disponible';
+    end if;
+
+    v_unit_price := v_variant.price;
 
     v_subtotal := v_subtotal + v_unit_price * v_quantity;
     v_lines := v_lines || jsonb_build_array(jsonb_build_object(
