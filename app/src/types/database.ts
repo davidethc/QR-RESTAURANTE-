@@ -362,6 +362,7 @@ export type Database = {
           reason: Database["public"]["Enums"]["cash_movement_reason"]
           restaurant_id: string
           type: Database["public"]["Enums"]["cash_movement_type"]
+          number: number | null
         }
         Insert: {
           amount: number
@@ -376,6 +377,7 @@ export type Database = {
           reason: Database["public"]["Enums"]["cash_movement_reason"]
           restaurant_id: string
           type: Database["public"]["Enums"]["cash_movement_type"]
+          number?: number | null
         }
         Update: {
           amount?: number
@@ -390,6 +392,7 @@ export type Database = {
           reason?: Database["public"]["Enums"]["cash_movement_reason"]
           restaurant_id?: string
           type?: Database["public"]["Enums"]["cash_movement_type"]
+          number?: number | null
         }
         Relationships: [
           {
@@ -506,6 +509,12 @@ export type Database = {
           restaurant_id: string
           status: Database["public"]["Enums"]["cash_session_status"]
           updated_at: string
+          cash_float_left: number | null
+          cash_to_withdraw: number | null
+          cut_number: number | null
+          result: string | null
+          skipped_order_folios: number[]
+          skipped_pending_orders: boolean
         }
         Insert: {
           closed_at?: string | null
@@ -520,6 +529,12 @@ export type Database = {
           restaurant_id: string
           status?: Database["public"]["Enums"]["cash_session_status"]
           updated_at?: string
+          cash_float_left?: number | null
+          cash_to_withdraw?: number | null
+          cut_number?: number | null
+          result?: string | null
+          skipped_order_folios?: number[]
+          skipped_pending_orders?: boolean
         }
         Update: {
           closed_at?: string | null
@@ -534,6 +549,12 @@ export type Database = {
           restaurant_id?: string
           status?: Database["public"]["Enums"]["cash_session_status"]
           updated_at?: string
+          cash_float_left?: number | null
+          cash_to_withdraw?: number | null
+          cut_number?: number | null
+          result?: string | null
+          skipped_order_folios?: number[]
+          skipped_pending_orders?: boolean
         }
         Relationships: [
           {
@@ -902,6 +923,7 @@ export type Database = {
           table_session_id: string | null
           total: number
           updated_at: string
+          source: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -938,6 +960,7 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
+          source?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -974,6 +997,7 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
+          source?: string | null
         }
         Relationships: [
           {
@@ -1543,6 +1567,8 @@ export type Database = {
           status: Database["public"]["Enums"]["restaurant_status"]
           timezone: string
           updated_at: string
+          qr_call_cooldown_seconds: number
+          qr_orders_require_approval: boolean
         }
         Insert: {
           address?: string | null
@@ -1565,6 +1591,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
+          qr_call_cooldown_seconds?: number
+          qr_orders_require_approval?: boolean
         }
         Update: {
           address?: string | null
@@ -1587,6 +1615,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
+          qr_call_cooldown_seconds?: number
+          qr_orders_require_approval?: boolean
         }
         Relationships: []
       }
@@ -1801,6 +1831,7 @@ export type Database = {
           kitchen_status: string
           number: number
           order_id: string
+          restaurant_id: string
         }
         Insert: {
           client_request_id?: string | null
@@ -1812,6 +1843,7 @@ export type Database = {
           kitchen_status?: string
           number: number
           order_id: string
+          restaurant_id?: string
         }
         Update: {
           client_request_id?: string | null
@@ -1823,6 +1855,7 @@ export type Database = {
           kitchen_status?: string
           number?: number
           order_id?: string
+          restaurant_id?: string
         }
         Relationships: [
           {
@@ -2016,6 +2049,118 @@ export type Database = {
       }
     }
     Functions: {
+      activate_device: {
+        Args: { p_name: string; p_token: string }
+        Returns: Json
+      }
+      approve_customer_order: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
+      can_handle_cash: {
+        Args: { p_register_id?: string; p_restaurant_id: string }
+        Returns: boolean
+      }
+      cash_cut: {
+        Args: {
+          p_cash_float_left?: number
+          p_cash_session_id: string
+          p_counts: Json
+          p_notes?: string
+          p_skip_pending_orders?: boolean
+        }
+        Returns: Json
+      }
+      create_device_link: {
+        Args: {
+          p_name?: string
+          p_restaurant_id: string
+          p_ttl_minutes?: number
+        }
+        Returns: Json
+      }
+      get_cash_cut_precheck: {
+        Args: { p_cash_session_id: string }
+        Returns: Json
+      }
+      get_customer_account: {
+        Args: { p_session_token: string }
+        Returns: Json
+      }
+      get_customer_session: {
+        Args: { p_session_token: string }
+        Returns: Json
+      }
+      get_device_link_info: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      get_last_cash_float: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_staff_counters: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      is_cash_admin: {
+        Args: { p_restaurant_id: string }
+        Returns: boolean
+      }
+      list_cash_cuts: {
+        Args: {
+          p_before_cut?: number
+          p_limit?: number
+          p_register_id?: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      list_cash_movements: {
+        Args: {
+          p_cash_session_id?: string
+          p_limit?: number
+          p_register_id?: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      list_devices: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      mark_order_reviewed: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      open_table_from_qr: {
+        Args: { p_customer_label: string; p_qr_token: string }
+        Returns: Json
+      }
+      pin_login: {
+        Args: { p_device_secret: string; p_pin: string }
+        Returns: Json
+      }
+      reject_customer_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: Json
+      }
+      revoke_device: {
+        Args: { p_device_id: string }
+        Returns: undefined
+      }
+      set_qr_settings: {
+        Args: {
+          p_call_cooldown_seconds?: number
+          p_require_approval?: boolean
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      validate_device: {
+        Args: { p_device_secret: string }
+        Returns: Json
+      }
       accept_and_prepare_order: {
         Args: { p_order_id: string }
         Returns: undefined
