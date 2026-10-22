@@ -824,8 +824,25 @@ export type Database = {
           },
         ]
       }
+      order_counters: {
+        Row: {
+          last_folio: number
+          restaurant_id: string
+        }
+        Insert: {
+          last_folio?: number
+          restaurant_id: string
+        }
+        Update: {
+          last_folio?: number
+          restaurant_id?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
+          cancelled: boolean
+          ticket_id: string | null
           created_at: string
           id: string
           notes: string | null
@@ -838,6 +855,8 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          cancelled?: boolean
+          ticket_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -850,6 +869,8 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          cancelled?: boolean
+          ticket_id?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -880,6 +901,13 @@ export type Database = {
       }
       orders: {
         Row: {
+          cancel_reason: string | null
+          cancelled: boolean
+          cancelled_by: string | null
+          folio: number
+          service_type: string
+          short_code: string
+          status_review: string
           accepted_at: string | null
           accepted_by: string | null
           created_at: string
@@ -899,6 +927,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancel_reason?: string | null
+          cancelled?: boolean
+          cancelled_by?: string | null
+          folio?: number
+          service_type?: string
+          short_code?: string
+          status_review?: string
           accepted_at?: string | null
           accepted_by?: string | null
           created_at?: string
@@ -918,6 +953,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancel_reason?: string | null
+          cancelled?: boolean
+          cancelled_by?: string | null
+          folio?: number
+          service_type?: string
+          short_code?: string
+          status_review?: string
           accepted_at?: string | null
           accepted_by?: string | null
           created_at?: string
@@ -1613,6 +1655,47 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_new: boolean
+          kitchen_status: string
+          number: number
+          order_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_new?: boolean
+          kitchen_status?: string
+          number: number
+          order_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_new?: boolean
+          kitchen_status?: string
+          number?: number
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
