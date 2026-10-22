@@ -411,3 +411,39 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Verificación**: typegen, tsc y lint sin errores; Vitest 120/120 en 11 archivos. Tests de RPC void, payload aislado, validación previa y traducción 42501/22023/23514.
 - **Contradicciones resueltas**: queda retirada la limitación anterior de saveProductVariants con múltiples escrituras REST; la función aprobada se encarga de la transacción sin actualizar otros campos del producto.
 - **Duración**: último ajuste M01-T04; sin modificar app/supabase/, sin commit ni push.
+
+## [2026-10-21] código | M00-T04: guardado de miembros con roles combinables
+
+- **Resumen**: nueva `saveMember` en `actions/staff.ts`, schema condicional añadido a `validations/staff.ts`, hash de PIN server-only y tipos manuales de los cuatro campos de #13. Flujos legacy de personal intactos.
+- **Referencias**: `docs/pos-spec/M00-base.md`, `app/supabase/migrations/20261020120000_restaurant_members_roles_pin.sql` y contrato/decisiones en `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro técnico de QA ampliado.
+- **Verificación**: next typegen, tsc y lint sin errores; Vitest 105/105 en 11 archivos. La validación recorre las 127 combinaciones de roles asignables; también se prueban aislamiento, RPCs de permisos, PIN y compensación de altas fallidas.
+- **Decisiones y dudas**: cajas solo con CASHIER; PIN obligatorio en alta y conservación en edición solo si hay hash real en BD. El alta solo-PIN, roles sin equivalente legacy, miembros activos sin roles, multi-sucursal y confirmación de correo necesitan completar los flujos de la spec. No se inventaron columnas ni SQL; se documentaron límites de la fase expand y del hash scrypt para M00-T03.
+- **Contradicciones detectadas**: la spec de cero o más roles y la unión de permisos nuevos todavía convive con `role` legacy como fuente de autorización; se evita conceder equivalencias implícitas a nuevos roles.
+- **Duración**: sesión M00-T04.
+
+## [2026-10-21] seguridad | M00-T04: PIN por RPC y compatibilidad del correo
+
+- **Resumen**: `saveMember` confirma correo al crear, bloquea desactivar su acceso hasta M00-T03 y solo envía email a Auth si cambió. PIN de 4–6 dígitos mediante set_member_pin con sesión de usuario; helper de hashing Node eliminado. Se comprueba presencia sin leer el hash y se sanitizan errores antes de dbFailure.
+- **Referencias**: correcciones de seguridad del encargo, `docs/pos-spec/M00-base.md`, contrato `set_member_pin(p_member_id uuid, p_pin text) returns void` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 112/112 en 10 archivos. Sin escrituras en Supabase y sin modificar archivos bajo app/supabase/ (trabajo paralelo de otro agente).
+- **Contradicciones resueltas**: quedan sustituidas las decisiones previas de hashing scrypt en Node, correo no confirmado en nuevas altas y edición con acceso por correo desactivado. La revisión exige RPC de PIN, email_confirm=true y bloqueo de esa desactivación en ambos flujos.
+- **Duración**: corrección de seguridad M00-T04.
+
+## [2026-10-21] código | M00-T04: PIN exactamente de cuatro dígitos
+
+- **Resumen**: regla Zod, mensajes y pruebas alineados con la decisión final de PIN de exactamente cuatro dígitos; cinco y seis quedan rechazados antes de llamar a la RPC.
+- **Referencias**: decisión del encargo, `docs/pos-spec/M00-base.md` y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 115/115 en 10 archivos.
+- **Contradicciones resueltas**: la decisión final de cuatro dígitos sustituye la regla temporal de 4–6. No se modificó app/supabase/.
+- **Duración**: ajuste final M00-T04.
+
+## [2026-10-21] código | M00-T04 (#21): contrato para edición de miembros
+
+- **Resumen**: listado con roles y cajas, manteniendo autorización OWNER/ADMIN; errores de saveMember con field/code opcionales compatibles con ActionResult.
+- **Archivos**: acciones/consultas de personal y sus tests, types/actions.ts, types/staff.ts, app/TESTING.md.
+- **Pendiente de BD**: no existe lectura segura de has_pin para authenticated. Tipo opcional y TODO claro; se requiere ampliar get_restaurant_staff para devolver solo el booleano de presencia, manteniendo permisos y sin exponer pin_hash. Petición detallada en app/TESTING.md.
+- **Verificación**: typegen, tsc --noEmit y lint en verde; Vitest 140/140 en 11 archivos. Sin cambios en app/supabase/, sin commit ni push.
+- **Páginas conceptuales actualizadas**: ninguna.

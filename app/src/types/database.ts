@@ -1236,6 +1236,10 @@ export type Database = {
       }
       restaurant_members: {
         Row: {
+          pin_hash: string | null
+          roles: string[]
+          cash_register_ids: string[]
+          email_login_enabled: boolean
           created_at: string
           id: string
           restaurant_id: string
@@ -1245,6 +1249,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          pin_hash?: string | null
+          roles?: string[]
+          cash_register_ids?: string[]
+          email_login_enabled?: boolean
           created_at?: string
           id?: string
           restaurant_id: string
@@ -1254,6 +1262,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          pin_hash?: string | null
+          roles?: string[]
+          cash_register_ids?: string[]
+          email_login_enabled?: boolean
           created_at?: string
           id?: string
           restaurant_id?: string
@@ -1541,6 +1553,10 @@ export type Database = {
         }
         Returns: string
       }
+      generate_member_pin: {
+        Args: { p_member_id: string }
+        Returns: string
+      }
       accept_and_prepare_order: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -1746,6 +1762,10 @@ export type Database = {
       get_sales_report: {
         Args: { p_days?: number; p_restaurant_id: string }
         Returns: Json
+      }
+      get_staff_pin_status: {
+        Args: { p_restaurant_id: string }
+        Returns: { has_pin: boolean; member_id: string }[]
       }
       get_session_bill: { Args: { p_session_token: string }; Returns: Json }
       get_session_calls: { Args: { p_session_token: string }; Returns: Json }
