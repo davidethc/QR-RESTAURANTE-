@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence } from "framer-motion";
 import { Inbox, ChefHat, Bell as BellIcon, PackageCheck, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -14,22 +13,18 @@ import {
 import { OrderCard } from "./order-card";
 import { CallCard } from "./call-card";
 import { ConnectionStatus } from "@/components/shared/connection-status";
-import { useStaffRealtime } from "@/hooks/use-staff-realtime";
+import {
+  useLiveActions,
+  useLiveCalls,
+  useLiveConnected,
+  useLiveOrders,
+} from "../../_components/staff-live-provider";
 import { useDeferredDelivery } from "@/hooks/use-deferred-delivery";
-import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
-import type { OrderStatus, UserRole } from "@/config/constants";
+import type { UserRole } from "@/config/constants";
 import { cn } from "@/lib/utils";
 import type { StaffOrder, StaffWaiterCall } from "@/types/staff";
 
-const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
-  "PENDING",
-  "ACCEPTED",
-  "PREPARING",
-  "READY",
-];
-
 export function OrdersBoard({
-  restaurantId,
   initialOrders,
   initialCalls,
   initialTableFilter,
@@ -40,7 +35,8 @@ export function OrdersBoard({
   tableSessionMap = {},
   readyStep = true,
 }: {
-  restaurantId: string;
+  /** Ya no se usa aquí (el proveedor del layout conoce el restaurante); se conserva por compatibilidad con la página. */
+  restaurantId?: string;
   initialOrders: StaffOrder[];
   initialCalls: StaffWaiterCall[];
   initialTableFilter: number | null;
@@ -56,8 +52,12 @@ export function OrdersBoard({
   readyStep?: boolean;
 }) {
   const router = useRouter();
-  const [orders, setOrders] = useState(initialOrders);
-  const [calls, setCalls] = useState(initialCalls);
+  // Datos en vivo del `StaffLiveProvider` (una sola suscripción para todo
+  // el panel). Hasta que cargan, los que trajo el servidor.
+  const orders = useLiveOrders() ?? initialOrders;
+  const calls = useLiveCalls() ?? initialCalls;
+  const connected = useLiveConnected();
+  const { afterMutation, removeOrder } = useLiveActions();
   const [tableFilter, setTableFilter] = useState(initialTableFilter);
   // Al entrar filtrado por una mesa (clic desde /tables), la pestaña
   // inicial debe ser la que de verdad tiene algo que atender en ESA
@@ -91,29 +91,14 @@ export function OrdersBoard({
     return "pending";
   });
 
-  // Los toasts de "pedido nuevo"/"listo"/"solicitud" ya no se disparan
-  // acá — vive una sola vez en `DashboardNotifier` (layout del
-  // dashboard) para que avisen en cualquier pantalla, no solo en
-  // /orders. Este refetch solo mantiene actualizada la lista visible.
-  const refetch = useCallback(async () => {
-    try {
-      const [newOrders, newCalls] = await Promise.all([
-        fetchStaffOrders(restaurantId, ACTIVE_ORDER_STATUSES),
-        fetchWaiterCalls(restaurantId, ["PENDING", "ACCEPTED"]),
-      ]);
-      setOrders(newOrders);
-      setCalls(newCalls);
-    } catch {
-      // Silencioso: Realtime reintentará con el próximo cambio.
-    }
-  }, [restaurantId]);
-
-  const { connected, refresh } = useStaffRealtime(restaurantId, refetch);
+  // Los toasts de "pedido nuevo"/"listo"/"solicitud" no se disparan
+  // acá: viven una sola vez en `DashboardNotifier` (layout del dashboard).
+  // Tampoco se pide nada al servidor: la lista llega del proveedor.
 
   const { pendingIds, scheduleDelivery } = useDeferredDelivery(
     async (orderId) => {
-      setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      await refresh();
+      removeOrder(orderId);
+      afterMutation();
     }
   );
 
@@ -162,7 +147,7 @@ export function OrdersBoard({
     <OrderCard
       key={order.id}
       order={order}
-      onDone={refresh}
+      onDone={afterMutation}
       onDeliver={() =>
         scheduleDelivery(
           order.id,
@@ -237,9 +222,7 @@ export function OrdersBoard({
           {pending.length === 0 ? (
             <EmptyState icon={Inbox} title="No hay pedidos nuevos" description="Cuando llegue un pedido aparecerá aquí." />
           ) : (
-            <AnimatePresence mode="popLayout">
-              {pending.map(renderOrder)}
-            </AnimatePresence>
+            pending.map(renderOrder)
           )}
         </TabsContent>
 
@@ -247,9 +230,7 @@ export function OrdersBoard({
           {inProgress.length === 0 ? (
             <EmptyState icon={ChefHat} title="Nada en cocina" description="Todo está al día ✓" />
           ) : (
-            <AnimatePresence mode="popLayout">
-              {inProgress.map(renderOrder)}
-            </AnimatePresence>
+            inProgress.map(renderOrder)
           )}
         </TabsContent>
 
@@ -258,9 +239,7 @@ export function OrdersBoard({
             {ready.length === 0 ? (
               <EmptyState icon={PackageCheck} title="No hay pedidos listos" description="Cocina avisará cuando termine uno." />
             ) : (
-              <AnimatePresence mode="popLayout">
-                {ready.map(renderOrder)}
-              </AnimatePresence>
+              ready.map(renderOrder)
             )}
           </TabsContent>
         )}
@@ -269,19 +248,17 @@ export function OrdersBoard({
           {visibleCalls.length === 0 ? (
             <EmptyState icon={BellIcon} title="No hay solicitudes" description="Todo tranquilo." />
           ) : (
-            <AnimatePresence mode="popLayout">
-              {visibleCalls.map((call) => (
-                <CallCard
-                  key={call.id}
-                  call={call}
-                  onDone={refresh}
-                  billingEnabled={billingEnabled}
-                  role={role}
-                  maxWaiterDiscountPct={maxWaiterDiscountPct}
-                  tableSessionId={tableSessionMap[call.table_id]}
-                />
-              ))}
-            </AnimatePresence>
+            visibleCalls.map((call) => (
+              <CallCard
+                key={call.id}
+                call={call}
+                onDone={afterMutation}
+                billingEnabled={billingEnabled}
+                role={role}
+                maxWaiterDiscountPct={maxWaiterDiscountPct}
+                tableSessionId={tableSessionMap[call.table_id]}
+              />
+            ))
           )}
         </TabsContent>
       </Tabs>

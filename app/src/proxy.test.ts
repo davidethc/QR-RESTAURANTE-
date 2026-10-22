@@ -1,56 +1,49 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "./proxy";
+import { PANEL_PATH_HEADER } from "@/app/(dashboard)/_components/route-guard";
 
-const mocks = vi.hoisted(() => ({ read: vi.fn(), claims: vi.fn(), device: vi.fn(), signOut: vi.fn() }));
+const mocks = vi.hoisted(() => ({ claims: vi.fn(), device: vi.fn(), signOut: vi.fn(), from: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/lib/devices/service", () => ({ checkDevice: mocks.device }));
-vi.mock("@/lib/auth/member-session", () => ({ readMemberSession: mocks.read }));
-vi.mock("@supabase/ssr", () => ({ createServerClient: () => ({ auth: { getClaims: mocks.claims, signOut: mocks.signOut } }) }));
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: () => ({
+    auth: { getClaims: mocks.claims, signOut: mocks.signOut },
+    from: mocks.from,
+    rpc: mocks.rpc,
+  }),
+}));
 
 beforeEach(() => {
-  mocks.read.mockReset();
   mocks.device.mockReset();
   mocks.signOut.mockReset();
+  mocks.from.mockReset();
+  mocks.rpc.mockReset();
   mocks.claims.mockReset().mockResolvedValue({ data: { claims: { sub: "user" } } });
 });
 const request = (path: string) => new NextRequest(`https://example.com${path}`);
 
-describe("proxy: navegación silenciosa con roles combinados", () => {
-  it.each([["WAITER", "/tables"], ["CASHIER", "/orders"], ["KITCHEN", "/kitchen"], ["ADMIN", "/today"]])("entrada %s → %s sin conservar la marca de entrada", async (role, expected) => {
-    mocks.read.mockResolvedValue({ role: "WAITER", roles: [role] });
+describe("proxy: sesión y reparto de trabajo con el layout", () => {
+  it("con sesión deja pasar y NO lee al miembro (eso lo hace el layout, una vez)", async () => {
+    for (const path of ["/orders", "/cash", "/today?entrada=1", "/menu"]) {
+      const response = await proxy(request(path));
+      expect(response.headers.get("location")).toBeNull();
+    }
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+  it("le pasa al layout la ruta pedida con su query", async () => {
     const response = await proxy(request("/today?entrada=1"));
-    expect(response.headers.get("location")).toBe(`https://example.com${expected}`);
+    // Las cabeceras reenviadas a la petición viajan como x-middleware-request-*.
+    expect(response.headers.get(`x-middleware-request-${PANEL_PATH_HEADER}`)).toBe("/today?entrada=1");
   });
-  it("niega URL directa antes de renderizar y no expone un error", async () => {
-    mocks.read.mockResolvedValue({ role: "ADMIN", roles: ["KITCHEN"] });
-    const response = await proxy(request("/menu?private=1"));
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://example.com/today");
+  it("pisa un valor inyectado por el cliente en esa cabecera", async () => {
+    const forged = new NextRequest("https://example.com/orders", { headers: { [PANEL_PATH_HEADER]: "/anything" } });
+    const response = await proxy(forged);
+    expect(response.headers.get(`x-middleware-request-${PANEL_PATH_HEADER}`)).toBe("/orders");
   });
-  it("permite el segundo rol y permite Inicio fuera de la entrada", async () => {
-    mocks.read.mockResolvedValue({ role: "WAITER", roles: ["WAITER", "CASHIER"] });
-    expect((await proxy(request("/orders"))).headers.get("location")).toBeNull();
-    expect((await proxy(request("/today"))).headers.get("location")).toBeNull();
-  });
-  it("sin autenticación va al login sin consultar miembros", async () => {
+  it("sin autenticación va al login", async () => {
     mocks.claims.mockResolvedValue({ data: null });
     expect((await proxy(request("/cash"))).headers.get("location")).toBe("https://example.com/login");
-    expect(mocks.read).not.toHaveBeenCalled();
-  });
-  it("un fallo transitorio se delega a los guards y al estado recuperable del layout", async () => {
-    mocks.read.mockRejectedValue(new Error("fetch failed"));
-    expect((await proxy(request("/cash"))).headers.get("location")).toBeNull();
-  });
-  it("mesero entra a /orders pero no a caja, ventas, reportes, personal ni ajustes", async () => {
-    mocks.read.mockResolvedValue({ role: "WAITER", roles: ["WAITER"] });
-    expect((await proxy(request("/orders"))).headers.get("location")).toBeNull();
-    for (const path of ["/cash", "/sales", "/reports", "/staff", "/settings"]) {
-      expect((await proxy(request(path))).headers.get("location")).toBe("https://example.com/today");
-    }
-  });
-  it("cocina no entra a /orders", async () => {
-    mocks.read.mockResolvedValue({ role: "KITCHEN", roles: ["KITCHEN"] });
-    expect((await proxy(request("/orders"))).headers.get("location")).toBe("https://example.com/kitchen");
   });
 });
 
@@ -65,7 +58,6 @@ describe("proxy: dispositivos vinculados (M10)", () => {
     expect(response.headers.get("set-cookie")).toContain("monky_device=;");
   });
   it("dispositivo válido o no verificable no corta la sesión", async () => {
-    mocks.read.mockResolvedValue({ role: "WAITER", roles: ["WAITER"] });
     for (const state of [{ state: "valid" }, { state: "unavailable" }]) {
       mocks.device.mockResolvedValue(state);
       expect((await proxy(withCookie("/orders"))).headers.get("location")).toBeNull();
@@ -73,7 +65,6 @@ describe("proxy: dispositivos vinculados (M10)", () => {
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
   it("sin cookie no consulta dispositivos", async () => {
-    mocks.read.mockResolvedValue({ role: "WAITER", roles: ["WAITER"] });
     await proxy(request("/orders"));
     expect(mocks.device).not.toHaveBeenCalled();
   });

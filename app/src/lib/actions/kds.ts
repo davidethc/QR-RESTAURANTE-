@@ -2,12 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { KitchenTicketsPayload } from "@/lib/kds";
 import {
   kdsSettingsSchema,
-  kitchenTicketsQuerySchema,
   ticketIdSchema,
-  type KitchenTicketsQuery,
 } from "@/lib/validations/kds";
 import type { ActionResult } from "@/types/actions";
 
@@ -18,26 +15,6 @@ function fail(fn: string, error: { code?: string; message: string }): ActionResu
   if (error.code === "P0001") return { ok: false, error: error.message };
   console.error(`[rpc ${fn}]`, error.code, error.message);
   return { ok: false, error: GENERIC_ERROR };
-}
-
-export async function fetchKitchenTickets(
-  input: KitchenTicketsQuery
-): Promise<ActionResult<KitchenTicketsPayload>> {
-  const parsed = kitchenTicketsQuerySchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Datos inválidos." };
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc("get_kitchen_tickets", {
-      p_restaurant_id: parsed.data.restaurantId,
-      p_status: parsed.data.status,
-      p_limit: parsed.data.limit,
-      p_offset: parsed.data.offset,
-    });
-    if (error) return fail("get_kitchen_tickets", error);
-    return { ok: true, data: data as unknown as KitchenTicketsPayload };
-  } catch {
-    return { ok: false, error: GENERIC_ERROR };
-  }
 }
 
 export async function completeTicket(ticketId: string): Promise<ActionResult<{ replayed: boolean }>> {

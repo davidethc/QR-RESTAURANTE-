@@ -46,9 +46,16 @@ const DEFAULT_TABLES: StaffTable[] = ["orders", "waiter_calls", "tables"];
  *    exponen para que la interfaz pueda decirlo.
  * 2. **Refetch al reconectar.** Es la pieza clave: recupera de una vez
  *    todo lo que ocurrió mientras el socket estuvo muerto.
- * 3. **Red de seguridad cada 20 s**, siempre, haya socket o no. Con el
- *    socket vivo un pedido entra en menos de un segundo; con el socket
- *    muerto, en menos de veinte. Nunca se pierde.
+ * 3. **Red de seguridad cada 20 s, solo SIN socket y con la pestaña
+ *    visible.** Con el socket vivo un pedido entra en menos de un
+ *    segundo y sondear solo gasta red; con el socket muerto, entra en
+ *    menos de veinte. Nunca se pierde.
+ *
+ * Nota: el panel NO debería montar este hook en cada pantalla. El layout
+ * del panel monta una sola vez `StaffLiveProvider`
+ * (`(dashboard)/_components/staff-live-provider.tsx`), que usa este hook
+ * para tener un único canal; las pantallas leen de ahí. Este hook queda
+ * para quien necesite tablas que el proveedor no cubre.
  *
  * Dos detalles que costaron caro y no hay que perder:
  *
@@ -68,15 +75,28 @@ export function useStaffRealtime(
     channelName = "staff",
     tables = DEFAULT_TABLES,
     immediate = false,
-  }: { channelName?: string; tables?: StaffTable[]; immediate?: boolean } = {}
+    onEvent,
+  }: {
+    channelName?: string;
+    tables?: StaffTable[];
+    immediate?: boolean;
+    /**
+     * Si se pasa, cada evento de Realtime lo llama con su tabla EN LUGAR de
+     * lanzar `onChange`; así quien lo usa decide qué volver a pedir.
+     * `onChange` sigue siendo la recarga completa (reconexión, sondeo).
+     */
+    onEvent?: (table: StaffTable) => void;
+  } = {}
 ) {
   // El callback más reciente, sin meterlo en las dependencias del efecto
   // de suscripción (si no, cada render recrearía el canal WebSocket).
   // La asignación va DENTRO de un efecto: escribir un ref durante el
   // render rompe el render concurrente y React Compiler lo marca.
   const onChangeRef = useRef(onChange);
+  const onEventRef = useRef(onEvent);
   useEffect(() => {
     onChangeRef.current = onChange;
+    onEventRef.current = onEvent;
   });
 
   // Dos señales, porque ninguna basta sola:
@@ -89,6 +109,11 @@ export function useStaffRealtime(
   const [channelOk, setChannelOk] = useState(false);
   const online = useOnline();
   const connected = channelOk && online;
+  // Lo lee el sondeo y el despertar sin reiniciar el efecto de suscripción.
+  const connectedRef = useRef(false);
+  useEffect(() => {
+    connectedRef.current = connected;
+  });
 
   // Evita que dos eventos seguidos lancen dos recargas a la vez: la
   // segunda leería datos a medio escribir y competiría con la primera.
@@ -156,7 +181,10 @@ export function useStaffRealtime(
             table,
             filter: `restaurant_id=eq.${restaurantId}`,
           },
-          () => void refresh()
+          () => {
+            if (onEventRef.current) onEventRef.current(table);
+            else void refresh();
+          }
         );
       }
 
@@ -182,24 +210,33 @@ export function useStaffRealtime(
     // Para quien no recibe datos del servidor (contadores): carga inicial.
     if (immediate) void refresh();
 
-    // La red de seguridad. Corre pase lo que pase con el socket.
-    const safetyNet = setInterval(() => void refresh(), SAFETY_NET_MS);
+    // La red de seguridad: solo sin socket y con la pestaña a la vista.
+    // Con el socket vivo los eventos llegan solos; en una pestaña oculta
+    // no hay nadie mirando.
+    const safetyNet = setInterval(() => {
+      if (!connectedRef.current && !document.hidden) void refresh();
+    }, SAFETY_NET_MS);
 
     // La tablet que se durmió o el celular que recuperó señal se ponen
-    // al día al instante, sin esperar al siguiente ciclo.
+    // al día al instante, sin esperar al siguiente ciclo. Al volver a la
+    // pestaña solo si el socket no está vivo (si lo está, no se perdió
+    // nada); al recuperar señal siempre.
     // `online` ya lo sigue `useOnline` arriba — este listener
     // solo dispara el refetch al recuperar señal, no duplica el estado.
-    function onWake() {
-      if (!document.hidden) void refresh();
+    function onVisible() {
+      if (!document.hidden && !connectedRef.current) void refresh();
     }
-    document.addEventListener("visibilitychange", onWake);
-    window.addEventListener("online", onWake);
+    function onOnline() {
+      void refresh();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
 
     return () => {
       cancelled = true;
       clearInterval(safetyNet);
-      document.removeEventListener("visibilitychange", onWake);
-      window.removeEventListener("online", onWake);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
       authListener.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };

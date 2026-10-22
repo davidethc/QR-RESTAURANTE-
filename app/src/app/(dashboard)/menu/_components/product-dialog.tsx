@@ -315,14 +315,17 @@ export function ProductDialog({
       }
 
       let partial: string | null = null;
-      for (const id of initialLinked.filter((g) => !linkedIds.includes(g))) {
-        const r = await unlinkProductModifierGroup(productId, id);
-        if (!r.ok) partial = r.error;
-      }
-      for (const [position, groupId] of linkedIds.entries()) {
-        const r = await linkProductModifierGroup({ product_id: productId, group_id: groupId, position });
-        if (!r.ok) partial = r.error;
-      }
+      // Cada vínculo es una fila distinta (product_id, group_id): el upsert/
+      // delete de uno no depende de otro, así que van juntos en vez de en serie.
+      const results = await Promise.all([
+        ...initialLinked
+          .filter((g) => !linkedIds.includes(g))
+          .map((id) => unlinkProductModifierGroup(productId, id)),
+        ...linkedIds.map((groupId, position) =>
+          linkProductModifierGroup({ product_id: productId, group_id: groupId, position })
+        ),
+      ]);
+      for (const r of results) if (!r.ok) partial = r.error;
 
       const file = fileInputRef.current?.files?.[0];
       if (file) {

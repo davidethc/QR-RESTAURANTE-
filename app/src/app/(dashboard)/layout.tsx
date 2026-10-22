@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { Geist } from "next/font/google";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getMyRestaurant } from "@/lib/queries/staff";
 import {
@@ -10,7 +10,8 @@ import type { MyRestaurant } from "@/types/staff";
 import { DashboardLoadError } from "./_components/dashboard-load-error";
 import { DashboardNav } from "./_components/dashboard-nav";
 import { DashboardNotifier } from "@/components/shared/dashboard-notifier";
-import { GooeyToaster } from "@/components/ui/goey-toaster";
+import { StaffLiveProvider } from "./_components/staff-live-provider";
+import { PANEL_PATH_HEADER, resolvePanelRedirect } from "./_components/route-guard";
 import { ChargeSheetProvider } from "./cash/_components/charge-sheet-host";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
@@ -18,13 +19,6 @@ import { ChargeSheetProvider } from "./cash/_components/charge-sheet-host";
 // marca este segmento como "puede bloquear" y silencia su validación,
 // sin cambiar cómo renderiza. Quitar esta línea al migrar el panel.
 export const instant = false;
-
-/**
- * Tipografía del panel. Se carga aquí y no en el layout raíz para que
- * la carta del comensal no la descargue. La variable se declara en
- * :root (no en el contenedor) porque Sheet y Dialog se montan en <body>.
- */
-const geist = Geist({ subsets: ["latin"], display: "swap" });
 
 export default async function DashboardLayout({
   children,
@@ -61,33 +55,35 @@ export default async function DashboardLayout({
   if (failure === "no-restaurant") redirect("/login?motivo=sin-restaurante");
   if (!session) return <DashboardLoadError />;
 
+  // Permiso por ruta: el proxy ya no lee al miembro (era la misma lectura
+  // que esta, dos veces por navegación); le pasa la ruta pedida y la regla
+  // se aplica aquí, con la sesión que ya se cargó. Las páginas siguen
+  // llamando a `requireRouteAccess` porque este layout NO se vuelve a
+  // renderizar en las navegaciones del lado del cliente.
+  const requested = (await headers()).get(PANEL_PATH_HEADER);
+  if (requested) {
+    const destination = resolvePanelRedirect(session, requested);
+    if (destination) redirect(destination);
+  }
+
   return (
-    <div data-theme="admin" className="min-h-full md:pl-16 xl:pl-60 print:pl-0">
-      <style>{`:root{--font-geist:${geist.style.fontFamily}}`}</style>
-      <DashboardNotifier
-        restaurantId={session.restaurant.id}
-        role={session.role}
-      />
-      <DashboardNav session={session} />
-      <ChargeSheetProvider role={session.role}>
-        <div id="contenido" tabIndex={-1} className="outline-none">
-          {children}
-        </div>
-      </ChargeSheetProvider>
-      {/* Solo el panel monta goey-toast (y con él framer-motion): es
-          donde los avisos tienen que verse desde el otro lado del
-          salón. El comensal se queda con el <Toaster> de sonner del
-          layout raíz. print:hidden: al imprimir el ticket de /cash/ticket
-          no debe verse un toast (ni su espacio) sobre el papel. */}
-      <div className="print:hidden">
-        <GooeyToaster
-          position="top-center"
-          bounce={0.4}
-          showProgress
-          closeButton
-          duration={2000}
-        />
-      </div>
+    // Una sola familia tipográfica en el panel (Figtree, la de `--font-sans`):
+    // `font-display` (Bricolage) es para la carta del comensal, así que aquí
+    // se apunta a la misma familia y el panel no descarga ni mezcla otra.
+    <div
+      data-theme="admin"
+      className="min-h-full md:pl-16 xl:pl-60 print:pl-0"
+      style={{ "--font-display": "var(--font-sans)" } as React.CSSProperties}
+    >
+      <StaffLiveProvider restaurantId={session.restaurant.id} role={session.role}>
+        <DashboardNotifier role={session.role} />
+        <DashboardNav session={session} />
+        <ChargeSheetProvider role={session.role}>
+          <div id="contenido" tabIndex={-1} className="outline-none">
+            {children}
+          </div>
+        </ChargeSheetProvider>
+      </StaffLiveProvider>
     </div>
   );
 }

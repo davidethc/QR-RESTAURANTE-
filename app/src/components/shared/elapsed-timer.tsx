@@ -1,40 +1,31 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useNow } from "@/components/shared/clock";
 import { cn } from "@/lib/utils";
 
-function formatElapsed(since: string): string {
-  const seconds = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(since).getTime()) / 1000)
-  );
-  const minutes = Math.floor(seconds / 60);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+function elapsedMinutes(since: string, now: number): number {
+  return Math.max(0, Math.floor((now - new Date(since).getTime()) / 60_000));
 }
 
-function subscribeToTick(callback: () => void) {
-  const id = setInterval(callback, 1000);
-  return () => clearInterval(id);
-}
-
-function noElapsedYet() {
-  return null;
+function formatMinutes(minutes: number): string {
+  if (minutes < 1) return "menos de 1 min";
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} min`;
 }
 
 /**
- * "Hace 05:32", actualizándose sola cada segundo. Se usa en tarjetas
- * de pedido y de solicitud para que el personal detecte demoras
- * sin tener que hacer cuentas ni recargar la página.
+ * "Hace 5 min", actualizándose sola. Se usa en tarjetas de pedido y de
+ * solicitud para que el personal detecte demoras sin tener que hacer
+ * cuentas ni recargar la página.
+ *
+ * Muestra minutos (no segundos), así que se apoya en el reloj compartido
+ * de 15 s (`clock.ts`) en vez de un temporizador por tarjeta.
  *
  * `warnAfterMinutes` resalta el texto cuando el pedido lleva
  * demasiado tiempo esperando (regla de "pedido urgente" del wireframe).
  *
  * El primer render (servidor y cliente) muestra siempre "—":
- * `useSyncExternalStore` sirve el snapshot del servidor (`null`) hasta
- * hidratar, y recién después pasa a leer el valor real y suscribirse
- * al tick — sin el doble setState manual de antes, que además disparaba
- * el aviso de React de "no llames a setState de forma síncrona dentro
- * de un efecto".
+ * `useNow` sirve `null` hasta hidratar.
  */
 export function ElapsedTimer({
   since,
@@ -48,15 +39,10 @@ export function ElapsedTimer({
   /** Texto antes del cronómetro ("Enviado hace" en la cocina). */
   prefix?: string;
 }) {
-  const elapsed = useSyncExternalStore(
-    subscribeToTick,
-    () => formatElapsed(since),
-    noElapsedYet
-  );
-
-  const minutes = elapsed ? Number(elapsed.split(":")[0]) : 0;
+  const now = useNow("minute");
+  const minutes = now === null ? null : elapsedMinutes(since, now);
   const isLate =
-    elapsed !== null &&
+    minutes !== null &&
     warnAfterMinutes !== undefined &&
     minutes >= warnAfterMinutes;
 
@@ -68,7 +54,7 @@ export function ElapsedTimer({
         className
       )}
     >
-      {elapsed === null ? "—" : `${prefix} ${elapsed}`}
+      {minutes === null ? "—" : `${prefix} ${formatMinutes(minutes)}`}
     </span>
   );
 }

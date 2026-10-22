@@ -2,17 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useStaffRealtime } from "@/hooks/use-staff-realtime";
+import { useLiveCalls, useLiveOrders } from "@/app/(dashboard)/_components/staff-live-provider";
 import { notifyStaff } from "@/lib/notifications-staff";
-import { fetchStaffOrders, fetchWaiterCalls } from "@/lib/actions/staff";
 import type { OrderStatus, UserRole } from "@/config/constants";
-
-const ACTIVE_ORDER_STATUSES: OrderStatus[] = [
-  "PENDING",
-  "ACCEPTED",
-  "PREPARING",
-  "READY",
-];
 
 /**
  * Canal entre pestañas del mismo navegador. Sin esto, dos pestañas del
@@ -32,17 +24,13 @@ const DEDUPE_TTL_MS = 30_000;
  * estas notificaciones — solo refresca su propia lista — para que no
  * suenen dos veces cuando el mesero sí está parado en /orders.
  *
- * Canal de Realtime separado (`staff-notify`, no `staff`) del que usa
- * `OrdersBoard`/`KitchenBoard`: si coincidiera el nombre y ambos
- * estuvieran montados a la vez (este componente vive en el layout,
- * siempre montado), Supabase rechaza la segunda suscripción al mismo
- * canal — mismo tipo de problema ya documentado en el hook.
+ * Ya no tiene canal propio ni hace lecturas: lee pedidos y solicitudes
+ * del `StaffLiveProvider` (una sola suscripción para todo el panel) y
+ * compara cada actualización con la anterior para decidir qué avisar.
  */
 export function DashboardNotifier({
-  restaurantId,
   role,
 }: {
-  restaurantId: string;
   /** Cocina no atiende mesas: oír la campana de "Mesa X solicita
    *  atención" solo la distrae de lo suyo. */
   role: UserRole;
@@ -78,72 +66,61 @@ export function DashboardNotifier({
   const prevStatusRef = useRef<Map<string, OrderStatus> | null>(null);
   const prevCallIdsRef = useRef<Set<string> | null>(null);
 
-  async function refetch() {
-    try {
-      const [orders, calls] = await Promise.all([
-        fetchStaffOrders(restaurantId, ACTIVE_ORDER_STATUSES),
-        fetchWaiterCalls(restaurantId, ["PENDING", "ACCEPTED"]),
-      ]);
-
-      // La primera pasada (montaje) solo establece la línea base —
-      // nunca avisa de "pedidos nuevos" que en realidad ya estaban
-      // ahí desde antes de abrir el panel.
-      if (prevStatusRef.current) {
-        for (const order of orders) {
-          const prevStatus = prevStatusRef.current.get(order.id);
-          if (
-            !prevStatus &&
-            order.status === "PENDING" &&
-            claim(`new:${order.id}`)
-          ) {
-            notifyStaff.newOrder(order.order_number, order.table_number);
-          } else if (
-            prevStatus &&
-            prevStatus !== order.status &&
-            order.status === "READY" &&
-            claim(`ready:${order.id}`)
-          ) {
-            notifyStaff.orderReadyForStaff(order.order_number, order.table_number);
-          }
-        }
-      }
-      prevStatusRef.current = new Map(orders.map((o) => [o.id, o.status]));
-
-      // Cocina no ve ni oye las solicitudes de mesa: no son su trabajo.
-      if (prevCallIdsRef.current && role !== "KITCHEN") {
-        for (const call of calls) {
-          if (
-            call.status === "PENDING" &&
-            !prevCallIdsRef.current.has(call.id) &&
-            claim(`call:${call.id}`)
-          ) {
-            const goToCalls = () => router.push("/orders?view=calls");
-            if (call.type === "BILL") {
-              notifyStaff.billRequested(call.table_number, goToCalls);
-            } else {
-              notifyStaff.waiterCalled(call.table_number, goToCalls);
-            }
-          }
-        }
-      }
-      prevCallIdsRef.current = new Set(
-        calls.filter((c) => c.status === "PENDING").map((c) => c.id)
-      );
-    } catch {
-      // Silencioso: Realtime reintentará con el próximo cambio.
-    }
-  }
+  const orders = useLiveOrders();
+  const calls = useLiveCalls();
 
   useEffect(() => {
-    refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restaurantId]);
+    if (!orders) return;
+    // La primera pasada (montaje) solo establece la línea base —
+    // nunca avisa de "pedidos nuevos" que en realidad ya estaban
+    // ahí desde antes de abrir el panel.
+    if (prevStatusRef.current) {
+      for (const order of orders) {
+        const prevStatus = prevStatusRef.current.get(order.id);
+        if (
+          !prevStatus &&
+          order.status === "PENDING" &&
+          claim(`new:${order.id}`)
+        ) {
+          notifyStaff.newOrder(order.order_number, order.table_number);
+        } else if (
+          prevStatus &&
+          prevStatus !== order.status &&
+          order.status === "READY" &&
+          claim(`ready:${order.id}`)
+        ) {
+          notifyStaff.orderReadyForStaff(order.order_number, order.table_number);
+        }
+      }
+    }
+    prevStatusRef.current = new Map(orders.map((o) => [o.id, o.status]));
+    // `claim` solo usa refs: no es una dependencia real.
+  }, [orders]);
 
-  useStaffRealtime(restaurantId, refetch, {
-    channelName: "staff-notify",
-    // Los cambios de estado de una mesa no generan avisos.
-    tables: ["orders", "waiter_calls"],
-  });
+  useEffect(() => {
+    if (!calls) return;
+    // Cocina no ve ni oye las solicitudes de mesa: no son su trabajo.
+    if (prevCallIdsRef.current && role !== "KITCHEN") {
+      for (const call of calls) {
+        if (
+          call.status === "PENDING" &&
+          !prevCallIdsRef.current.has(call.id) &&
+          claim(`call:${call.id}`)
+        ) {
+          const goToCalls = () => router.push("/orders?view=calls");
+          if (call.type === "BILL") {
+            notifyStaff.billRequested(call.table_number, goToCalls);
+          } else {
+            notifyStaff.waiterCalled(call.table_number, goToCalls);
+          }
+        }
+      }
+    }
+    prevCallIdsRef.current = new Set(
+      calls.filter((c) => c.status === "PENDING").map((c) => c.id)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calls, role]);
 
   return null;
 }

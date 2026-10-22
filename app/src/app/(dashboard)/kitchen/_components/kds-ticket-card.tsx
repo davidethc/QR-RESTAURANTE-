@@ -1,7 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { Check, RotateCcw } from "lucide-react";
+import { useNow } from "@/components/shared/clock";
 import { ActionButton } from "@/components/shared/action-button";
 import { formatTimer, serviceLabel, timerTone, type KdsThresholds, type KitchenTicket, type TimerTone } from "@/lib/kds";
 import { cn } from "@/lib/utils";
@@ -17,19 +17,11 @@ const TONE_LABEL: Record<TimerTone, string> = {
   red: "Muy demorada",
 };
 
-function subscribe(cb: () => void) {
-  const id = setInterval(cb, 1000);
-  return () => clearInterval(id);
-}
-
-/** Cronómetro que se actualiza solo cada segundo; "—" hasta hidratar. */
+/** Cronómetro mm:ss: muestra segundos, así que usa el reloj compartido de 1 s. */
 function Timer({ createdAt, thresholds }: { createdAt: string; thresholds: KdsThresholds }) {
-  const seconds = useSyncExternalStore(
-    subscribe,
-    () => Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000)),
-    () => null
-  );
-  if (seconds === null) return <span className="text-body-lg tabular-nums">—</span>;
+  const now = useNow("second");
+  if (now === null) return <span className="text-body-lg tabular-nums">—</span>;
+  const seconds = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 1000));
   const tone = timerTone(seconds / 60, thresholds);
   return (
     <span
