@@ -1,215 +1,153 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { ChefHat, PackageCheck, Clock } from "lucide-react";
+import { useCallback, useState, useTransition } from "react";
+import Link from "next/link";
+import { ChefHat, History, Maximize2, Minimize2, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
-import { KitchenOrderCard } from "./kitchen-order-card";
-import { kitchenStatuses, sentToKitchenAt } from "./kitchen-statuses";
 import { ConnectionStatus } from "@/components/shared/connection-status";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { useStaffRealtime } from "@/hooks/use-staff-realtime";
-import { fetchStaffOrders } from "@/lib/actions/staff";
-import { cn } from "@/lib/utils";
-import type { StaffOrder } from "@/types/staff";
-
-type ColumnTone = "cooking" | "ready";
-
-const TONE: Record<ColumnTone, { badge: string; count: string }> = {
-  cooking: {
-    badge: "bg-primary-soft text-primary",
-    count: "bg-primary-soft text-primary",
-  },
-  ready: {
-    badge: "bg-success-soft text-success-soft-foreground",
-    count: "bg-success-soft text-success-soft-foreground",
-  },
-};
-
-function Column({
-  tone,
-  title,
-  icon: Icon,
-  orders,
-  emptyTitle,
-  emptyDescription,
-  readyStep,
-  onDone,
-  className,
-  listClassName,
-}: {
-  tone: ColumnTone;
-  title: string;
-  icon: typeof ChefHat;
-  orders: StaffOrder[];
-  emptyTitle: string;
-  emptyDescription?: string;
-  readyStep: boolean;
-  onDone?: () => void;
-  className?: string;
-  listClassName?: string;
-}) {
-  const colors = TONE[tone];
-
-  return (
-    <section
-      aria-label={title}
-      className={cn(
-        "flex min-w-0 flex-col gap-4 rounded-card border border-border bg-card p-5 lg:p-6",
-        className
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "flex size-10 items-center justify-center rounded-control",
-            colors.badge
-          )}
-        >
-          <Icon aria-hidden className="size-5" strokeWidth={1.75} />
-        </div>
-        <h2 className="text-title-sm font-semibold text-foreground">
-          {title}
-        </h2>
-        <span
-          className={cn(
-            "ml-auto flex h-6 min-w-6 items-center justify-center rounded-badge px-2 text-meta font-semibold tabular-nums",
-            colors.count
-          )}
-        >
-          {orders.length}
-        </span>
-      </div>
-
-      {orders.length === 0 ? (
-        <EmptyState
-          icon={Icon}
-          title={emptyTitle}
-          description={emptyDescription}
-        />
-      ) : (
-        <div className={cn("grid gap-3", listClassName)}>
-          {orders.map((order) => (
-            <KitchenOrderCard
-              key={order.id}
-              order={order}
-              readyStep={readyStep}
-              onDone={onDone}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function byTime(getTime: (o: StaffOrder) => string) {
-  return (a: StaffOrder, b: StaffOrder) =>
-    new Date(getTime(a)).getTime() - new Date(getTime(b)).getTime();
-}
+import { useFullscreen } from "@/hooks/use-fullscreen";
+import { completeTicket, fetchKitchenTickets, setKdsSettings } from "@/lib/actions/kds";
+import { notify } from "@/lib/notifications";
+import { countPendingTickets, pendingLabel, type KitchenTicketsPayload } from "@/lib/kds";
+import { KdsTicketCard } from "./kds-ticket-card";
+import { KdsSettings } from "./kds-settings";
 
 /**
- * Tablero de cocina.
- *
- * `readyStep` (ajuste `kitchen_ready_step` del restaurante):
- * - true: "En cocina" (ACCEPTED + PREPARING) con botón "Listo" por
- *   tarjeta, y "Para recoger" (READY).
- * - false: la cocina solo mira. Una sola columna "En cocina", sin
- *   botones; el pedido sale cuando el mesero lo entrega.
- *
- * Ya no hay columna "Nuevos": el mesero acepta y el pedido entra directo
- * en preparación (`accept_and_prepare_order`), así que ACCEPTED casi no
- * se ve; si aparece, cuenta como "En cocina".
+ * Tablero de cocina por COMANDAS (tickets), en orden de llegada. Completar
+ * saca la tarjeta al instante (optimista) y sin confirmar.
  */
 export function KitchenBoard({
   restaurantId,
-  initialOrders,
-  readyStep,
+  initial,
+  canManage,
 }: {
   restaurantId: string;
-  initialOrders: StaffOrder[];
-  readyStep: boolean;
+  initial: KitchenTicketsPayload;
+  canManage: boolean;
 }) {
-  const [orders, setOrders] = useState(initialOrders);
+  const [data, setData] = useState(initial);
+  const fs = useFullscreen();
+  const [activating, startActivate] = useTransition();
 
   const refetch = useCallback(async () => {
     try {
-      const newOrders = await fetchStaffOrders(
-        restaurantId,
-        kitchenStatuses(readyStep)
-      );
-      setOrders(newOrders);
+      const r = await fetchKitchenTickets({ restaurantId, status: "pending" });
+      if (r.ok) setData(r.data);
     } catch {
-      // Silencioso: Realtime reintentará con el próximo cambio.
+      // Silencioso: Realtime / red de seguridad reintentan.
     }
-  }, [restaurantId, readyStep]);
+  }, [restaurantId]);
 
   const { connected, refresh } = useStaffRealtime(restaurantId, refetch, {
     tables: ["orders"],
   });
 
-  // Más viejo primero: lo que lleva más rato esperando va arriba.
-  const { cooking, ready } = useMemo(
-    () => ({
-      cooking: orders
-        .filter((o) => o.status === "ACCEPTED" || o.status === "PREPARING")
-        .sort(byTime(sentToKitchenAt)),
-      ready: readyStep
-        ? orders
-            .filter((o) => o.status === "READY")
-            .sort(byTime((o) => o.ready_at ?? sentToKitchenAt(o)))
-        : [],
-    }),
-    [orders, readyStep]
-  );
+  if (!data.kds_enabled) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
+        <div className="flex max-w-md flex-col items-center gap-4 text-center">
+          <ChefHat aria-hidden className="size-12 text-primary" strokeWidth={1.5} />
+          <h1 className="text-2xl font-semibold text-foreground">Comandas digitales sin activar</h1>
+          <p className="text-body-lg text-muted-foreground">
+            Comandas digitales: gestiona las comandas de cocina desde uno o varios dispositivos en tiempo real.
+          </p>
+          {canManage ? (
+            <Button
+              className="min-h-11 px-6 text-body-lg"
+              disabled={activating}
+              onClick={() =>
+                startActivate(async () => {
+                  const r = await setKdsSettings({ restaurantId, enabled: true });
+                  if (!r.ok) return notify.error(r.error);
+                  await refetch();
+                })
+              }
+            >
+              {activating ? "Activando…" : "Activar"}
+            </Button>
+          ) : (
+            <p className="text-body-sm text-muted-foreground">
+              Pide al dueño o a un administrador que active las comandas digitales.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const count = countPendingTickets(data.tickets);
+
+  async function complete(id: string) {
+    const previous = data;
+    setData((d) => ({ ...d, tickets: d.tickets.filter((t) => t.ticket_id !== id) }));
+    const r = await completeTicket(id);
+    if (!r.ok) setData(previous);
+    else void refresh();
+    return r;
+  }
 
   return (
     <>
       <div className="border-b border-border bg-card px-4 py-6 md:px-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold text-foreground">
-              Cocina
-            </h1>
-            <p className="mt-1 flex items-center gap-2 text-body-sm text-muted-foreground">
+            <h1 className="text-2xl font-semibold text-foreground">Cocina</h1>
+            <p aria-live="polite" className="mt-1 flex items-center gap-2 text-body-lg text-muted-foreground">
               <Clock aria-hidden className="size-4" strokeWidth={1.75} />
-              {cooking.length} en cocina
-              {readyStep && ` · ${ready.length} para recoger`}
+              {pendingLabel(count)}
             </p>
           </div>
-          <ConnectionStatus connected={connected} />
+          <div className="flex flex-wrap items-center gap-2">
+            {canManage && (
+              <KdsSettings restaurantId={restaurantId} thresholds={data.thresholds} onSaved={refresh} />
+            )}
+            <Button asChild variant="outline" className="min-h-11 px-4">
+              <Link href="/kitchen/history">
+                <History aria-hidden className="size-4" /> Ver historial
+              </Link>
+            </Button>
+            {fs.supported && (
+              <Button variant="outline" className="min-h-11 px-4" onClick={fs.toggle}>
+                {fs.active ? (
+                  <><Minimize2 aria-hidden className="size-4" /> Salir de pantalla completa</>
+                ) : (
+                  <><Maximize2 aria-hidden className="size-4" /> Pantalla completa</>
+                )}
+              </Button>
+            )}
+            <ConnectionStatus connected={connected} />
+          </div>
         </div>
+        {fs.error && <p role="alert" className="mt-3 text-body-sm text-destructive">{fs.error}</p>}
         <OfflineBanner
           className="mt-4"
-          message="Los pedidos nuevos no están llegando. Aparecen solos al volver la red."
+          message="Las comandas nuevas no están llegando. Aparecen solas al volver la red."
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 px-4 py-4 md:px-8 lg:flex-row lg:items-start">
-        <Column
-          tone="cooking"
-          title="En cocina"
-          icon={ChefHat}
-          orders={cooking}
-          emptyTitle="Nada en cocina"
-          emptyDescription="Los pedidos aparecen aquí apenas el mesero los envía."
-          readyStep={readyStep}
-          onDone={refresh}
-          className="lg:flex-[2]"
-          listClassName={
-            readyStep ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"
-          }
-        />
-        {readyStep && (
-          <Column
-            tone="ready"
-            title="Para recoger"
-            icon={PackageCheck}
-            orders={ready}
-            emptyTitle="Nada para recoger"
-            readyStep={readyStep}
-            onDone={refresh}
-            className="lg:flex-1"
+      <div className="flex-1 px-4 py-4 md:px-8">
+        {data.tickets.length === 0 ? (
+          <EmptyState
+            icon={ChefHat}
+            title="Nada por preparar"
+            description="Las comandas aparecen aquí apenas el mesero las envía."
           />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {data.tickets.map((t) => (
+              <KdsTicketCard
+                key={t.ticket_id}
+                ticket={t}
+                thresholds={data.thresholds}
+                mode="pending"
+                action={complete}
+                onDone={() => {}}
+              />
+            ))}
+          </div>
         )}
       </div>
     </>
