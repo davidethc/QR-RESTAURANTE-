@@ -160,7 +160,7 @@ function DetailDialog({
         </DialogHeader>
 
         <div className="flex gap-2">
-          {canCharge && order.tableSessionId && (
+          {canCharge && order.tableSessionId && order.status !== "CANCELLED" && (
             <Button
               className="min-h-11 flex-1"
               onClick={() => {

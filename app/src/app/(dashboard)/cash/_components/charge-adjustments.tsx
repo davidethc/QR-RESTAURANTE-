@@ -4,10 +4,10 @@ import { Minus, Plus, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatPrice } from "@/lib/utils";
-import { PAYMENT_METHOD_LABEL } from "@/lib/payment-method-labels";
 import { SPLIT_MODE } from "@/config/constants";
 import type { SplitMode } from "@/config/constants";
-import type { Bill } from "@/types/billing";
+import type { Bill, BillPaymentContext } from "@/types/billing";
+import { PaymentsBlock } from "./payments-block";
 import { DiscountDialog } from "./discount-dialog";
 
 /**
@@ -23,6 +23,7 @@ export function ChargeAdjustments({
   onChangeSplit,
   onRemoveDiscount,
   onDiscountApplied,
+  paymentContext,
 }: {
   bill: Bill;
   partLabel: string | null;
@@ -31,9 +32,9 @@ export function ChargeAdjustments({
   onChangeSplit: (mode: SplitMode, parts?: number) => void;
   onRemoveDiscount: (discountId: string) => void;
   onDiscountApplied: (bill: Bill) => void;
+  paymentContext: BillPaymentContext | null;
 }) {
   const isOpen = bill.status === "OPEN";
-  const payments = bill.payments.filter((p) => p.status === "COMPLETED");
 
   return (
     <div className="flex flex-col gap-6">
@@ -149,26 +150,7 @@ export function ChargeAdjustments({
         )}
       </section>
 
-      <section aria-labelledby="adj-payments" className="flex flex-col gap-2.5">
-        <SectionTitle id="adj-payments">Pagos registrados</SectionTitle>
-        {payments.length === 0 ? (
-          <p className="text-meta text-muted-foreground">Todavía no se registró ningún pago.</p>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {payments.map((p) => (
-              <li key={p.id} className="flex min-h-11 items-center justify-between gap-3 rounded-control bg-secondary px-3 text-body-sm">
-                <span className="text-foreground">
-                  {PAYMENT_METHOD_LABEL[p.method]}
-                  {p.tip_amount > 0 && (
-                    <span className="text-muted-foreground"> · propina {formatPrice(p.tip_amount)}</span>
-                  )}
-                </span>
-                <span className="tabular-nums text-foreground">{formatPrice(p.amount)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <PaymentsBlock bill={bill} context={paymentContext} onBillChange={onDiscountApplied} />
     </div>
   );
 }
