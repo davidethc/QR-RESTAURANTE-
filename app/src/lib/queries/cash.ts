@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { fromUntyped } from "@/lib/supabase/untyped-table";
-import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import { placeLabel } from "@/lib/place-label";
 import { TABLE_KIND, type TableKind } from "@/config/constants";
 
@@ -116,16 +115,10 @@ export async function getClosedBillsToday(
 ): Promise<ClosedBillToday[]> {
   const supabase = await createClient();
 
-  const { data: today, error: todayError } = await callUntypedRpc<string>(
-    supabase,
-    "business_today",
-    { p_restaurant_id: restaurantId }
-  );
+  const { data: today, error: todayError } = await supabase.rpc("business_today", { p_restaurant_id: restaurantId });
   if (todayError) throw todayError;
 
-  const { data: boundsRows, error: boundsError } = await callUntypedRpc<
-    { start_at: string; end_at: string }[]
-  >(supabase, "business_day_bounds", {
+  const { data: boundsRows, error: boundsError } = await supabase.rpc("business_day_bounds", {
     p_restaurant_id: restaurantId,
     p_from: today,
     p_to: today,

@@ -10,6 +10,8 @@ import {
   type CreateCounterOrderInput,
   type UpdateCounterOrderInput,
 } from "@/lib/validations/counter-order";
+import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
+import type { CounterAddress } from "@/lib/counter-order";
 import type { Json } from "@/types/database";
 import type { ActionResult } from "@/types/actions";
 
@@ -124,6 +126,31 @@ export async function updateCounterOrder(
     if (!data) return { ok: false, error: GENERIC_DB_ERROR };
     revalidate();
     return { ok: true, data: data as unknown as CounterOrderUpdated };
+  } catch {
+    return { ok: false, error: GENERIC_DB_ERROR };
+  }
+}
+
+export interface OrderContact {
+  customerPhone: string | null;
+  deliveryAddress: CounterAddress | null;
+}
+
+/**
+ * Teléfono y dirección del pedido (PII). Ya no se leen de la tabla orders
+ * (S3-F0): solo vía get_order_contact, que valida rol y restaurante.
+ * TODO: tipar con supabase.rpc al regenerar database.ts tras aplicar la migración.
+ */
+export async function getOrderContact(orderId: string): Promise<ActionResult<OrderContact>> {
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) return { ok: false, error: GENERIC_DB_ERROR };
+  try {
+    const supabase = await createClient();
+    const { data, error } = await callUntypedRpc<{
+      customer_phone: string | null;
+      delivery_address: CounterAddress | null;
+    }>(supabase, "get_order_contact", { p_order_id: orderId });
+    if (error || !data) return { ok: false, error: GENERIC_DB_ERROR };
+    return { ok: true, data: { customerPhone: data.customer_phone, deliveryAddress: data.delivery_address } };
   } catch {
     return { ok: false, error: GENERIC_DB_ERROR };
   }
