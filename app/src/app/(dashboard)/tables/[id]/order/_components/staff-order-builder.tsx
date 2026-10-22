@@ -1,41 +1,52 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, X, PencilLine, Check, Flame } from "lucide-react";
+import { Search, X, Flame, Pencil, Split, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { QuantityStepper } from "@/components/shared/quantity-stepper";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
-import { createStaffOrder } from "@/lib/actions/orders";
+import { addTicket } from "@/lib/actions/orders";
 import { notify } from "@/lib/notifications";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
+import { fromPrice } from "@/lib/order-lines";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { useStaffCart } from "@/hooks/use-staff-cart";
 import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
-import type { PublicCategory, PublicProduct } from "@/types/menu";
+import { ProductSheet, type SheetProduct } from "./product-sheet";
+import type {
+  PublicCategory,
+  PublicProduct,
+  StaffCartItem,
+  StaffProductDetail,
+} from "@/types/menu";
 import type { TopProduct } from "@/types/staff";
 
 export function StaffOrderBuilder({
   categories,
   topProducts,
+  details,
   tableId,
-  tableNumber,
-  tableLabel,
+  orderId,
 }: {
   categories: PublicCategory[];
   topProducts: TopProduct[];
+  details: Record<string, StaffProductDetail>;
   tableId: string;
-  tableNumber: number;
-  tableLabel: string;
+  /** Pedido vigente de la mesa; null = la primera comanda lo crea. */
+  orderId: string | null;
 }) {
   const router = useRouter();
   const cart = useStaffCart();
   const [query, setQuery] = useState("");
-  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<{
+    product: SheetProduct;
+    editing: StaffCartItem | null;
+  } | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
   const [openCategories, setOpenCategories] = useState<Set<string>>(
     () => new Set()
   );
@@ -46,12 +57,13 @@ export function StaffOrderBuilder({
     () =>
       cart.items.map((item) => ({
         productId: item.productId,
+        variantId: item.variantId,
         quantity: item.quantity,
         notes: item.notes || undefined,
       })),
     [cart.items]
   );
-  const requestKey = useIdempotencyKey(JSON.stringify(orderLines));
+  const requestKey = useIdempotencyKey(JSON.stringify([orderId, orderLines]));
 
   const results = useMemo(() => {
     const term = normalizeText(query.trim());
@@ -76,23 +88,29 @@ export function StaffOrderBuilder({
     });
   }
 
-  async function handleSend() {
-    const result = await createStaffOrder({
-      tableId,
-      items: orderLines,
-      clientRequestId: requestKey.get(),
-    });
-    if (result.ok) {
+  function openProduct(product: SheetProduct) {
+    setSheet({ product, editing: null });
+  }
+
+  function handleSave() {
+    setSaveError(null);
+    startSaving(async () => {
+      const result = await addTicket({
+        orderId,
+        tableId,
+        items: orderLines,
+        requestId: requestKey.get(),
+      });
+      if (!result.ok) {
+        setSaveError(result.error);
+        notify.error(result.error);
+        return;
+      }
       requestKey.renew();
       cart.clear();
-      // Nace directo en preparación (ver createStaffOrder): llevar al
-      // mesero de vuelta a Mesas lo dejaría sin ver dónde quedó su
-      // pedido. Esto lo deja parado justo en "Preparando", filtrado a
-      // la mesa que acaba de atender.
-      router.push(`/orders?table=${tableNumber}&view=progress`);
+      notify.success(`Comanda #${result.data.ticketNumber} enviada a cocina`);
       router.refresh();
-    }
-    return result;
+    });
   }
 
   return (
@@ -129,7 +147,7 @@ export function StaffOrderBuilder({
               <button
                 key={product.id}
                 type="button"
-                onClick={() => cart.addItem(product)}
+                onClick={() => openProduct(product)}
                 className="flex min-h-11 items-center gap-2 rounded-control border border-border bg-card px-3.5 text-body-sm font-semibold transition-colors duration-150 active:scale-[0.97]"
               >
                 {product.name}
@@ -152,8 +170,9 @@ export function StaffOrderBuilder({
           ) : (
             <ProductList
               products={results}
-              onAdd={(p) => cart.addItem(p)}
+              onAdd={openProduct}
               quantityOf={cart.quantityOf}
+              details={details}
             />
           )}
         </section>
@@ -207,8 +226,9 @@ export function StaffOrderBuilder({
                 {isOpen && (
                   <ProductList
                     products={available}
-                    onAdd={(p) => cart.addItem(p)}
+                    onAdd={openProduct}
                     quantityOf={cart.quantityOf}
+                    details={details}
                   />
                 )}
               </section>
@@ -230,9 +250,9 @@ export function StaffOrderBuilder({
           }}
         >
           <div className="mx-auto max-w-3xl">
-            <ul className="mb-3 max-h-52 space-y-1.5 overflow-y-auto">
+            <ul className="mb-3 max-h-60 space-y-2 overflow-y-auto">
               {cart.items.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} className="rounded-control border border-border p-2">
                   <div className="flex items-center gap-2">
                     <QuantityStepper
                       compact
@@ -241,82 +261,99 @@ export function StaffOrderBuilder({
                       value={item.quantity}
                       onChange={(q) => cart.setQuantity(item.id, q)}
                     />
-                    <span className="min-w-0 flex-1 truncate text-body-sm font-medium">
-                      {item.name}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEditingNote(editingNote === item.id ? null : item.id)
-                      }
-                      aria-label={`Indicación para ${item.name}`}
-                      className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-full",
-                        item.notes
-                          ? "bg-honey-soft text-honey-soft-foreground"
-                          : "text-muted-foreground hover:bg-muted"
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-body-sm font-medium">
+                        {item.name}
+                        {item.variantName ? ` · ${item.variantName}` : ""}
+                      </span>
+                      {item.notes && (
+                        <span className="block truncate text-meta text-muted-foreground">
+                          {item.notes}
+                        </span>
                       )}
-                    >
-                      <PencilLine className="size-4" />
-                    </button>
+                    </span>
                     <span className="w-16 shrink-0 text-right text-body-sm font-semibold tabular-nums text-wine">
                       {formatPrice(item.price * item.quantity)}
                     </span>
                   </div>
-
-                  {editingNote === item.id && (
-                    <div className="mt-1.5 flex items-start gap-2 pl-2">
-                      <Textarea
-                        value={item.notes}
-                        onChange={(e) => cart.setNotes(item.id, e.target.value)}
-                        placeholder="Ej: sin cebolla, término medio…"
-                        rows={2}
-                        autoFocus
-                        className="rounded-control text-body-sm"
-                      />
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="min-h-11 rounded-full"
+                      onClick={() =>
+                        setSheet({
+                          product: { id: item.productId, name: item.name, price: item.price },
+                          editing: item,
+                        })
+                      }
+                    >
+                      <Pencil className="size-4" /> Editar
+                    </Button>
+                    {item.quantity > 1 && (
                       <Button
                         type="button"
-                        size="icon"
                         variant="ghost"
-                        aria-label="Listo"
-                        className="size-9 shrink-0 rounded-full"
-                        onClick={() => setEditingNote(null)}
+                        size="sm"
+                        className="min-h-11 rounded-full"
+                        onClick={() => cart.splitOne(item.id)}
                       >
-                        <Check className="size-4" />
+                        <Split className="size-4" /> Separar uno
                       </Button>
-                    </div>
-                  )}
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="min-h-11 rounded-full text-destructive"
+                      onClick={() => cart.remove(item.id)}
+                    >
+                      <Trash2 className="size-4" /> Remover
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
 
-            <ConfirmDialog
-              trigger={
-                <Button
-                  size="lg"
-                  className="h-13 w-full justify-between rounded-control px-5 text-body"
-                >
-                  <span>
-                    Enviar pedido · {cart.count}{" "}
-                    {cart.count === 1 ? "plato" : "platos"}
-                  </span>
-                  <span className="text-title font-semibold tabular-nums">
-                    {formatPrice(cart.total)}
-                  </span>
-                </Button>
-              }
-              title={`¿Enviar el pedido de ${tableLabel}?`}
-              description={`${cart.count} ${
-                cart.count === 1 ? "plato" : "platos"
-              } por ${formatPrice(cart.total)}. Pasa directo a cocina.`}
-              confirmLabel="Enviar"
-              action={handleSend}
-              onSuccess={() => notify.success("Pedido enviado a cocina")}
-            />
+            {saveError && (
+              <p role="alert" className="mb-2 text-body-sm font-medium text-destructive">
+                {saveError}
+              </p>
+            )}
+            <Button
+              size="lg"
+              disabled={saving}
+              onClick={handleSave}
+              className="h-13 w-full justify-between rounded-control px-5 text-body"
+            >
+              <span className="flex items-center gap-2">
+                {saving && <Loader2 className="size-4 animate-spin" />}
+                Guardar comanda · {cart.count} {cart.count === 1 ? "plato" : "platos"}
+              </span>
+              <span className="text-title font-semibold tabular-nums">
+                {formatPrice(cart.total)}
+              </span>
+            </Button>
           </div>
         </motion.div>
       )}
       </AnimatePresence>
+
+      {sheet && (
+        <ProductSheet
+          key={sheet.editing?.id ?? sheet.product.id}
+          product={sheet.product}
+          detail={details[sheet.product.id]}
+          initial={sheet.editing}
+          onClose={() => setSheet(null)}
+          onConfirm={(line) => {
+            if (sheet.editing) cart.replaceLine(sheet.editing.id, line);
+            else cart.addLine(line);
+            setSheet(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -325,34 +362,43 @@ function ProductList({
   products,
   onAdd,
   quantityOf,
+  details,
 }: {
   products: PublicProduct[];
   onAdd: (product: PublicProduct) => void;
   quantityOf: (productId: string) => number;
+  details: Record<string, StaffProductDetail>;
 }) {
   return (
-    <ul className="mx-4 mb-3 divide-y divide-border overflow-hidden rounded-card border border-border bg-card">
+    <ul className="mx-4 mb-3 grid gap-2 sm:grid-cols-2">
       {products.map((product) => {
         const inCart = quantityOf(product.id);
+        const { price, hasChoice } = fromPrice(
+          product.price,
+          details[product.id]?.variants
+        );
 
         return (
           <li key={product.id}>
             <button
               type="button"
               onClick={() => onAdd(product)}
-              className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 active:bg-secondary"
+              className="flex min-h-14 w-full items-center gap-3 rounded-card border border-border bg-card px-4 py-2.5 text-left transition-colors duration-150 active:bg-secondary"
             >
-              <span className="min-w-0 flex-1 truncate text-body font-semibold">
-                {product.name}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-body font-semibold">
+                  {product.name}
+                </span>
+                <span className="block text-meta tabular-nums text-wine">
+                  {hasChoice ? "Desde " : ""}
+                  {formatPrice(price)}
+                </span>
               </span>
               {inCart > 0 && (
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-caption font-bold tabular-nums text-primary-foreground">
                   {inCart}
                 </span>
               )}
-              <span className="shrink-0 text-body font-semibold tabular-nums text-wine">
-                {formatPrice(product.price)}
-              </span>
             </button>
           </li>
         );

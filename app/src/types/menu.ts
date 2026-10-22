@@ -77,6 +77,40 @@ export interface StaffCartItem {
   price: number;
   quantity: number;
   notes: string;
+  /** Variante elegida (siempre se envía; la base cobra su precio). */
+  variantId?: string;
+  variantName?: string;
+  /** Resumen de personalizaciones elegidas; viaja dentro de la nota. */
+  modifiers?: string;
+  /** Selección estructurada para reabrir la ficha: grupo -> opción -> veces. */
+  selections?: Record<string, Record<string, number>>;
+}
+
+export interface StaffVariant {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface StaffModifierOption {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface StaffModifierGroup {
+  id: string;
+  name: string;
+  min_select: number;
+  max_select: number;
+  allow_repeat: boolean;
+  options: StaffModifierOption[];
+}
+
+/** Variantes y grupos de personalización de un producto, para el mesero. */
+export interface StaffProductDetail {
+  variants: StaffVariant[];
+  groups: StaffModifierGroup[];
 }
 
 /* Carta pública — lo que devuelve el RPC get_public_menu.
