@@ -7,8 +7,8 @@ import { z } from "zod";
  * Los topes coinciden con los de la RPC.
  */
 
-export const COUNTER_MAX_LINES = 100;
-export const COUNTER_MAX_QUANTITY = 999;
+export const COUNTER_MAX_LINES = 50;
+export const COUNTER_MAX_QUANTITY = 99;
 export const COUNTER_LABEL_MAX = 40;
 export const COUNTER_NOTES_MAX = 500;
 

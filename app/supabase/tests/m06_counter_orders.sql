@@ -111,6 +111,18 @@ begin
     ('la auditoría no guarda teléfono ni dirección', not exists (
         select 1 from public.audit_logs where entity_id = (v_res ->> 'order_id')::uuid and metadata::text like '%988 000%'));
   perform set_config('role', 'authenticated', true);
+  -- Reducir el envío por debajo de lo ya cobrado: mensaje claro (OWNER pasa el control de rol).
+  begin
+    perform set_config('role', 'postgres', true);
+    update public.bills set paid_total = total, balance = 0 where id = (v_res ->> 'bill_id')::uuid;
+    perform set_config('role', 'authenticated', true);
+    perform public.update_counter_order((v_res ->> 'order_id')::uuid, '{"shipping_cost": 0}');
+    insert into _m06 (test, ok) values ('envío no deja la cuenta en negativo', false);
+  exception when others then
+    perform set_config('role', 'postgres', true);
+    insert into _m06 (test, ok) values ('envío no deja la cuenta en negativo', sqlerrm like '%negativo%');
+    perform set_config('role', 'authenticated', true);
+  end;
   begin
     perform public.update_counter_order((v_res ->> 'order_id')::uuid, '{"total": 1}');
     insert into _m06 (test, ok) values ('no edita campos ajenos', false);

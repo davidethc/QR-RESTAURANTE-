@@ -635,10 +635,6 @@ begin
     raise exception 'El pedido debe contener productos';
   end if;
 
-  if jsonb_array_length(p_items) > 100 then
-    raise exception 'Demasiados productos en una sola venta (máximo 100 líneas)';
-  end if;
-
   v_label := nullif(btrim(coalesce(p_customer_label, '')), '');
   if length(v_label) > 40 then
     raise exception 'El nombre de la venta admite hasta 40 caracteres';

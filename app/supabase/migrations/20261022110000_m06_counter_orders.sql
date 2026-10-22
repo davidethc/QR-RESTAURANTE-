@@ -493,6 +493,16 @@ begin
       if v_bill.status = 'CLOSED' then
         raise exception 'La cuenta ya está cerrada: no se puede cambiar el envío' using hint = 'field=shipping_cost';
       end if;
+      if (v_delta < 0 or v_bill.paid_total > 0) and not (
+        public.user_has_restaurant_role(v_restaurant_id, 'OWNER')
+        or public.user_has_restaurant_role(v_restaurant_id, 'ADMIN')
+      ) then
+        raise exception 'Solo OWNER o ADMIN pueden reducir el envío o cambiarlo en una cuenta con pagos'
+          using hint = 'field=shipping_cost';
+      end if;
+      if v_bill.balance + v_delta < 0 then
+        raise exception 'El envío no puede dejar la cuenta en negativo' using hint = 'field=shipping_cost';
+      end if;
       if v_delta > 0 and v_bill.paid_total > 0 and not coalesce(p_confirm_total_increase, false) then
         raise exception 'CONFIRM_REQUIRED: el pedido ya tiene pagos y quedarían % por cobrar', v_bill.balance + v_delta
           using hint = 'confirm=p_confirm_total_increase';
