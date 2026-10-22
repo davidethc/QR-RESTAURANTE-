@@ -39,7 +39,7 @@ export async function fetchWaiterCalls(
  */
 export type SaveMemberResult = { memberId: string; pin?: string; notice?: string };
 
-export const SHARED_ACCOUNT_NOTICE = "Esta persona también pertenece a otro negocio; solo se desactivó aquí.";
+const SHARED_ACCOUNT_NOTICE = "Esta persona también pertenece a otro negocio; solo se desactivó aquí.";
 
 /** Campos nuevos de M00; el flujo legacy de staff-admin.ts se mantiene. */
 export async function saveMember(restaurantId: string, input: unknown): Promise<ActionResult<SaveMemberResult>> {
