@@ -1661,6 +1661,7 @@ export type Database = {
       }
       tickets: {
         Row: {
+          client_request_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
@@ -1671,6 +1672,7 @@ export type Database = {
           order_id: string
         }
         Insert: {
+          client_request_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1681,6 +1683,7 @@ export type Database = {
           order_id: string
         }
         Update: {
+          client_request_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1924,6 +1927,31 @@ export type Database = {
       }
       cancel_counter_sale: {
         Args: { p_bill_id: string; p_reason: string }
+        Returns: Json
+      }
+      add_ticket: {
+        Args: {
+          p_items: Json
+          p_order_id: string
+          p_request_id?: string
+          p_table_id?: string
+        }
+        Returns: Json
+      }
+      cancel_order_item: {
+        Args: { p_order_item_id: string; p_reason: string }
+        Returns: Json
+      }
+      cancel_order_with_reason: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: undefined
+      }
+      open_table: {
+        Args: { p_table_id: string }
+        Returns: Json
+      }
+      transfer_order: {
+        Args: { p_order_id: string; p_target_table_id: string }
         Returns: Json
       }
       cancel_order: {

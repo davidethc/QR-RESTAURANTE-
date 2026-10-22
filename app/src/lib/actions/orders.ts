@@ -5,6 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getTableSession } from "@/lib/session";
 import { dbFailure } from "@/lib/db-errors";
 import {
+  addTicketSchema,
+  cancelOrderItemSchema,
+  cancelOrderWithReasonSchema,
+  openTableSchema,
+  transferOrderSchema,
+  type AddTicketInput,
   customerOrderSchema,
   staffOrderSchema,
   type CustomerOrderInput,
@@ -186,5 +192,129 @@ export async function markDelivered(orderId: string): Promise<ActionResult> {
   if (error) return dbFailure(error, "markDelivered");
   revalidatePath("/orders");
   revalidatePath("/kitchen");
+  return { ok: true, data: undefined };
+}
+
+export type TicketResult = {
+  orderId: string;
+  ticketId: string;
+  ticketNumber: number;
+  folio: number;
+  shortCode: string;
+};
+
+function revalidateTables() {
+  revalidatePath("/tables");
+  revalidatePath("/orders");
+  revalidatePath("/kitchen");
+}
+
+/** Abre la mesa (sesión) sin crear pedido: el pedido nace con la primera comanda. */
+export async function openTable(
+  tableId: string
+): Promise<ActionResult<{ sessionId: string }>> {
+  const parsed = openTableSchema.safeParse({ tableId });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("open_table", {
+    p_table_id: parsed.data.tableId,
+  });
+  if (error) return dbFailure(error, "openTable");
+
+  revalidateTables();
+  return { ok: true, data: { sessionId: (data as { session_id: string }).session_id } };
+}
+
+/** Comanda nueva (#N+1) de un pedido, o la #1 de una mesa recién abierta (`orderId` null). */
+export async function addTicket(
+  input: AddTicketInput
+): Promise<ActionResult<TicketResult>> {
+  const parsed = addTicketSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("add_ticket", {
+    p_order_id: parsed.data.orderId as string,
+    p_items: toRpcItems(parsed.data.items),
+    p_request_id: parsed.data.requestId,
+    p_table_id: parsed.data.tableId,
+  });
+  if (error) return dbFailure(error, "addTicket");
+
+  const r = data as {
+    order_id: string;
+    ticket_id: string;
+    ticket_number: number;
+    folio: number;
+    short_code: string;
+  };
+  revalidateTables();
+  return {
+    ok: true,
+    data: {
+      orderId: r.order_id,
+      ticketId: r.ticket_id,
+      ticketNumber: r.ticket_number,
+      folio: r.folio,
+      shortCode: r.short_code,
+    },
+  };
+}
+
+/** Cancela un producto de una comanda ya enviada (motivo obligatorio, auditado). */
+export async function cancelOrderItem(
+  orderItemId: string,
+  reason: string
+): Promise<ActionResult> {
+  const parsed = cancelOrderItemSchema.safeParse({ orderItemId, reason });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_order_item", {
+    p_order_item_id: parsed.data.orderItemId,
+    p_reason: parsed.data.reason,
+  });
+  if (error) return dbFailure(error, "cancelOrderItem");
+
+  revalidateTables();
+  return { ok: true, data: undefined };
+}
+
+/** Cancela el pedido completo con motivo obligatorio y libera la mesa. */
+export async function cancelOrderWithReason(
+  orderId: string,
+  reason: string
+): Promise<ActionResult> {
+  const parsed = cancelOrderWithReasonSchema.safeParse({ orderId, reason });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_order_with_reason", {
+    p_order_id: parsed.data.orderId,
+    p_reason: parsed.data.reason,
+  });
+  if (error) return dbFailure(error, "cancelOrderWithReason");
+
+  revalidateTables();
+  return { ok: true, data: undefined };
+}
+
+/** Mueve el pedido (sesión, comandas, cuenta y pagos) a una mesa disponible. */
+export async function transferOrder(
+  orderId: string,
+  targetTableId: string
+): Promise<ActionResult> {
+  const parsed = transferOrderSchema.safeParse({ orderId, targetTableId });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("transfer_order", {
+    p_order_id: parsed.data.orderId,
+    p_target_table_id: parsed.data.targetTableId,
+  });
+  if (error) return dbFailure(error, "transferOrder");
+
+  revalidateTables();
   return { ok: true, data: undefined };
 }
