@@ -27,3 +27,7 @@ skills-lock.json
 
 # Capturas locales de QA/diseño (no versionar: repo público)
 _capturas/
+
+# Archivos temporales de la CLI de Supabase
+supabase/.temp/
+**/supabase/.temp/
