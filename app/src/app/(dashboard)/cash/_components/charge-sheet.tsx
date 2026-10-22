@@ -1,5 +1,6 @@
 "use client";
 
+import { attendPaidBillCalls } from "@/lib/actions/waiter-calls";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Printer, Receipt } from "lucide-react";
@@ -57,6 +58,9 @@ interface ChargeSheetProps {
  */
 export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, onSettled }: ChargeSheetProps) {
   const [bill, setBill] = useState<Bill | null>(null);
+  // La etiqueta de la cuenta (bill_json -> session_place_label) manda sobre la
+  // que pasó quien abrió la hoja, para que coincida con /cash.
+  const placeName = bill?.place_label || tableLabel;
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
@@ -144,6 +148,8 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
     setBill(result.bill);
     setSelectedItems({});
     setIdempotencyKey(crypto.randomUUID());
+    // Pagada del todo: la solicitud "Pedir cuenta" ya no está pendiente.
+    if (result.bill.status === "PAID") void attendPaidBillCalls(tableSessionId);
     if (result.replayed) {
       notify.success("Ese pago ya se había registrado.");
       return;
@@ -223,7 +229,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
       >
         <SheetHeader className="flex-row items-center gap-3 border-b border-border bg-card py-3 pr-16 pl-4 lg:pl-6">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <SheetTitle className="truncate text-title-sm font-semibold">Cobrar · {tableLabel}</SheetTitle>
+            <SheetTitle className="truncate text-title-sm font-semibold">Cobrar · {placeName}</SheetTitle>
             <SheetDescription className="flex items-center gap-2">
               {bill ? `Cuenta #${bill.bill_number}` : "Cargando la cuenta…"}
               {bill?.status === "OPEN" && <Badge variant="secondary">Abierta</Badge>}
@@ -269,7 +275,7 @@ export function ChargeSheet({ tableSessionId, tableLabel, open, onOpenChange, on
               <CheckCircle2 className="size-9" aria-hidden />
             </span>
             <p className="text-title font-semibold text-foreground">Mesa cobrada ✓</p>
-            <p className="text-body-sm text-muted-foreground">{tableLabel} quedó libre para el próximo cliente.</p>
+            <p className="text-body-sm text-muted-foreground">{placeName} quedó libre para el próximo cliente.</p>
             <Button asChild variant="outline" className="mt-4 h-12 w-full text-body font-semibold">
               <Link href={`/cash/ticket/${bill.id}?print=1`} target="_blank" rel="noopener noreferrer">
                 <Printer aria-hidden data-icon="inline-start" /> Imprimir ticket

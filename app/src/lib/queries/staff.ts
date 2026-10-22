@@ -43,7 +43,22 @@ export async function getStaffOrders(
   });
 
   if (error) throw error;
-  return (data ?? []) as unknown as StaffOrder[];
+  const orders = (data ?? []) as unknown as StaffOrder[];
+
+  // `get_staff_orders` no devuelve el origen; `orders.source` tiene SELECT
+  // por columna para el personal, así que se une aquí sin tocar la RPC.
+  if (orders.length > 0) {
+    const { data: sources } = await supabase
+      .from("orders")
+      .select("id, source")
+      .in(
+        "id",
+        orders.map((o) => o.id)
+      );
+    const bySource = new Map((sources ?? []).map((s) => [s.id, s.source]));
+    for (const o of orders) o.source = bySource.get(o.id) ?? null;
+  }
+  return orders;
 }
 
 export async function getWaiterCalls(
@@ -131,7 +146,7 @@ export async function getRestaurantSettings(
     // kitchen_ready_step: si la cocina marca "Listo" o solo mira (cocina,
     // pedidos del mesero).
     .select(
-      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, business_day_cutoff, timezone, kitchen_ready_step"
+      "id, name, slug, description, logo_url, phone, address, billing_enabled, max_waiter_discount_pct, business_day_cutoff, timezone, kitchen_ready_step, qr_orders_require_approval"
     )
     .eq("id", restaurantId)
     .single();

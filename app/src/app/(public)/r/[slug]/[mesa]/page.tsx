@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTableSession, getTableSessionExpiresAt } from "@/lib/session";
 import { getPublicMenu } from "@/lib/queries/menu";
+import { getPublicProductDetails } from "@/lib/queries/public-product-details";
 import { getTableStatus } from "@/lib/actions/table-status";
 import { getSessionChannelName } from "@/lib/session-channel";
 import { MenuHeader } from "./_components/menu-header";
 import { MenuBrowser } from "./_components/menu-browser";
 import { TableStatusProvider } from "./_components/table-status-provider";
 import { ActiveOrderStrip } from "./_components/active-order-strip";
+import { NameGate } from "./_components/name-gate";
+import { AccountBar } from "./_components/account-bar";
 import { SessionExpiryWatcher } from "./_components/session-expiry-watcher";
 
 export async function generateMetadata({
@@ -38,6 +41,7 @@ export default async function MenuPage({
   const statusPromise = getTableStatus();
   const session = await getTableSession();
   const menu = await menuPromise;
+  const productDetails = await getPublicProductDetails(menu.restaurant.id, slug);
 
   /**
    * Dos modos, decididos por si hay sesión de mesa viva:
@@ -72,6 +76,17 @@ export default async function MenuPage({
   // nunca sale del servidor (la cookie es httpOnly). Ver session-channel.ts.
   const channelName = inTable ? await getSessionChannelName() : null;
 
+  // Mesa recién escaneada y sin nombre: primero se le pone nombre (M11).
+  // Si la consulta de la sesión falló (info null) no se bloquea la carta.
+  if (inTable && initialStatus?.ok && initialStatus.data.info?.customerLabel === null) {
+    return (
+      <NameGate
+        restaurantName={menu.restaurant.name}
+        tableNumber={session!.tableNumber}
+      />
+    );
+  }
+
   return (
     <main className="min-h-full">
       <MenuHeader
@@ -85,16 +100,20 @@ export default async function MenuPage({
       {inTable ? (
         <TableStatusProvider
           initialStatus={
-            initialStatus?.ok ? initialStatus.data : { orders: [], calls: [], billPaid: false }
+            initialStatus?.ok
+              ? initialStatus.data
+              : { orders: [], calls: [], billPaid: false, info: null }
           }
           channelName={channelName}
         >
           <SessionExpiryWatcher
             expiresAt={getTableSessionExpiresAt(session!)}
           />
+          <AccountBar tableNumber={session!.tableNumber} />
           <ActiveOrderStrip slug={slug} tableNumber={session!.tableNumber} />
           <MenuBrowser
             categories={menu.categories}
+          productDetails={productDetails}
             slug={slug}
             tableNumber={session!.tableNumber}
             restaurantName={menu.restaurant.name}
@@ -104,6 +123,7 @@ export default async function MenuPage({
       ) : (
         <MenuBrowser
           categories={menu.categories}
+          productDetails={productDetails}
           slug={slug}
           tableNumber={null}
           restaurantName={menu.restaurant.name}

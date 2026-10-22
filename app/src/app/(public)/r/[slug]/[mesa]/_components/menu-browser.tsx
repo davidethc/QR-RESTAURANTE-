@@ -10,22 +10,28 @@ import { SuggestionsRow } from "./suggestions-row";
 import { ProductSheet } from "./product-sheet";
 import { CartSheet } from "./cart-sheet";
 import { ServiceButtons } from "./service-buttons";
+import { useTableStatus } from "./table-status-provider";
+import { useLiveMenuCategories } from "@/hooks/use-live-menu";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatPrice, cn, normalizeText } from "@/lib/utils";
-import type { PublicCategory, PublicProduct } from "@/types/menu";
+import { needsChoice } from "@/lib/order-lines";
+import type { PublicCategory, PublicProduct, StaffProductDetail } from "@/types/menu";
 
 export function MenuBrowser({
-  categories,
+  categories: initialCategories,
+  productDetails,
   slug,
   tableNumber,
   restaurantName,
   whatsappPhone,
 }: {
   categories: PublicCategory[];
+  /** Variantes y extras por producto (id). */
+  productDetails: Record<string, StaffProductDetail>;
   slug: string;
   /** null = modo carta: sin mesa, el pedido se envía por WhatsApp. */
   tableNumber: number | null;
@@ -33,6 +39,8 @@ export function MenuBrowser({
   whatsappPhone: string | null;
 }) {
   const inTable = tableNumber !== null;
+  // M09: la disponibilidad se actualiza sola mientras la carta está abierta.
+  const categories = useLiveMenuCategories(slug, initialCategories);
   const [query, setQuery] = useState("");
   // Todas las categorías arrancan cerradas — el cliente ve la lista
   // completa de nombres de un vistazo y toca la que le interesa, en
@@ -68,6 +76,7 @@ export function MenuBrowser({
   // Mesa 0 = carrito del modo carta. Las mesas reales empiezan en 1,
   // así que nunca se pisa con el carrito de una mesa de verdad.
   const cart = useCart(slug, tableNumber ?? 0);
+  const { canOrder } = useTableStatus();
 
   // Enlace de "solo conversar", sin pedido: el que lleva el pedido
   // redactado vive en el carrito.
@@ -236,6 +245,12 @@ export function MenuBrowser({
           suggestions={suggestions}
           onSelectProduct={setSelectedProduct}
           onAddCombo={(dish, drink) => {
+            // Si algo del combo exige elegir variante/extras, se abre su ficha.
+            const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
+            if (pick) {
+              setSelectedProduct(pick);
+              return;
+            }
             cart.addItems([
               { product: dish, quantity: 1, notes: "" },
               { product: drink, quantity: 1, notes: "" },
@@ -285,9 +300,10 @@ export function MenuBrowser({
 
       <ProductSheet
         product={selectedProduct}
+        detail={selectedProduct ? productDetails[selectedProduct.id] : undefined}
         onOpenChange={(open) => !open && setSelectedProduct(null)}
-        onAdd={(product, quantity, notes) => {
-          cart.addItem(product, quantity, notes);
+        onAdd={(product, quantity, notes, choice) => {
+          cart.addItem(product, quantity, notes, choice);
           notify.itemAdded(product.name);
         }}
       />
@@ -302,10 +318,16 @@ export function MenuBrowser({
         onClearCart={cart.clearCart}
         slug={slug}
         tableNumber={tableNumber}
+        orderingClosed={!canOrder}
         restaurantName={restaurantName}
         whatsappPhone={whatsappPhone}
         suggestedProducts={suggestedProducts}
         onAddSuggestion={(product) => {
+          if (needsChoice(productDetails[product.id])) {
+            setCartOpen(false);
+            setSelectedProduct(product);
+            return;
+          }
           cart.addItem(product, 1, "");
           notify.itemAdded(product.name);
         }}

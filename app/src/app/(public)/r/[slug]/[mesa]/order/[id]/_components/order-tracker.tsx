@@ -212,7 +212,9 @@ export function OrderTracker({
                       : "text-muted-foreground"
                   )}
                 >
-                  {step.label}
+                  {step.key === "received" && order.status === "PENDING"
+                    ? "Esperando aprobación del mesero"
+                    : step.label}
                   {current && (
                     <span className="sr-only"> (paso actual)</span>
                   )}

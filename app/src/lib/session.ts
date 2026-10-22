@@ -74,3 +74,32 @@ export async function getTableSession(): Promise<TableSession | null> {
   }
   return null;
 }
+
+const QR_COOKIE = "mk_qr";
+const QR_MAX_AGE_SECONDS = 60 * 15;
+
+/**
+ * Token del QR de la mesa, guardado unos minutos solo para poder abrir la
+ * mesa con el nombre del cliente (`open_table_from_qr`). httpOnly: nunca
+ * llega al JavaScript del navegador. Se borra en cuanto se usa.
+ */
+export async function setQrToken(token: string): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(QR_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: QR_MAX_AGE_SECONDS,
+    path: "/",
+  });
+}
+
+export async function getQrToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(QR_COOKIE)?.value ?? null;
+}
+
+export async function clearQrToken(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(QR_COOKIE);
+}

@@ -6,21 +6,16 @@ import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
-import {
-  getCashRegisters,
-  getClosedBillsToday,
-  getClosedCashSessions,
-  getOpenCashSessionId,
-} from "@/lib/queries/cash";
+import { getClosedBillsToday } from "@/lib/queries/cash";
 import { listOpenBills } from "@/lib/actions/billing";
-import { getCashSessionSummary } from "@/lib/actions/cash";
+import { getCashSessionSummary, getLastCashFloat } from "@/lib/actions/cash";
 import { getPublicMenu } from "@/lib/queries/menu";
 import { getTopProducts } from "@/lib/queries/staff";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { CashPageLive } from "./_components/cash-page-live";
 import { CashSessionArea } from "./_components/cash-session-area";
 import { ClosedBillsToday } from "./_components/closed-bills-today";
-import { ClosedSessionsHistory } from "./_components/closed-sessions-history";
+import { CashTabs } from "./_components/cash-tabs";
 import { OpenBillsList } from "./_components/open-bills-list";
 import { QuickSaleSheet } from "./_components/quick-sale-sheet";
 import type { CashSessionSummary } from "@/types/billing";
@@ -72,40 +67,38 @@ export default async function CashPage() {
     );
   }
 
-  const [registers, openSessionId, closedSessionRows, closedBillsToday] = await Promise.all([
-    getCashRegisters(restaurantId),
-    getOpenCashSessionId(restaurantId),
-    getClosedCashSessions(restaurantId, 10),
+  const [registersResult, closedBillsToday] = await Promise.all([
+    getLastCashFloat(restaurantId),
     getClosedBillsToday(restaurantId),
   ]);
+  const registers = registersResult.ok ? registersResult.data : [];
+  const openSessionIds = registers.flatMap((r) => (r.open_session_id ? [r.open_session_id] : []));
 
-  const [summaryResult, openBillsResult, closedSummaryResults, menu, topProducts] = await Promise.all([
-    openSessionId ? getCashSessionSummary(openSessionId) : Promise.resolve(null),
+  const [summaryResults, openBillsResult, menu, topProducts] = await Promise.all([
+    Promise.all(openSessionIds.map((id) => getCashSessionSummary(id))),
     listOpenBills(restaurantId),
-    Promise.all(closedSessionRows.map((row) => getCashSessionSummary(row.id))),
     getPublicMenu(session.restaurant.slug),
     getTopProducts(restaurantId),
   ]);
 
-  const summary = summaryResult && summaryResult.ok ? summaryResult.data : null;
-  const openBills = openBillsResult.ok ? openBillsResult.data : [];
-  const closedSessions = closedSummaryResults
+  const summaries = summaryResults
     .map((r) => (r.ok ? r.data : null))
     .filter((s): s is CashSessionSummary => s !== null);
+  const openBills = openBillsResult.ok ? openBillsResult.data : [];
 
   return (
     <main>
       <PageHeader
         title="Caja"
-        description={summary ? "Caja abierta" : "La caja está cerrada"}
+        description={summaries.length > 0 ? "Caja abierta" : "La caja está cerrada"}
         action={<CashPageLive restaurantId={restaurantId} />}
       />
+      <CashTabs />
       <div className="flex flex-col gap-8 px-4 pb-12 md:px-8">
         <OfflineBanner message="No se puede cobrar ni registrar pagos hasta que vuelva la red." />
         <CashSessionArea
-          summary={summary}
+          summaries={summaries}
           registers={registers}
-          role={role}
           timeZone={session.restaurant.timezone}
         />
 
@@ -113,14 +106,12 @@ export default async function CashPage() {
           categories={menu.categories}
           topProducts={topProducts}
           maxWaiterDiscountPct={settings.max_waiter_discount_pct}
-          hasOpenSession={summary !== null}
+          hasOpenSession={summaries.length > 0}
         />
 
         <OpenBillsList bills={openBills} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
 
         <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />
-
-        <ClosedSessionsHistory sessions={closedSessions} timeZone={session.restaurant.timezone} />
       </div>
     </main>
   );

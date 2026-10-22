@@ -19,6 +19,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -30,20 +31,11 @@ import { newRequestId } from "@/lib/request-id";
 import { addCashMovement } from "@/lib/actions/cash";
 import { addCashMovementSchema, type AddCashMovementInput } from "@/lib/validations/cash";
 import { CASH_MOVEMENT_TYPE } from "@/config/constants";
+import { REASON_LABEL } from "@/lib/cash-labels";
 
-export const REASON_LABEL: Record<string, string> = {
-  FLOAT_TOPUP: "Refuerzo de fondo",
-  TIPS_PAYOUT: "Reparto de propinas",
-  SUPPLIER_PAYMENT: "Pago a proveedor",
-  EXPENSE: "Gasto",
-  REFUND: "Devolución",
-  WITHDRAWAL: "Retiro",
-  OTHER: "Otro",
-};
 
 /**
- * Entrada/salida de caja. Solo OWNER/ADMIN (add_cash_movement lo exige;
- * cash_movements ni siquiera lo puede leer un WAITER — cierre ciego).
+ * Entrada/salida de caja. OWNER/ADMIN y CASHIER de esa caja (add_cash_movement).
  */
 /** Valores de un movimiento nuevo, con su propia clave de idempotencia. La
  * clave se conserva entre reintentos del mismo envío (el formulario no se
@@ -61,8 +53,19 @@ function freshMovement(cashSessionId: string): AddCashMovementInput {
   };
 }
 
-export function CashMovementDialog({ cashSessionId }: { cashSessionId: string }) {
+export function CashMovementDialog({
+  cashSessionId,
+  sessions,
+  label = "Registrar movimiento",
+}: {
+  cashSessionId?: string;
+  /** Cajas abiertas donde se puede registrar; con varias, se muestra un selector. */
+  sessions?: { id: string; name: string }[];
+  label?: string;
+}) {
   "use no memo";
+  const [targetId, setTargetId] = useState(cashSessionId ?? sessions?.[0]?.id ?? "");
+  const cashSessionIdValue = targetId;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const {
@@ -74,13 +77,13 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
     formState: { errors, isSubmitting },
   } = useForm<AddCashMovementInput>({
     resolver: zodResolver(addCashMovementSchema),
-    defaultValues: freshMovement(cashSessionId),
+    defaultValues: freshMovement(cashSessionIdValue),
   });
 
   const reason = useWatch({ control, name: "reason" });
 
   function onSubmit(values: AddCashMovementInput) {
-    return addCashMovement({ ...values, cashSessionId }).then((result) => {
+    return addCashMovement({ ...values, cashSessionId: cashSessionIdValue }).then((result) => {
       if (!result.ok) {
         setError("root", { message: result.error });
         notify.error(result.error);
@@ -88,7 +91,7 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
       }
       notify.success(result.data.replayed ? "Ese movimiento ya estaba registrado" : "Movimiento registrado");
       setOpen(false);
-      reset(freshMovement(cashSessionId));
+      reset(freshMovement(cashSessionIdValue));
       router.refresh();
     });
   }
@@ -98,20 +101,38 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) reset(freshMovement(cashSessionId));
+        if (!next) reset(freshMovement(cashSessionIdValue));
       }}
     >
       <DialogTrigger asChild>
         <Button variant="outline" className="h-11 text-body-sm font-semibold">
-          Registrar movimiento
+          {label}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Movimiento de caja</DialogTitle>
+          <DialogDescription>Todo movimiento necesita un motivo; suma al esperado del siguiente corte.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <FieldGroup>
+            {sessions && sessions.length > 1 && (
+              <Field>
+                <FieldLabel htmlFor="movement-register">Caja</FieldLabel>
+                <Select value={targetId} onValueChange={setTargetId}>
+                  <SelectTrigger id="movement-register" className="h-12 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessions.map((x) => (
+                      <SelectItem key={x.id} value={x.id}>
+                        {x.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
             <Field>
               <FieldLabel>Tipo</FieldLabel>
               <Controller
@@ -184,7 +205,7 @@ export function CashMovementDialog({ cashSessionId }: { cashSessionId: string })
             <FieldError errors={[errors.root]} />
           </FieldGroup>
           <DialogFooter className="mt-4">
-            <Button type="submit" disabled={isSubmitting} className="h-11">
+            <Button type="submit" disabled={isSubmitting || !targetId} className="h-11">
               {isSubmitting && <Loader2 className="animate-spin" />}
               Registrar
             </Button>

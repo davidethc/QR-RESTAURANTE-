@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Minus, Plus, Trash2, MessageCircle, ShoppingBag, X, QrCode } from "lucide-react";
+import { Minus, Plus, Trash2, MessageCircle, ShoppingBag, X, QrCode, Receipt } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -27,6 +27,7 @@ export function CartSheet({
   onClearCart,
   slug,
   tableNumber,
+  orderingClosed = false,
   restaurantName,
   whatsappPhone,
   suggestedProducts,
@@ -41,6 +42,8 @@ export function CartSheet({
   onClearCart: () => void;
   slug: string;
   tableNumber: number | null;
+  /** La cuenta ya se pidió: no se pueden agregar más productos. */
+  orderingClosed?: boolean;
   restaurantName: string;
   whatsappPhone: string | null;
   suggestedProducts: PublicProduct[];
@@ -63,8 +66,11 @@ export function CartSheet({
     () =>
       items.map((item) => ({
         productId: item.product.id,
+        variantId: item.variantId,
         quantity: item.quantity,
         notes: item.notes || undefined,
+        // Siempre un arreglo (aun vacío): así la base exige los grupos obligatorios.
+        modifiers: item.modifierPicks ?? [],
       })),
     [items]
   );
@@ -159,6 +165,11 @@ export function CartSheet({
                       <p className="font-display truncate text-[15px] font-bold text-foreground">
                         {item.product.name}
                       </p>
+                      {(item.variantName || item.modifiers) && (
+                        <p className="mt-0.5 text-[12px] text-muted-foreground line-clamp-2">
+                          {[item.variantName, item.modifiers].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
                       {item.notes && (
                         <p className="mt-0.5 text-[12px] text-muted-foreground line-clamp-1">
                           {item.notes}
@@ -278,7 +289,20 @@ export function CartSheet({
               </div>
             )}
 
-            {inTable && sessionExpired ? (
+            {inTable && orderingClosed && !sessionExpired && (
+              <div
+                role="alert"
+                className="mb-3 flex items-start gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 text-[13px] text-foreground"
+              >
+                <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                <span>
+                  Ya pediste la cuenta, así que no se pueden agregar más productos. Si quieres
+                  algo más, avísale al mesero.
+                </span>
+              </div>
+            )}
+
+            {inTable && (sessionExpired || orderingClosed) ? (
               // Sin ConfirmDialog a propósito: con `asChild`, Radix pone el
               // manejador de apertura en el `motion.div` envoltorio, no en
               // el <button> — un <button disabled> anidado no lo hubiera

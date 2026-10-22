@@ -52,6 +52,23 @@ export interface CartItem {
   quantity: number;
   notes: string;
   subtotal: number;
+  /** Precio unitario con variante y extras (informativo; la base recalcula). */
+  unitPrice?: number;
+  variantId?: string;
+  variantName?: string;
+  /** Resumen legible de extras: "Extra queso x2". */
+  modifiers?: string;
+  /** Extras estructurados que viajan a create_customer_order. */
+  modifierPicks?: { optionId: string; qty: number }[];
+}
+
+/** Elección hecha en la ficha del cliente (QR). */
+export interface CustomerChoice {
+  unitPrice: number;
+  variantId?: string;
+  variantName?: string;
+  modifiers?: string;
+  modifierPicks: { optionId: string; qty: number }[];
 }
 
 /**

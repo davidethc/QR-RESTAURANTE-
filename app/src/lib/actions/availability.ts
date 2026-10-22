@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { refreshPublicMenuTag } from "@/lib/public-menu-tag";
 import { dbFailure } from "@/lib/db-errors";
 import { setItemAvailabilitySchema } from "@/lib/validations/menu";
 import type { ActionResult } from "@/types/actions";
@@ -36,5 +37,7 @@ export async function setItemAvailability(input: unknown): Promise<ActionResult>
 
   revalidatePath("/menu");
   revalidatePath("/availability");
+  // La carta pública (cacheada) ve el cambio en el siguiente refresco en vivo.
+  await refreshPublicMenuTag();
   return { ok: true, data: undefined };
 }

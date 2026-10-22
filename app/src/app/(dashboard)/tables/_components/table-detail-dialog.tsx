@@ -23,7 +23,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { OrderStatusBadge } from "@/components/shared/status-badge";
 import { ReleaseTableButton } from "./release-table-button";
-import { cancelOrderWithReason, openTable, transferOrder } from "@/lib/actions/orders";
+import { ActionButton } from "@/components/shared/action-button";
+import { RejectDialog } from "../../orders/_components/reject-dialog";
+import { acceptOrder, cancelOrderWithReason, openTable, transferOrder } from "@/lib/actions/orders";
 import { cancelOrderWithReasonSchema } from "@/lib/validations/orders";
 import { notify } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
@@ -210,7 +212,7 @@ export function TableDetailDialog({
             {order ? (
               <ul className="flex flex-col divide-y divide-border rounded-card border border-border">
                 {table.orders.map((o) => (
-                  <li key={o.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5">
                     <div className="min-w-0">
                       <p className="text-body-sm font-semibold">
                         Pedido #{o.folio} <span className="font-normal text-muted-foreground">· {o.shortCode}</span>
@@ -221,6 +223,19 @@ export function TableDetailDialog({
                       </div>
                     </div>
                     <span className="font-semibold tabular-nums">{formatPrice(o.total)}</span>
+                    {o.status === "PENDING" && canServeTable && (
+                      <div className="flex w-full gap-2">
+                        <ActionButton
+                          action={() => acceptOrder(o.id)}
+                          successMessage="Pedido aprobado — va a cocina"
+                          onSuccess={() => router.refresh()}
+                          className="h-11 flex-1 rounded-control font-semibold"
+                        >
+                          Aprobar
+                        </ActionButton>
+                        <RejectDialog orderId={o.id} onDone={() => router.refresh()} />
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
