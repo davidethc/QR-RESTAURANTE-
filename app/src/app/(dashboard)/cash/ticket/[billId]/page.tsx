@@ -111,9 +111,16 @@ export default async function TicketPage({
                 <div className="flex justify-between gap-2">
                   <span>
                     {item.quantity}x {item.product_name}
+                    {item.variant_name ? ` (${item.variant_name})` : ""}
                   </span>
                   <span className="shrink-0 tabular-nums">{formatPrice(item.subtotal)}</span>
                 </div>
+                {(item.options ?? []).map((o, k) => (
+                  <p key={k} className="pl-3 text-tiny">
+                    + {o.qty > 1 ? `${o.qty}x ` : ""}{o.value_name}
+                    {o.price_modifier ? ` (${formatPrice(o.price_modifier * o.qty)})` : ""}
+                  </p>
+                ))}
                 {item.notes && <p className="pl-3 text-tiny">* {item.notes}</p>}
               </div>
             ))}

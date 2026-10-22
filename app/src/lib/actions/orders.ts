@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTableSession } from "@/lib/session";
 import { dbFailure } from "@/lib/db-errors";
-import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import {
   addTicketSchema,
   cancelOrderItemSchema,
@@ -345,10 +344,10 @@ export async function editOrderItem(
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
 
   const supabase = await createClient();
-  const { error } = await callUntypedRpc(supabase, "edit_order_item", {
+  const { error } = await supabase.rpc("edit_order_item", {
     p_order_item_id: parsed.data.orderItemId,
-    p_variant_id: parsed.data.variantId ?? null,
-    p_notes: parsed.data.notes ?? null,
+    p_variant_id: parsed.data.variantId ?? undefined,
+    p_notes: parsed.data.notes ?? undefined,
   });
   if (error) return dbFailure(error, "editOrderItem");
 
@@ -362,7 +361,7 @@ export async function reopenTable(tableSessionId: string): Promise<ActionResult>
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
 
   const supabase = await createClient();
-  const { error } = await callUntypedRpc(supabase, "reopen_table", {
+  const { error } = await supabase.rpc("reopen_table", {
     p_table_session_id: parsed.data.tableSessionId,
   });
   if (error) return dbFailure(error, "reopenTable");

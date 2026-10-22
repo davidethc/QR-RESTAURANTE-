@@ -22,10 +22,21 @@ export type BillItem = {
   id: string;
   product_id: string | null;
   product_name: string;
+  /** Variante elegida (S3-F0); puede faltar en respuestas anteriores. */
+  variant_name?: string | null;
+  /** Personalizaciones elegidas (S3-F0). */
+  options?: BillItemOption[];
   quantity: number;
   unit_price: number;
   subtotal: number;
   notes: string | null;
+};
+
+export type BillItemOption = {
+  name: string;
+  value_name: string;
+  qty: number;
+  price_modifier: number;
 };
 
 export type BillOrder = {

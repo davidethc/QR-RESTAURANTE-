@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getOrderContact, type OrderContact } from "@/lib/actions/counter-order";
 import { Check, ChevronDown, Copy, MoreHorizontal, Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,7 +62,22 @@ export function CounterOrdersPanel({
 }) {
   const [modal, setModal] = useState<{ editing: CounterOrderView | null } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const detail = orders.find((o) => o.id === detailId) ?? null;
+  const [contacts, setContacts] = useState<Record<string, OrderContact>>({});
+  const baseDetail = orders.find((o) => o.id === detailId) ?? null;
+  const contact = detailId ? contacts[detailId] : undefined;
+  const detail = baseDetail && contact ? { ...baseDetail, ...contact } : baseDetail;
+
+  // Teléfono y dirección ya no vienen en la lista: se piden al abrir el detalle.
+  useEffect(() => {
+    if (!detailId || contacts[detailId]) return;
+    let live = true;
+    getOrderContact(detailId).then((r) => {
+      if (live && r.ok) setContacts((c) => ({ ...c, [detailId]: r.data }));
+    });
+    return () => {
+      live = false;
+    };
+  }, [detailId, contacts]);
 
   return (
     <section aria-labelledby="counter-orders-title" className="px-4 pb-24 pt-6">
@@ -107,6 +123,7 @@ export function CounterOrdersPanel({
         <DetailDialog
           order={detail}
           canCharge={billingEnabled && canCharge}
+          contactReady={Boolean(contact)}
           onClose={() => setDetailId(null)}
           onEdit={() => {
             setDetailId(null);
@@ -131,11 +148,13 @@ export function CounterOrdersPanel({
 function DetailDialog({
   order,
   canCharge,
+  contactReady,
   onClose,
   onEdit,
 }: {
   order: CounterOrderView;
   canCharge: boolean;
+  contactReady: boolean;
   onClose: () => void;
   onEdit: () => void;
 }) {
@@ -195,7 +214,7 @@ function DetailDialog({
                   Contactar cliente (sin teléfono)
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem className="min-h-11" onSelect={onEdit}>
+              <DropdownMenuItem className="min-h-11" disabled={!contactReady} onSelect={onEdit}>
                 Editar pedido
               </DropdownMenuItem>
             </DropdownMenuContent>

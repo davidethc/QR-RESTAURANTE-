@@ -1,7 +1,6 @@
 import { readMemberSession } from "@/lib/auth/member-session";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import type { OrderStatus, CallStatus } from "@/config/constants";
 import type {
   MyRestaurant,
@@ -92,7 +91,31 @@ export async function getAdminMenu(restaurantId: string): Promise<AdminMenu> {
   });
 
   if (error) throw error;
-  return data as unknown as AdminMenu;
+  const menu = data as unknown as AdminMenu;
+
+  // "Desde $X": con varias variantes el precio del producto no es el de venta.
+  const ids = (menu.products ?? []).map((p) => p.id);
+  if (ids.length === 0) return menu;
+  const { data: vars } = await supabase
+    .from("product_variants")
+    .select("product_id, price")
+    .in("product_id", ids);
+  const byProduct = new Map<string, { count: number; min: number }>();
+  for (const v of vars ?? []) {
+    const cur = byProduct.get(v.product_id);
+    const price = Number(v.price);
+    byProduct.set(v.product_id, {
+      count: (cur?.count ?? 0) + 1,
+      min: cur ? Math.min(cur.min, price) : price,
+    });
+  }
+  return {
+    ...menu,
+    products: menu.products.map((p) => {
+      const agg = byProduct.get(p.id);
+      return agg && agg.count > 1 ? { ...p, variant_count: agg.count, min_variant_price: agg.min } : p;
+    }),
+  };
 }
 
 export async function getRestaurantSettings(
@@ -192,9 +215,10 @@ export async function getTopProducts(
 /** Personal del restaurante (solo OWNER/ADMIN; la RPC lo exige). */
 export async function getRestaurantStaff(restaurantId: string): Promise<StaffMember[]> {
   const supabase = await createClient();
-  const { data, error } = await callUntypedRpc<Omit<StaffMember, "roles" | "cash_register_ids" | "has_pin">[]>(supabase, "get_restaurant_staff", {
+  const { data: rawStaff, error } = await supabase.rpc("get_restaurant_staff", {
     p_restaurant_id: restaurantId,
   });
+  const data = rawStaff as unknown as Omit<StaffMember, "roles" | "cash_register_ids" | "has_pin">[] | null;
 
   // La RPC autoriza a quien lista antes de leer los campos nuevos.
   if (error) throw error;
@@ -229,11 +253,11 @@ export async function getSalesReport(
   days: 1 | 7 | 30
 ): Promise<SalesReport> {
   const supabase = await createClient();
-  const { data, error } = await callUntypedRpc<SalesReport>(supabase, "get_sales_report", {
+  const { data, error } = await supabase.rpc("get_sales_report", {
     p_restaurant_id: restaurantId,
     p_days: days,
   });
 
   if (error || !data) throw error ?? new Error("Sin datos de ventas");
-  return data;
+  return data as unknown as SalesReport;
 }

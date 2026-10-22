@@ -149,6 +149,9 @@ export interface AdminProduct {
   featured: boolean;
   paired_drink_id: string | null;
   position: number;
+  /** Solo con 2+ variantes (lo agrega getAdminMenu). */
+  variant_count?: number;
+  min_variant_price?: number;
 }
 
 export interface AdminMenu {
