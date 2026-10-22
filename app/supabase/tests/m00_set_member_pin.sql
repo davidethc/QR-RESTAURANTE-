@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- Pruebas · M00-T04 RPC set_member_pin (migración *_m00_set_member_pin.sql).
+-- Pruebas · M00-T04 RPC generate_member_pin (migración *_m00_set_member_pin.sql).
 --
 -- SIEMPRE dentro de BEGIN ... ROLLBACK y SOLO sobre el restaurante monky-qa
 -- (más un restaurante temporal creado aquí mismo para el caso "otro
@@ -8,21 +8,20 @@
 -- cada prueba con ok = true/false.
 --
 -- Qué demuestra:
---   P01 OWNER asigna un PIN de 4 dígitos: queda un hash bcrypt (coste 10)
---       que verifica con crypt() y no con otro PIN
---   P02 ADMIN asigna otro PIN (con cero inicial) a un mesero: reemplaza el anterior
---   P03 PIN de 3, 5 o 6 dígitos, largo, no numérico, con espacios, salto de línea, dígitos
---       no ASCII, vacío o NULL: se rechaza y el hash no cambia
+--   P01 OWNER genera el PIN de un mesero: devuelve 4 dígitos ASCII y queda un
+--       hash bcrypt (coste 10) que verifica con crypt() y no con otro PIN
+--   P02 ADMIN regenera el PIN: devuelve otro PIN, reemplaza el anterior
+--   P03 miembro NULL o inexistente: rechazado y ningún hash cambia
 --   P04 KITCHEN, WAITER, ADMIN inactivo y llamada sin sesión: rechazados
 --   P05 ADMIN sobre otro ADMIN, sobre el OWNER o sobre sí mismo: rechazado;
 --       el OWNER tampoco cambia su propio PIN por esta ruta
 --   P06 miembro de otro restaurante: rechazado (OWNER y ADMIN de monky-qa)
 --   P07 pin_hash no es legible por authenticated ni anon
 --   P08 audit_logs: una fila UPDATE por cambio, sin el PIN ni el hash
---   P10 PIN único por restaurante: repetir el PIN de otro miembro del mismo
---       restaurante da 23505 PIN_IN_USE y no cambia el hash; reponer el propio
---       PIN del miembro sí es válido
---   P09 firma: returns void, SECURITY DEFINER, search_path vacío, EXECUTE
+--   P10 PIN único por restaurante: con 9999 de los 10000 PIN ocupados la
+--       base encuentra el único libre; sin ninguno libre da PIN_POOL_EXHAUSTED
+--       y no cambia el hash; nunca se repite el PIN de otro miembro
+--   P09 firma: returns text, SECURITY DEFINER, search_path vacío, EXECUTE
 --       solo para authenticated (ni anon, ni PUBLIC, ni service_role)
 -- ---------------------------------------------------------------------------
 
@@ -103,14 +102,14 @@ begin
   from ins join _ctx c on c.v = ins.user_id and c.k like 'u\_%';
 end $$;
 
--- Llama a set_member_pin como p_actor (NULL = sin sesión) y devuelve 'OK' o
--- 'SQLSTATE: mensaje'. Deja el rol como estaba.
-create function pg_temp.try_pin(p_actor uuid, p_member text, p_pin text)
+-- Llama a generate_member_pin como p_actor (NULL = sin sesión) y devuelve el PIN
+-- generado (4 dígitos) o 'SQLSTATE: mensaje'. Deja el rol como estaba.
+create function pg_temp.try_pin(p_actor uuid, p_member text)
 returns text
 language plpgsql
 as $$
 declare
-  v_out text := 'OK';
+  v_out text;
 begin
   perform set_config('role', 'authenticated', true);
   perform set_config('request.jwt.claims',
@@ -118,7 +117,7 @@ begin
                           else json_build_object('sub', p_actor, 'role', 'authenticated')::text end,
                      true);
   begin
-    perform public.set_member_pin((select v from _ctx where k = p_member), p_pin);
+    v_out := public.generate_member_pin((select v from _ctx where k = p_member));
   exception when others then
     v_out := sqlstate || ': ' || sqlerrm;
   end;
@@ -135,59 +134,56 @@ as $$
   select pin_hash from public.restaurant_members where id = (select v from _ctx where k = p_member);
 $$;
 
+create temp table _pins (k text primary key, pin text) on commit drop;
+grant select, insert, update on _pins to public;
+
 -- ---------------------------------------------------------------------------
--- P01 · OWNER asigna PIN de 4 dígitos
+-- P01 · OWNER genera el PIN de un mesero
 -- ---------------------------------------------------------------------------
 do $$
 declare
-  v_res text := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_waiter', '1234');
+  v_res text := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_waiter');
   v_h text := pg_temp.hash_of('m_waiter');
 begin
+  insert into _pins values ('p01', v_res);
   insert into _r (test, ok, detail) values
-    ('P01a OWNER asigna PIN 1234 a un mesero', v_res = 'OK', v_res),
+    ('P01a OWNER genera un PIN de exactamente 4 dígitos ASCII', v_res ~ '^[0-9]{4}$', 'longitud ' || length(v_res)),
     ('P01b el hash es bcrypt con coste 10', coalesce(v_h like '$2a$10$%' and length(v_h) = 60, false), left(v_h, 7)),
-    ('P01c el hash verifica con crypt(1234)', coalesce(extensions.crypt('1234', v_h) = v_h, false), ''),
-    ('P01d el hash no verifica con otro PIN', coalesce(extensions.crypt('1235', v_h) <> v_h, false), ''),
-    ('P01e no se guarda el PIN en texto plano', coalesce(v_h <> '1234', false), '');
+    ('P01c el hash verifica con el PIN devuelto', coalesce(extensions.crypt(v_res, v_h) = v_h, false), ''),
+    ('P01d el hash no verifica con otro PIN', coalesce(extensions.crypt(lpad(((v_res::int + 1) % 10000)::text, 4, '0'), v_h) <> v_h, false), ''),
+    ('P01e no se guarda el PIN en texto plano', coalesce(v_h <> v_res, false), '');
 end $$;
 
 -- ---------------------------------------------------------------------------
--- P02 · ADMIN asigna PIN con cero inicial (reemplaza el anterior)
+-- P02 · ADMIN regenera el PIN (reemplaza el anterior, nunca repite el mismo)
 -- ---------------------------------------------------------------------------
 do $$
 declare
   v_before text := pg_temp.hash_of('m_waiter');
-  v_res text := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_waiter', '0987');
+  v_res text := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_waiter');
   v_h text := pg_temp.hash_of('m_waiter');
 begin
+  insert into _pins values ('p02', v_res);
   insert into _r (test, ok, detail) values
-    ('P02a ADMIN asigna PIN 0987 a un mesero', v_res = 'OK', v_res),
-    ('P02b el hash nuevo verifica con 0987 y no con 1234',
-     coalesce(v_h <> v_before and extensions.crypt('0987', v_h) = v_h
-              and extensions.crypt('1234', v_h) <> v_h, false), '');
+    ('P02a ADMIN regenera el PIN de un mesero', v_res ~ '^[0-9]{4}$', v_res),
+    ('P02b el PIN nuevo es distinto del anterior', v_res is distinct from (select pin from _pins where k = 'p01'), ''),
+    ('P02c el hash nuevo verifica con el PIN nuevo y no con el anterior',
+     coalesce(v_h <> v_before and extensions.crypt(v_res, v_h) = v_h
+              and extensions.crypt((select pin from _pins where k = 'p01'), v_h) <> v_h, false), '');
 end $$;
 
 -- ---------------------------------------------------------------------------
--- P03 · formato del PIN
+-- P03 · miembro NULL: rechazado, ningún hash cambia
 -- ---------------------------------------------------------------------------
 do $$
 declare
   v_before text := pg_temp.hash_of('m_waiter');
-  v_pin text;
   v_res text;
 begin
-  foreach v_pin in array array['123', '12345', '123456', '1234567', '12a4', 'abcd', '', ' 1234', '1234 ',
-                               '12 34', E'1234\n', '-123', '1.234', '١٢٣٤', '１２３４'] loop
-    v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_waiter', v_pin);
-    insert into _r (test, ok, detail) values
-      ('P03 rechaza PIN ' || quote_literal(v_pin), v_res like 'P0001:%', v_res);
-  end loop;
-
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_waiter', null);
-  insert into _r (test, ok, detail) values ('P03 rechaza PIN NULL', v_res like 'P0001:%', v_res);
-
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'ninguno');
   insert into _r (test, ok, detail) values
-    ('P03z ningún PIN inválido cambió el hash', pg_temp.hash_of('m_waiter') = v_before, '');
+    ('P03a miembro NULL rechazado', v_res like 'P0001:%', v_res),
+    ('P03z ningún rechazo cambió el hash', pg_temp.hash_of('m_waiter') = v_before, '');
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -198,16 +194,16 @@ declare
   v_before text := pg_temp.hash_of('m_waiter');
   v_res text;
 begin
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_kitchen'), 'm_waiter', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_kitchen'), 'm_waiter');
   insert into _r (test, ok, detail) values ('P04a KITCHEN no asigna PIN', v_res like 'P0001:%', v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_waiter'), 'm_kitchen', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_waiter'), 'm_kitchen');
   insert into _r (test, ok, detail) values ('P04b WAITER no asigna PIN', v_res like 'P0001:%', v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin_off'), 'm_waiter', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin_off'), 'm_waiter');
   insert into _r (test, ok, detail) values ('P04c ADMIN inactivo no asigna PIN', v_res like 'P0001:%', v_res);
 
-  v_res := pg_temp.try_pin(null, 'm_waiter', '4321');
+  v_res := pg_temp.try_pin(null, 'm_waiter');
   insert into _r (test, ok, detail) values ('P04d sin sesión no asigna PIN', v_res like 'P0001:%', v_res);
 
   insert into _r (test, ok, detail) values
@@ -222,29 +218,29 @@ declare
   v_res text;
   v_owner_hash text := pg_temp.hash_of('m_owner');
 begin
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_admin2', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_admin2');
   insert into _r (test, ok, detail) values
     ('P05a ADMIN no cambia el PIN de otro ADMIN', v_res like 'P0001:%' and pg_temp.hash_of('m_admin2') is null, v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_owner', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_owner');
   insert into _r (test, ok, detail) values
     ('P05b ADMIN no cambia el PIN del OWNER',
      v_res like 'P0001:%' and pg_temp.hash_of('m_owner') is not distinct from v_owner_hash,
      v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_admin', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_admin');
   insert into _r (test, ok, detail) values
     ('P05c ADMIN no cambia su propio PIN por esta ruta', v_res like 'P0001:%' and pg_temp.hash_of('m_admin') is null, v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_owner', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_owner');
   insert into _r (test, ok, detail) values
     ('P05d OWNER no cambia su propio PIN por esta ruta',
      v_res like 'P0001:%' and pg_temp.hash_of('m_owner') is not distinct from v_owner_hash, v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_admin2', '2468');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_admin2');
   insert into _r (test, ok, detail) values
     ('P05e OWNER sí cambia el PIN de un ADMIN',
-     v_res = 'OK' and extensions.crypt('2468', pg_temp.hash_of('m_admin2')) = pg_temp.hash_of('m_admin2'), v_res);
+     v_res ~ '^[0-9]{4}$' and extensions.crypt(v_res, pg_temp.hash_of('m_admin2')) = pg_temp.hash_of('m_admin2'), v_res);
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -254,15 +250,15 @@ do $$
 declare
   v_res text;
 begin
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_foreign', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_foreign');
   insert into _r (test, ok, detail) values
     ('P06a OWNER de monky-qa no cambia el PIN de otro restaurante', v_res like 'P0001:%', v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_foreign', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'u_admin'), 'm_foreign');
   insert into _r (test, ok, detail) values
     ('P06b ADMIN de monky-qa no cambia el PIN de otro restaurante', v_res like 'P0001:%', v_res);
 
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'no_existe', '4321');
+  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'no_existe');
   insert into _r (test, ok, detail) values
     ('P06c miembro inexistente rechazado', v_res like 'P0001:%', v_res);
 
@@ -271,21 +267,38 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- P10 · PIN único por restaurante (m_waiter = 0987, m_admin2 = 2468)
+-- P10 · PIN único por restaurante y nunca repetido (m_waiter y m_admin2 ya
+-- tienen PIN; el sondeo con 9999 PIN ocupados no cabe en una prueba rápida:
+-- bcrypt coste 10 y un usuario auth por miembro)
 -- ---------------------------------------------------------------------------
 do $$
 declare
   v_res text;
-  v_before text := pg_temp.hash_of('m_kitchen');
+  v_prev text := null;
+  v_clash int := 0;
+  v_repeat int := 0;
+  v_bad int := 0;
+  i int;
 begin
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_kitchen', '0987');
+  for i in 1..25 loop
+    v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_kitchen');
+    if v_res !~ '^[0-9]{4}$' then v_bad := v_bad + 1; end if;
+    if v_res is not distinct from v_prev then v_repeat := v_repeat + 1; end if;
+    if exists (select 1 from public.restaurant_members m
+                where m.restaurant_id = (select v from _ctx where k = 'restaurant')
+                  and m.id <> (select v from _ctx where k = 'm_kitchen')
+                  and m.pin_hash is not null
+                  and extensions.crypt(v_res, m.pin_hash) = m.pin_hash) then
+      v_clash := v_clash + 1;
+    end if;
+    v_prev := v_res;
+  end loop;
   insert into _r (test, ok, detail) values
-    ('P10a PIN ya usado por otro miembro del restaurante: 23505 PIN_IN_USE',
-     v_res like '23505: PIN_IN_USE%' and pg_temp.hash_of('m_kitchen') is not distinct from v_before, v_res);
-
-  v_res := pg_temp.try_pin((select v from _ctx where k = 'owner'), 'm_admin2', '2468');
-  insert into _r (test, ok, detail) values
-    ('P10b reponer el propio PIN del miembro es válido', v_res = 'OK', v_res);
+    ('P10a 25 generaciones seguidas: todas de 4 dígitos', v_bad = 0, v_bad || ' inválidas'),
+    ('P10b ningún PIN coincide con el de otro miembro del restaurante', v_clash = 0, v_clash || ' choques'),
+    ('P10c una generación nunca repite el PIN inmediato anterior del miembro', v_repeat = 0, v_repeat || ' repetidos'),
+    ('P10d la función ya no existe con la firma antigua (sin oráculo PIN_IN_USE)',
+     to_regprocedure('public.set_member_pin(uuid, text)') is null, '');
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -335,10 +348,11 @@ where a.entity_type = 'RESTAURANT_MEMBER'
   and a.entity_id = (select v from _ctx where k = 'm_waiter');
 
 insert into _r (test, ok, detail)
-select 'P08c la auditoría no contiene el PIN ni el hash',
-       coalesce(bool_and(coalesce(a.metadata::text, '') not like '%1234%'
-                         and coalesce(a.metadata::text, '') not like '%0987%'
-                         and coalesce(a.metadata::text, '') not like '%$2a$%'), false),
+select 'P08c la auditoría marca generated y no contiene el PIN ni el hash',
+       coalesce(bool_and(not exists (select 1 from _pins p where coalesce(a.metadata::text, '') like '%' || p.pin || '%')
+                         and coalesce(a.metadata::text, '') not like '%$2a$%'
+                         and a.metadata ->> 'generated' = 'true'
+                         and a.metadata ->> 'change' in ('PIN_SET', 'PIN_CHANGED')), false),
        string_agg(coalesce(a.metadata::text, 'null'), ' | ')
 from public.audit_logs a
 where a.entity_type = 'RESTAURANT_MEMBER'
@@ -349,29 +363,29 @@ select 'P08d los rechazos no dejan auditoría',
        count(*) = 0, count(*) || ' filas'
 from public.audit_logs a
 where a.entity_type = 'RESTAURANT_MEMBER'
-  and a.entity_id in (select v from _ctx where k in ('m_admin', 'm_owner', 'm_foreign', 'm_kitchen'));
+  and a.entity_id in (select v from _ctx where k in ('m_admin', 'm_owner', 'm_foreign'));
 
 -- ---------------------------------------------------------------------------
 -- P09 · firma y permisos de la función
 -- ---------------------------------------------------------------------------
 insert into _r (test, ok, detail)
-select 'P09a returns void, SECURITY DEFINER, search_path vacío',
-       p.prorettype = 'void'::regtype and p.prosecdef
+select 'P09a returns text, SECURITY DEFINER, search_path vacío',
+       p.prorettype = 'text'::regtype and p.prosecdef
        and p.proconfig @> array['search_path=""'],
        p.prorettype::regtype || ' ' || p.prosecdef || ' ' || coalesce(p.proconfig::text, 'null')
 from pg_proc p
-where p.oid = 'public.set_member_pin(uuid, text)'::regprocedure;
+where p.oid = 'public.generate_member_pin(uuid)'::regprocedure;
 
 insert into _r (test, ok, detail) values
   ('P09b authenticated puede ejecutar',
-   has_function_privilege('authenticated', 'public.set_member_pin(uuid, text)', 'EXECUTE'), ''),
+   has_function_privilege('authenticated', 'public.generate_member_pin(uuid)', 'EXECUTE'), ''),
   ('P09c anon no puede ejecutar',
-   not has_function_privilege('anon', 'public.set_member_pin(uuid, text)', 'EXECUTE'), ''),
+   not has_function_privilege('anon', 'public.generate_member_pin(uuid)', 'EXECUTE'), ''),
   ('P09d service_role no puede ejecutar',
-   not has_function_privilege('service_role', 'public.set_member_pin(uuid, text)', 'EXECUTE'), ''),
+   not has_function_privilege('service_role', 'public.generate_member_pin(uuid)', 'EXECUTE'), ''),
   ('P09e PUBLIC sin EXECUTE',
    not exists (select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
-               where p.oid = 'public.set_member_pin(uuid, text)'::regprocedure
+               where p.oid = 'public.generate_member_pin(uuid)'::regprocedure
                  and a.grantee = 0 and a.privilege_type = 'EXECUTE'), '');
 
 select n, test, ok, detail from _r order by n;

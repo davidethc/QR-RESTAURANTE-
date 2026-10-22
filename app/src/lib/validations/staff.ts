@@ -40,7 +40,6 @@ export function generateTempPassword(length = 10): string {
 export const MEMBER_ROLES = ["ADMIN", "MEMBERS_ADMIN", "BRANCH_MANAGER", "MENU_MANAGER", "CASHIER", "WAITER", "KITCHEN"] as const;
 export type MemberRole = typeof MEMBER_ROLES[number];
 const memberId = z.string({ error: "Identificador inválido" }).uuid("Identificador inválido");
-const pinSchema = z.string({ error: "El PIN debe tener 4 dígitos" }).regex(/^\d{4}$/, "El PIN debe tener 4 dígitos");
 
 export const saveMemberSchema = z.object({
   memberId: memberId.optional(),
@@ -51,13 +50,13 @@ export const saveMemberSchema = z.object({
   cashRegisterIds: z.unknown().optional(),
   email: z.unknown().optional(),
   password: z.unknown().optional(),
-  pin: z.unknown().optional(),
+  /** El PIN lo genera la base; el cliente solo pide generarlo (en el alta siempre se genera). */
+  generatePin: z.boolean().optional(),
 }, { error: "Ingresa los datos del miembro" }).transform((input, ctx) => {
   const roles = [...new Set(input.roles)];
   let cashRegisterIds: string[] = [];
   let email: string | undefined;
   let memberPassword: string | undefined;
-  let pin: string | undefined;
   if (roles.includes("CASHIER")) {
     const parsed = z.array(memberId, { error: "Selecciona las cajas asignadas" }).min(1, "Asigna al menos una caja al cajero").safeParse(input.cashRegisterIds ?? []);
     if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ code: "custom", path: ["cashRegisterIds", ...issue.path], message: issue.message });
@@ -73,15 +72,11 @@ export const saveMemberSchema = z.object({
       else memberPassword = parsedPassword.data;
     }
   }
-  if (!input.memberId || (input.pin !== undefined && input.pin !== "")) {
-    const parsed = pinSchema.safeParse(input.pin);
-    if (!parsed.success) ctx.addIssue({ code: "custom", path: ["pin"], message: parsed.error.issues[0].message });
-    else pin = parsed.data;
-  }
   if (!roles.length && input.active) {
     ctx.addIssue({ code: "custom", path: ["roles"], message: "Un miembro sin roles debe quedar inactivo durante la transición" });
   }
   return { memberId: input.memberId, fullName: input.fullName, roles, active: input.active,
-    emailLoginEnabled: input.emailLoginEnabled, cashRegisterIds, email, password: memberPassword, pin };
+    emailLoginEnabled: input.emailLoginEnabled, cashRegisterIds, email, password: memberPassword,
+    generatePin: !input.memberId || input.generatePin === true };
 });
 export type SaveMemberInput = z.output<typeof saveMemberSchema>;

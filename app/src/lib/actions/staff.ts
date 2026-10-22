@@ -32,8 +32,17 @@ export async function fetchWaiterCalls(
   return getWaiterCalls(restaurantId, statuses);
 }
 
+/**
+ * `pin` solo viene cuando se generó en esta llamada: se muestra UNA vez y no
+ * se puede volver a consultar (en la base solo queda su hash). `notice` es un
+ * aviso que la UI debe mostrar junto al resultado correcto.
+ */
+export type SaveMemberResult = { memberId: string; pin?: string; notice?: string };
+
+export const SHARED_ACCOUNT_NOTICE = "Esta persona también pertenece a otro negocio; solo se desactivó aquí.";
+
 /** Campos nuevos de M00; el flujo legacy de staff-admin.ts se mantiene. */
-export async function saveMember(restaurantId: string, input: unknown): Promise<ActionResult<string>> {
+export async function saveMember(restaurantId: string, input: unknown): Promise<ActionResult<SaveMemberResult>> {
   const parsed = saveMemberSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -84,6 +93,7 @@ export async function saveMember(restaurantId: string, input: unknown): Promise<
   const fullName = values.fullName;
   let previous: Pick<Database["public"]["Tables"]["restaurant_members"]["Row"], "role" | "updated_at"> | null = null;
   let emailChanged = false;
+  let sharedAccount = false;
   if (values.memberId) {
     const { data, error } = await admin.from("restaurant_members")
       .select("id, restaurant_id, user_id, role, roles, status, updated_at")
@@ -91,12 +101,12 @@ export async function saveMember(restaurantId: string, input: unknown): Promise<
     if (error) return memberWriteFailure(error, "saveMember.target");
     if (!data || data.role === "OWNER" || data.user_id === user.id) return memberFailure("El miembro no existe en esta sucursal o no tienes permiso.", "MEMBER_UNAVAILABLE");
     if (actor.role !== "OWNER" && data.roles.includes("ADMIN")) return memberFailure("Solo el dueño puede gestionar administradores.", "ROLES_FORBIDDEN", "roles");
-    if (!values.pin) {
+    if (!values.generatePin) {
       const presence = await admin.from("restaurant_members").select("id")
         .eq("id", values.memberId).eq("restaurant_id", restaurantId).eq("user_id", targetUserId!)
         .not("pin_hash", "is", null).maybeSingle();
       if (presence.error) return memberWriteFailure(presence.error, "saveMember.pinPresence");
-      if (!presence.data) return memberFailure("El PIN debe tener 4 dígitos", "PIN_INVALID", "pin");
+      if (!presence.data) return memberFailure("Este miembro aún no tiene PIN. Genera uno.", "PIN_REQUIRED", "pin");
     }
     if (!legacyRole && values.active && data.role === "ADMIN") return memberFailure("No se puede retirar el rol administrativo sin definir un rol de compatibilidad de producción.", "ROLE_COMPATIBILITY_REQUIRED", "roles");
     if (legacyRole && legacyRole !== data.role && JSON.stringify(values.roles) === JSON.stringify(data.roles)) {
@@ -105,6 +115,15 @@ export async function saveMember(restaurantId: string, input: unknown): Promise<
     const current = await admin.auth.admin.getUserById(targetUserId!);
     if (current.error || !current.data.user) return memberFailure("No se pudo consultar la cuenta de acceso. Intenta de nuevo.", "AUTH_LOOKUP_FAILED");
     emailChanged = current.data.user.email?.trim().toLowerCase() !== values.email;
+    // La cuenta de acceso (Auth) es global: si esta persona pertenece a otro
+    // negocio, correo, clave y ban afectarían también a ese negocio.
+    const others = await admin.from("restaurant_members").select("id", { count: "exact", head: true })
+      .eq("user_id", targetUserId!).neq("restaurant_id", restaurantId);
+    if (others.error) return memberWriteFailure(others.error, "saveMember.sharedAccount");
+    sharedAccount = (others.count ?? 0) > 0;
+    if (sharedAccount && (emailChanged || values.password)) {
+      return memberFailure("Esta persona también pertenece a otro negocio; no se puede cambiar su correo ni su clave desde aquí.", "ACCOUNT_SHARED", values.password ? "password" : "email");
+    }
     previous = data;
   }
 
@@ -143,11 +162,14 @@ export async function saveMember(restaurantId: string, input: unknown): Promise<
     return saveError ? memberWriteFailure(saveError, "saveMember.write") : memberFailure("El miembro cambió o ya no está disponible. Recarga Personal e intenta de nuevo.", "MEMBER_CONFLICT");
   }
 
-  if (values.pin) {
+  let generatedPin: string | undefined;
+  if (values.generatePin) {
     let pinError: { code?: string } | null;
     try {
-      const result = await supabase.rpc("set_member_pin", { p_member_id: memberId, p_pin: values.pin });
+      const result = await supabase.rpc("generate_member_pin", { p_member_id: memberId });
       pinError = result.error;
+      if (!result.error) generatedPin = typeof result.data === "string" && /^\d{4}$/.test(result.data) ? result.data : undefined;
+      if (!result.error && !generatedPin) pinError = {};
     } catch {
       pinError = {};
     }
@@ -160,7 +182,9 @@ export async function saveMember(restaurantId: string, input: unknown): Promise<
     }
   }
 
-  if (!createdUserId) {
+  if (sharedAccount) {
+    // Cuenta compartida: solo cambió el miembro local; no se toca Auth ni el perfil global.
+  } else if (!createdUserId) {
     const { error: profileError } = await admin.from("profiles").update({ full_name: fullName }).eq("id", targetUserId!).select("id").single();
     if (profileError) { revalidatePath("/staff"); return memberFailure("Se guardaron los permisos, pero no el nombre. Recarga Personal y reintenta.", "FULL_NAME_SAVE_FAILED", "fullName"); }
     const authUpdate = await admin.auth.admin.updateUserById(targetUserId!, {
@@ -174,7 +198,11 @@ export async function saveMember(restaurantId: string, input: unknown): Promise<
     if (banned.error) { revalidatePath("/staff"); return memberFailure("Se guardó el miembro inactivo, pero no se pudo bloquear su cuenta de acceso.", "AUTH_UPDATE_FAILED"); }
   }
   revalidatePath("/staff");
-  return { ok: true, data: memberId };
+  return { ok: true, data: {
+    memberId,
+    ...(generatedPin ? { pin: generatedPin } : {}),
+    ...(sharedAccount && !values.active ? { notice: SHARED_ACCOUNT_NOTICE } : {}),
+  } };
 }
 
 const MEMBER_FIELD_CODES = {
@@ -184,6 +212,7 @@ const MEMBER_FIELD_CODES = {
   email: "EMAIL_INVALID",
   password: "PASSWORD_INVALID",
   pin: "PIN_INVALID",
+  generatePin: "PIN_INVALID",
   emailLoginEnabled: "EMAIL_LOGIN_INVALID",
 } as const;
 type MemberField = keyof typeof MEMBER_FIELD_CODES;
@@ -209,12 +238,10 @@ function memberAuthFailure(error: { code?: string } | null, fallback = "No se pu
 
 function memberPinFailure(error: { code?: string }): MemberFailure {
   const fallback = error.code === "42501" ? "No tienes permiso para cambiar el PIN de este miembro."
-    : error.code === "22023" ? "El PIN debe tener 4 dígitos"
-    : error.code === "23505" ? "Ese PIN ya lo usa otro miembro"
-    : "No se pudo guardar el PIN. Revisa el miembro antes de reintentar.";
+    : "No se pudo generar el PIN. Revisa el miembro antes de reintentar.";
   return {
-    ...dbFailure({ code: error.code, message: "Error al asignar el PIN del miembro" }, "set_member_pin", fallback),
+    ...dbFailure({ code: error.code, message: "Error al generar el PIN del miembro" }, "generate_member_pin", fallback),
     field: "pin",
-    code: error.code === "22023" ? "PIN_INVALID" : error.code === "23505" ? "PIN_IN_USE" : error.code === "42501" ? "PIN_FORBIDDEN" : "PIN_SAVE_FAILED",
+    code: error.code === "42501" ? "PIN_FORBIDDEN" : "PIN_SAVE_FAILED",
   };
 }
