@@ -78,7 +78,7 @@ export const modifierGroupSchema = modifierGroupFieldsSchema.extend({
   if (group.min_select > group.max_select) {
     ctx.addIssue({ code: "custom", path: ["min_select"], message: "El mínimo no puede superar el máximo" });
   }
-  if (group.max_select > group.options.length) {
+  if (!group.allow_repeat && group.max_select > group.options.length) {
     ctx.addIssue({ code: "custom", path: ["max_select"], message: "El máximo no puede superar la cantidad de opciones" });
   }
   group.options.forEach((option, index) => {
