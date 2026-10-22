@@ -5,14 +5,14 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TablesLive } from "./_components/tables-live";
 import { CreateTablesDialog } from "./_components/create-tables-dialog";
 import { TablesPdfButton } from "./_components/tables-pdf-button";
-import { TablesBoard } from "./_components/tables-board";
+import { TablesPanel } from "./_components/tables-panel";
 import { CartaLinkDialog } from "./_components/carta-link-dialog";
 import {
   getMyRestaurant,
   getRestaurantSettings,
   getTablesStatus,
-  getActiveTableSessionsMap,
 } from "@/lib/queries/staff";
+import { getTablesPanel } from "@/lib/queries/tables-panel";
 import { toWhatsappNumber } from "@/lib/whatsapp";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
@@ -34,10 +34,10 @@ export default async function TablesPage() {
   // CartaLinkDialog). El módulo de cobro también necesita billing_enabled
   // y el tope de descuento del mesero para CUALQUIER rol que atienda
   // mesas, así que ahora se pide siempre.
-  const [tables, settings, tableSessionMap] = await Promise.all([
-    getTablesStatus(session.restaurant.id),
+  const [zones, settings, tables] = await Promise.all([
+    getTablesPanel(session.restaurant.id),
     getRestaurantSettings(session.restaurant.id),
-    getActiveTableSessionsMap(session.restaurant.id),
+    getTablesStatus(session.restaurant.id),
   ]);
   /** Quien atiende mesas: toma pedidos, marca la cuenta y libera. */
   const canServeTable =
@@ -70,14 +70,12 @@ export default async function TablesPage() {
           </div>
         }
       />
-      <TablesBoard
-        tables={tables}
-        canManage={canManage}
-        canServeTable={canServeTable}
+      <TablesPanel
+        zones={zones}
         role={session.role}
+        canServeTable={canServeTable}
         billingEnabled={settings.billing_enabled}
         maxWaiterDiscountPct={settings.max_waiter_discount_pct}
-        tableSessionMap={tableSessionMap}
       />
     </main>
   );
