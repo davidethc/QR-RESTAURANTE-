@@ -2,12 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "./proxy";
 
-const mocks = vi.hoisted(() => ({ read: vi.fn(), claims: vi.fn() }));
+const mocks = vi.hoisted(() => ({ read: vi.fn(), claims: vi.fn(), device: vi.fn(), signOut: vi.fn() }));
+vi.mock("@/lib/devices/service", () => ({ checkDevice: mocks.device }));
 vi.mock("@/lib/auth/member-session", () => ({ readMemberSession: mocks.read }));
-vi.mock("@supabase/ssr", () => ({ createServerClient: () => ({ auth: { getClaims: mocks.claims } }) }));
+vi.mock("@supabase/ssr", () => ({ createServerClient: () => ({ auth: { getClaims: mocks.claims, signOut: mocks.signOut } }) }));
 
 beforeEach(() => {
   mocks.read.mockReset();
+  mocks.device.mockReset();
+  mocks.signOut.mockReset();
   mocks.claims.mockReset().mockResolvedValue({ data: { claims: { sub: "user" } } });
 });
 const request = (path: string) => new NextRequest(`https://example.com${path}`);
@@ -48,5 +51,30 @@ describe("proxy: navegación silenciosa con roles combinados", () => {
   it("cocina no entra a /orders", async () => {
     mocks.read.mockResolvedValue({ role: "KITCHEN", roles: ["KITCHEN"] });
     expect((await proxy(request("/orders"))).headers.get("location")).toBe("https://example.com/kitchen");
+  });
+});
+
+describe("proxy: dispositivos vinculados (M10)", () => {
+  const withCookie = (path: string) =>
+    new NextRequest(`https://example.com${path}`, { headers: { cookie: `monky_device=${"c".repeat(64)}` } });
+  it("dispositivo revocado: cierra sesión, borra la cookie y manda a /pin", async () => {
+    mocks.device.mockResolvedValue({ state: "revoked" });
+    const response = await proxy(withCookie("/orders"));
+    expect(mocks.signOut).toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://example.com/pin?motivo=revocado");
+    expect(response.headers.get("set-cookie")).toContain("monky_device=;");
+  });
+  it("dispositivo válido o no verificable no corta la sesión", async () => {
+    mocks.read.mockResolvedValue({ role: "WAITER", roles: ["WAITER"] });
+    for (const state of [{ state: "valid" }, { state: "unavailable" }]) {
+      mocks.device.mockResolvedValue(state);
+      expect((await proxy(withCookie("/orders"))).headers.get("location")).toBeNull();
+    }
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+  it("sin cookie no consulta dispositivos", async () => {
+    mocks.read.mockResolvedValue({ role: "WAITER", roles: ["WAITER"] });
+    await proxy(request("/orders"));
+    expect(mocks.device).not.toHaveBeenCalled();
   });
 });
