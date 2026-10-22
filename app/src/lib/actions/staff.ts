@@ -239,8 +239,10 @@ function memberAuthFailure(error: { code?: string } | null, fallback = "No se pu
 function memberPinFailure(error: { code?: string }): MemberFailure {
   const fallback = error.code === "42501" ? "No tienes permiso para cambiar el PIN de este miembro."
     : "No se pudo generar el PIN. Revisa el miembro antes de reintentar.";
+  // 22023 tiene una traducción genérica de catálogo en db-errors; aquí el mensaje propio del PIN prevalece.
+  const failure = dbFailure({ code: error.code, message: "Error al generar el PIN del miembro" }, "generate_member_pin", fallback);
   return {
-    ...dbFailure({ code: error.code, message: "Error al generar el PIN del miembro" }, "generate_member_pin", fallback),
+    ...(error.code === "22023" ? { ok: false as const, error: fallback } : failure),
     field: "pin",
     code: error.code === "42501" ? "PIN_FORBIDDEN" : "PIN_SAVE_FAILED",
   };
