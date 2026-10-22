@@ -19,6 +19,7 @@ import {
   BarChart3,
   ShieldCheck,
   Menu,
+  PackageX,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -62,6 +63,7 @@ const NAV_GROUPS: { label: string; links: NavLink[] }[] = [
       { href: "/kitchen", label: "Cocina", icon: ChefHat },
       { href: "/tables", label: "Mesas", icon: LayoutGrid },
       { href: "/cash", label: "Caja", icon: Wallet },
+      { href: "/availability", label: "Disponibilidad", icon: PackageX },
     ],
   },
   {

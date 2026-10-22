@@ -35,5 +35,6 @@ export async function setItemAvailability(input: unknown): Promise<ActionResult>
   }
 
   revalidatePath("/menu");
+  revalidatePath("/availability");
   return { ok: true, data: undefined };
 }

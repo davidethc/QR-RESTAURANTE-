@@ -64,6 +64,7 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, Permission>> = {
   "/security": "members.manageAdmins",
   // Rutas especificadas en M02/M16, todavía sin páginas en esta rama.
   "/disponibilidad": "availability.edit",
+  "/availability": "availability.edit",
   "/ajustes/impresion": "printing.manage",
 };
 
