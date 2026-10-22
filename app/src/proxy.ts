@@ -57,6 +57,7 @@ const STAFF_PREFIXES = [
   "/today",
   "/reports",
   "/inventory",
+  "/security",
 ];
 
 export const config = {
@@ -76,5 +77,6 @@ export const config = {
     "/today/:path*",
     "/reports/:path*",
     "/inventory/:path*",
+    "/security/:path*",
   ],
 };

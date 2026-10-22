@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Users,
   BarChart3,
+  ShieldCheck,
   Menu,
   type LucideIcon,
 } from "lucide-react";
@@ -67,6 +68,7 @@ const NAV_GROUPS: { label: string; links: NavLink[] }[] = [
       { href: "/menu", label: "Carta", icon: UtensilsCrossed, roles: MANAGERS },
       { href: "/reports", label: "Reportes", icon: BarChart3, roles: MANAGERS },
       { href: "/staff", label: "Personal", icon: Users, roles: MANAGERS },
+      { href: "/security", label: "Historial de seguridad", icon: ShieldCheck, roles: MANAGERS },
     ],
   },
 ];
@@ -98,7 +100,7 @@ function NavItem({
       aria-current={active ? "page" : undefined}
       title={compact ? link.label : undefined}
       className={cn(
-        "relative flex h-9 items-center gap-2.5 rounded-control px-2.5 text-body-sm font-medium transition-colors duration-150",
+        "relative flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-body-sm font-medium transition-colors duration-150",
         compact && "xl:justify-start justify-center",
         active
           ? "bg-primary-soft text-primary before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-primary"

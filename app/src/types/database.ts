@@ -1341,7 +1341,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      security_events: {
+        Row: {
+          id: string
+          restaurant_id: string
+          created_at: string
+          actor_user_id: string | null
+          action: Database["public"]["Enums"]["audit_action"]
+          event_type: string | null
+          entity_type: string
+          entity_id: string | null
+          group_key: string
+          amount: number | null
+          cash_movement_type: string | null
+          cash_movement_reason: string | null
+          cash_difference: number | null
+          reason: string | null
+          metadata: Json | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_and_prepare_order: {
