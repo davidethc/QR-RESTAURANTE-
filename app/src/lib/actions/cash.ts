@@ -1,10 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import {
   addCashMovementSchema,
+  cashCutSchema,
+  cashListSchema,
+  type CashCutInput,
   cashSessionIdSchema,
   closeCashSessionSchema,
   openCashSessionSchema,
@@ -14,6 +18,10 @@ import {
 } from "@/lib/validations/cash";
 import type { ActionResult } from "@/types/actions";
 import type {
+  CashCutPrecheck,
+  CashCutRow,
+  CashMovementRow,
+  RegisterCashStatus,
   CashMovement,
   CashSessionOpened,
   CashSessionSummary,
@@ -31,6 +39,8 @@ function revalidateCash() {
   revalidatePath("/orders");
   revalidatePath("/tables");
   revalidatePath("/cash");
+  revalidatePath("/cash/cortes");
+  revalidatePath("/cash/movimientos");
 }
 
 function firstIssue(error: { issues: { message: string }[] }): string {
@@ -110,5 +120,89 @@ export async function closeCashSession(input: CloseCashSessionInput): Promise<Ac
       p_notes: parsed.data.notes || null,
     },
     { revalidate: true }
+  );
+}
+
+/** Corte a ciegas. `skipPendingOrders` solo tras confirmación explícita del usuario. */
+export async function cashCut(input: CashCutInput): Promise<ActionResult<CashSessionSummary>> {
+  const parsed = cashCutSchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { ok: false, error: issue?.message ?? "Datos inválidos.", field: issue?.path.join(".") };
+  }
+  const v = parsed.data;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await callUntypedRpc<CashSessionSummary>(supabase, "cash_cut", {
+      p_cash_session_id: v.cashSessionId,
+      p_counts: v.counts,
+      p_cash_float_left: v.cashFloatLeft,
+      p_notes: v.notes || null,
+      p_skip_pending_orders: v.skipPendingOrders,
+    });
+    if (error) {
+      if (error.code === "P0001") {
+        return {
+          ok: false,
+          error: error.message,
+          code: error.hint === "PENDING_ORDERS" ? "PENDING_ORDERS" : undefined,
+        };
+      }
+      console.error("[rpc cash_cut]", error.code, error.message);
+      return { ok: false, error: "No se pudo guardar el corte. Intenta de nuevo." };
+    }
+    revalidateCash();
+    return { ok: true, data: data as CashSessionSummary };
+  } catch {
+    return { ok: false, error: "No se pudo guardar el corte. Intenta de nuevo." };
+  }
+}
+
+export async function getCashCutPrecheck(cashSessionId: string): Promise<ActionResult<CashCutPrecheck>> {
+  const parsed = cashSessionIdSchema.safeParse({ cashSessionId });
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  return run<CashCutPrecheck>(
+    "get_cash_cut_precheck",
+    { p_cash_session_id: parsed.data.cashSessionId },
+    { revalidate: false }
+  );
+}
+
+export async function getLastCashFloat(restaurantId: string): Promise<ActionResult<RegisterCashStatus[]>> {
+  const parsed = z.uuid().safeParse(restaurantId);
+  if (!parsed.success) return { ok: false, error: "Restaurante inválido" };
+  return run<RegisterCashStatus[]>("get_last_cash_float", { p_restaurant_id: parsed.data }, { revalidate: false });
+}
+
+export async function listCashCuts(
+  restaurantId: string,
+  filters: { registerId?: string; limit?: number } = {}
+): Promise<ActionResult<CashCutRow[]>> {
+  const rid = z.uuid().safeParse(restaurantId);
+  const f = cashListSchema.safeParse(filters);
+  if (!rid.success || !f.success) return { ok: false, error: "Filtros inválidos." };
+  return run<CashCutRow[]>(
+    "list_cash_cuts",
+    { p_restaurant_id: rid.data, p_register_id: f.data.registerId ?? null, p_limit: f.data.limit ?? 50 },
+    { revalidate: false }
+  );
+}
+
+export async function listCashMovements(
+  restaurantId: string,
+  filters: { registerId?: string; cashSessionId?: string; limit?: number } = {}
+): Promise<ActionResult<CashMovementRow[]>> {
+  const rid = z.uuid().safeParse(restaurantId);
+  const f = cashListSchema.safeParse(filters);
+  if (!rid.success || !f.success) return { ok: false, error: "Filtros inválidos." };
+  return run<CashMovementRow[]>(
+    "list_cash_movements",
+    {
+      p_restaurant_id: rid.data,
+      p_register_id: f.data.registerId ?? null,
+      p_cash_session_id: f.data.cashSessionId ?? null,
+      p_limit: f.data.limit ?? 100,
+    },
+    { revalidate: false }
   );
 }
