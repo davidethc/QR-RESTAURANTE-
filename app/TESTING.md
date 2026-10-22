@@ -2408,3 +2408,43 @@ Worktree `.claude/worktrees/M01-T07`, rama `feat/M01-T07-horarios`.
 - Feedback persistente en `role=status`: «Turno guardado» / «Turno quitado», también tras desmontarse la fila guardada o retirada. Inputs con `step={60}` y valores HH:mm; resumen recorta los TIME de PostgreSQL a minutos.
 - Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`, todo en verde. **107/107 tests, 12 archivos**. Ocho casos nuevos de helpers y renderizado SSR de editor, contenedor y esqueleto; incluyen que el error no monte un editor y que carga no muestre 24 h. Las pruebas de reglas y acciones siguen pasando.
 - Alcance de esta ronda: sin QA interactivo de navegador ni escrituras en Supabase; sin commit ni push.
+
+## 2026-10-21 — M03-T01: migración de zonas y plano (solo local)
+
+Worktree `.claude/worktrees/M03-T01`, rama `feat/M03-T01-zones`, base M00-T01
+`228fcc5`. No se conectó a Supabase, no se aplicó nada a producción y no se
+creó commit, push ni PR. Datos sintéticos exclusivamente para `monky-qa`.
+
+- `npx next typegen && npx tsc --noEmit && npm run lint && npm test`: **OK**;
+  Vitest: **76 pruebas**, 9 archivos. Tipos de zones/tables editados a mano.
+- `app/supabase/tests/m03_zones.sql`: **80/80 comprobaciones** en PGlite;
+  transacción `BEGIN…ROLLBACK`, fixtures de roles generadas sin credenciales.
+  Cubre OWNER/ADMIN, WAITER/KITCHEN, miembro inactivo, usuario sin membresía,
+  lectura/escritura permitida o rechazada, WITH CHECK, constraints, defaults,
+  backfill idempotente, QR intactos y rechazo real de SELECT/INSERT/UPDATE/DELETE
+  para anon. FK compuesta comprobada por catálogo; no se crea un segundo tenant.
+- Migración real ejecutada sobre **40 mesas + 1 COUNTER** preexistentes:
+  41 asignadas a Salón, `qr_token` y `updated_at` idénticos antes/después,
+  posiciones null. Reejecutar sus sentencias de backfill no cambia zonas,
+  asignaciones ni tokens. La cuadrícula 7×5 no limita el backfill a 35 mesas.
+- El harness comprueba también que el ROLLBACK restaura las mesas originales.
+  Revisión estática por `security-reviewer`: aprobada. Se agregó GRANT EXECUTE
+  explícito al helper temporal de tests por el default privilege real que
+  revoca EXECUTE de PUBLIC para nuevas funciones.
+
+Harness local: desde `app`, `node node_modules/.cache/m03-zones/run.mjs`.
+Este auxiliar no versionado reutiliza PGlite/pgcrypto y `pin/base_pin.sql` del
+harness de ejemplo suministrado por el usuario. Añade las migraciones reales
+011 (tables/sessions), counter_kind, M00-T01 y default_privileges_public, las
+políticas originales de tables y los grants/revokes de los helpers. Simula
+además grants heredados de tablas para comprobar que zones revoca TRUNCATE.
+No reproduce todo el historial, Supabase Auth/REST, Realtime ni concurrencia;
+no equivale a una validación remota ni a probar la UI.
+
+Decisiones de alcance documentadas en la cabecera SQL: coordenadas base cero
+nullable (la spec no fija origen); orden `sort_order` con empates; sin máximos
+arbitrarios ni distribución automática. Nombres únicos exactos por restaurante.
+RESTRICT impide borrar zonas con mesas vinculadas; validar movimientos de mesas
+con sesiones activas y el flujo de borrado corresponde a M03-T03. Solapamiento y
+límites respecto a la cuadrícula corresponden a M03-T02/T03. RLS sigue el `role`
+legado OWNER/ADMIN solicitado; BRANCH_MANAGER requiere la transición de M00.

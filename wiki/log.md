@@ -1,8 +1,11 @@
 ---
 title: "Activity Log"
-type: "log"
+type: "reference"
 created: "2026-09-01"
-updated: "2026-09-01"
+sources: ["docs/pos-spec/M03-zonas-mesas.md", "docs/pos-spec/M00-base.md"]
+tags: ["registro", "desarrollo"]
+aliases: ["log"]
+updated: "2026-10-21"
 ---
 
 # Activity Log
@@ -482,3 +485,12 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Verificación**: typegen, tsc y lint sin errores; Vitest 107/107 (12 archivos). Ocho pruebas nuevas de presentación y estados; sin QA interactivo ni escrituras en Supabase.
 - **Contradicciones detectadas**: ninguna; el resumen ahora distingue datos persistidos de las ediciones locales.
 - **Duración**: revisión de diseño M01-T07.
+
+
+## [2026-10-21] code | M03-T01: zonas y columnas del plano (solo local)
+
+- **Resumen**: Preparada la migración EXPAND `20261021140000_m03_zones.sql`, prueba SQL transaccional y tipos manuales. Zona Salón para mesas existentes, QR intactos, FK compuesta por restaurante y acceso de escritura OWNER/ADMIN. Sin aplicar a producción ni commit, push o PR.
+- **Fuentes**: [M03, datos/reglas/casos límite](../docs/pos-spec/M03-zonas-mesas.md), [M00, transición de roles](../docs/pos-spec/M00-base.md).
+- **Decisiones y dudas**: Coordenadas base cero y nullable, sin inventar distribución física; `sort_order` admite empates. La spec no fija origen de coordenadas, máximos ni normalización de nombres. RESTRICT bloquea borrar zonas con mesas; la gestión de esas mesas y sesiones queda para M03-T03. BRANCH_MANAGER queda pendiente de M00; este encargo exige OWNER/ADMIN.
+- **Páginas actualizadas**: [[Wiki Index]], [[Activity Log]]. Sin páginas nuevas.
+- **Verificación**: Evidencia y límites en [app/TESTING.md](../app/TESTING.md).

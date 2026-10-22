@@ -1,8 +1,11 @@
 ---
 title: "Wiki Index"
-type: "index"
+type: "reference"
 created: "2026-09-01"
-updated: "2026-09-28"
+sources: ["docs/pos-spec/M03-zonas-mesas.md", "docs/pos-spec/M00-base.md"]
+tags: ["indice"]
+aliases: ["index"]
+updated: "2026-10-21"
 ---
 
 # Índice del Wiki Monky.com
@@ -68,4 +71,4 @@ Catálogo de todas las páginas en el wiki. Se actualiza con cada ingesta.
 - Referencias: 2 (Fuentes Originales + Índice de Búsqueda)
 - Fuentes ingestionadas: 8 (raw/assets)
 
-**Última actualización**: 2026-09-28 ⬅️ Auditoría de producción, correcciones de contradicciones
+**Última actualización**: 2026-10-21 — M03-T01 preparado solo local; ver [[Activity Log]] y [registro de QA](../app/TESTING.md).
