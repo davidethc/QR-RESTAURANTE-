@@ -1684,6 +1684,14 @@ export type Database = {
       }
     }
     Functions: {
+      product_effective_available: {
+        Args: { p_product_id: string }
+        Returns: boolean
+      }
+      set_item_availability: {
+        Args: { p_item_type: string; p_item_id: string; p_available: boolean }
+        Returns: undefined
+      }
       save_product_variants: {
         Args: { p_product_id: string; p_variants: Json }
         Returns: undefined
