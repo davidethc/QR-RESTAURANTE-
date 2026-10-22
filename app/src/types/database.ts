@@ -875,16 +875,25 @@ export type Database = {
           cancelled_by: string | null
           client_request_id: string | null
           created_at: string
+          customer_name: string | null
+          customer_phone: string | null
           delivered_at: string | null
+          delivery_address: Json | null
+          delivery_provider: string | null
+          external_order_id: string | null
           folio: number
+          general_comment: string | null
           id: string
           notes: string | null
           order_number: number
+          pays_with_amount: number | null
+          preferred_payment_method: string | null
           preparing_at: string | null
           ready_at: string | null
           rejection_reason: string | null
           restaurant_id: string
           service_type: string
+          shipping_cost: number | null
           short_code: string
           status: Database["public"]["Enums"]["order_status"]
           status_review: string
@@ -893,15 +902,6 @@ export type Database = {
           table_session_id: string | null
           total: number
           updated_at: string
-          customer_name: string | null
-          customer_phone: string | null
-          delivery_address: Json | null
-          delivery_provider: string | null
-          external_order_id: string | null
-          general_comment: string | null
-          pays_with_amount: number | null
-          preferred_payment_method: string | null
-          shipping_cost: number | null
         }
         Insert: {
           accepted_at?: string | null
@@ -911,16 +911,25 @@ export type Database = {
           cancelled_by?: string | null
           client_request_id?: string | null
           created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           delivered_at?: string | null
+          delivery_address?: Json | null
+          delivery_provider?: string | null
+          external_order_id?: string | null
           folio: number
+          general_comment?: string | null
           id?: string
           notes?: string | null
           order_number?: never
+          pays_with_amount?: number | null
+          preferred_payment_method?: string | null
           preparing_at?: string | null
           ready_at?: string | null
           rejection_reason?: string | null
           restaurant_id: string
           service_type?: string
+          shipping_cost?: number | null
           short_code: string
           status?: Database["public"]["Enums"]["order_status"]
           status_review?: string
@@ -929,15 +938,6 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
-          customer_name?: string | null
-          customer_phone?: string | null
-          delivery_address?: Json | null
-          delivery_provider?: string | null
-          external_order_id?: string | null
-          general_comment?: string | null
-          pays_with_amount?: number | null
-          preferred_payment_method?: string | null
-          shipping_cost?: number | null
         }
         Update: {
           accepted_at?: string | null
@@ -947,16 +947,25 @@ export type Database = {
           cancelled_by?: string | null
           client_request_id?: string | null
           created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           delivered_at?: string | null
+          delivery_address?: Json | null
+          delivery_provider?: string | null
+          external_order_id?: string | null
           folio?: number
+          general_comment?: string | null
           id?: string
           notes?: string | null
           order_number?: never
+          pays_with_amount?: number | null
+          preferred_payment_method?: string | null
           preparing_at?: string | null
           ready_at?: string | null
           rejection_reason?: string | null
           restaurant_id?: string
           service_type?: string
+          shipping_cost?: number | null
           short_code?: string
           status?: Database["public"]["Enums"]["order_status"]
           status_review?: string
@@ -965,15 +974,6 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
-          customer_name?: string | null
-          customer_phone?: string | null
-          delivery_address?: Json | null
-          delivery_provider?: string | null
-          external_order_id?: string | null
-          general_comment?: string | null
-          pays_with_amount?: number | null
-          preferred_payment_method?: string | null
-          shipping_cost?: number | null
         }
         Relationships: [
           {
@@ -1054,6 +1054,7 @@ export type Database = {
           amount: number
           bill_id: string
           card_type: string | null
+          cash_register_id: string | null
           cash_session_id: string
           change_amount: number | null
           created_at: string
@@ -1061,6 +1062,7 @@ export type Database = {
           idempotency_key: string
           invoice_id: string | null
           method: Database["public"]["Enums"]["payment_method"]
+          number: number | null
           received_at: string
           received_by: string | null
           reference: string | null
@@ -1071,13 +1073,12 @@ export type Database = {
           void_reason: string | null
           voided_at: string | null
           voided_by: string | null
-          cash_register_id: string | null
-          number: number | null
         }
         Insert: {
           amount: number
           bill_id: string
           card_type?: string | null
+          cash_register_id?: string | null
           cash_session_id: string
           change_amount?: number | null
           created_at?: string
@@ -1085,6 +1086,7 @@ export type Database = {
           idempotency_key: string
           invoice_id?: string | null
           method: Database["public"]["Enums"]["payment_method"]
+          number?: number | null
           received_at?: string
           received_by?: string | null
           reference?: string | null
@@ -1095,13 +1097,12 @@ export type Database = {
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
-          cash_register_id?: string | null
-          number?: number | null
         }
         Update: {
           amount?: number
           bill_id?: string
           card_type?: string | null
+          cash_register_id?: string | null
           cash_session_id?: string
           change_amount?: number | null
           created_at?: string
@@ -1109,6 +1110,7 @@ export type Database = {
           idempotency_key?: string
           invoice_id?: string | null
           method?: Database["public"]["Enums"]["payment_method"]
+          number?: number | null
           received_at?: string
           received_by?: string | null
           reference?: string | null
@@ -1119,8 +1121,6 @@ export type Database = {
           void_reason?: string | null
           voided_at?: string | null
           voided_by?: string | null
-          cash_register_id?: string | null
-          number?: number | null
         }
         Relationships: [
           {
@@ -1128,6 +1128,13 @@ export type Database = {
             columns: ["bill_id"]
             isOneToOne: false
             referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
             referencedColumns: ["id"]
           },
           {
@@ -1523,6 +1530,9 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          kds_alert_minutes: number
+          kds_enabled: boolean
+          kds_warn_minutes: number
           kitchen_ready_step: boolean
           logo_url: string | null
           max_waiter_discount_pct: number
@@ -1533,9 +1543,6 @@ export type Database = {
           status: Database["public"]["Enums"]["restaurant_status"]
           timezone: string
           updated_at: string
-          kds_alert_minutes: number
-          kds_enabled: boolean
-          kds_warn_minutes: number
         }
         Insert: {
           address?: string | null
@@ -1545,6 +1552,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          kds_alert_minutes?: number
+          kds_enabled?: boolean
+          kds_warn_minutes?: number
           kitchen_ready_step?: boolean
           logo_url?: string | null
           max_waiter_discount_pct?: number
@@ -1555,9 +1565,6 @@ export type Database = {
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
-          kds_alert_minutes?: number
-          kds_enabled?: boolean
-          kds_warn_minutes?: number
         }
         Update: {
           address?: string | null
@@ -1567,6 +1574,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          kds_alert_minutes?: number
+          kds_enabled?: boolean
+          kds_warn_minutes?: number
           kitchen_ready_step?: boolean
           logo_url?: string | null
           max_waiter_discount_pct?: number
@@ -1577,9 +1587,6 @@ export type Database = {
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
-          kds_alert_minutes?: number
-          kds_enabled?: boolean
-          kds_warn_minutes?: number
         }
         Relationships: []
       }
@@ -2130,8 +2137,28 @@ export type Database = {
         Args: { p_force?: boolean; p_reason?: string; p_table_id: string }
         Returns: undefined
       }
+      complete_ticket: { Args: { p_ticket_id: string }; Returns: Json }
       counter_sale_json: {
         Args: { p_replayed: boolean; p_session_id: string }
+        Returns: Json
+      }
+      create_counter_order: {
+        Args: {
+          p_client_request_id: string
+          p_customer_name?: string
+          p_customer_phone?: string
+          p_delivery_address?: Json
+          p_delivery_provider?: string
+          p_external_order_id?: string
+          p_general_comment?: string
+          p_items: Json
+          p_pay_later?: boolean
+          p_pays_with_amount?: number
+          p_preferred_payment_method?: string
+          p_restaurant_id?: string
+          p_service_type: string
+          p_shipping_cost?: number
+        }
         Returns: Json
       }
       create_counter_sale: {
@@ -2286,6 +2313,16 @@ export type Database = {
         Args: { p_restaurant_id: string }
         Returns: Json
       }
+      get_kitchen_tickets: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_restaurant_id: string
+          p_since?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       get_my_restaurant: { Args: never; Returns: Json }
       get_public_menu: { Args: { p_slug: string }; Returns: Json }
       get_restaurant_staff: { Args: { p_restaurant_id: string }; Returns: Json }
@@ -2336,6 +2373,7 @@ export type Database = {
         Args: { p_lines: Json; p_order_id: string; p_ticket_id: string }
         Returns: undefined
       }
+      kds_lock_ticket: { Args: { p_ticket_id: string }; Returns: Json }
       list_open_bills: { Args: { p_restaurant_id: string }; Returns: Json }
       lock_bill: {
         Args: { p_bill_id: string }
@@ -2417,6 +2455,20 @@ export type Database = {
       m03_require_zone_admin: {
         Args: { p_restaurant_id: string }
         Returns: string
+      }
+      m06_normalize_counter_fields: {
+        Args: {
+          p_address: Json
+          p_external_id: string
+          p_name: string
+          p_pays_with: number
+          p_phone: string
+          p_pref_method: string
+          p_provider: string
+          p_service_type: string
+          p_shipping: number
+        }
+        Returns: Json
       }
       mark_order_delivered: { Args: { p_order_id: string }; Returns: undefined }
       mark_order_ready: { Args: { p_order_id: string }; Returns: undefined }
@@ -2503,6 +2555,19 @@ export type Database = {
           p_method: Database["public"]["Enums"]["payment_method"]
           p_reference?: string
           p_tendered_amount?: number
+          p_tip_amount?: number
+        }
+        Returns: Json
+      }
+      record_payments: {
+        Args: {
+          p_amount: number
+          p_auto_close?: boolean
+          p_bill_id: string
+          p_cash_session_id?: string
+          p_items?: Json
+          p_payments: Json
+          p_request_id: string
           p_tip_amount?: number
         }
         Returns: Json
@@ -2656,6 +2721,10 @@ export type Database = {
         }[]
       }
       restaurant_tz: { Args: { p_restaurant_id: string }; Returns: string }
+      return_ticket_to_preparation: {
+        Args: { p_ticket_id: string }
+        Returns: Json
+      }
       save_product_variants: {
         Args: { p_product_id: string; p_variants: Json }
         Returns: undefined
@@ -2686,6 +2755,15 @@ export type Database = {
         Args: { p_available: boolean; p_item_id: string; p_item_type: string }
         Returns: undefined
       }
+      set_kds_settings: {
+        Args: {
+          p_alert_minutes?: number
+          p_enabled?: boolean
+          p_restaurant_id: string
+          p_warn_minutes?: number
+        }
+        Returns: Json
+      }
       start_order_preparing: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -2713,6 +2791,14 @@ export type Database = {
       unlock_pin_login: {
         Args: { p_restaurant_id: string }
         Returns: undefined
+      }
+      update_counter_order: {
+        Args: {
+          p_changes: Json
+          p_confirm_total_increase?: boolean
+          p_order_id: string
+        }
+        Returns: Json
       }
       update_staff_member: {
         Args: {
@@ -2748,67 +2834,6 @@ export type Database = {
       }
       void_payment: {
         Args: { p_payment_id: string; p_reason: string }
-        Returns: Json
-      }
-      complete_ticket: { Args: { p_ticket_id: string }; Returns: Json }
-      return_ticket_to_preparation: { Args: { p_ticket_id: string }; Returns: Json }
-      set_kds_settings: {
-        Args: {
-          p_alert_minutes?: number
-          p_enabled?: boolean
-          p_restaurant_id: string
-          p_warn_minutes?: number
-        }
-        Returns: Json
-      }
-      get_kitchen_tickets: {
-        Args: {
-          p_limit?: number
-          p_offset?: number
-          p_restaurant_id: string
-          p_since?: string
-          p_status?: string
-        }
-        Returns: Json
-      }
-      create_counter_order: {
-        Args: {
-          p_client_request_id: string
-          p_customer_name?: string
-          p_customer_phone?: string
-          p_delivery_address?: Json
-          p_delivery_provider?: string
-          p_external_order_id?: string
-          p_general_comment?: string
-          p_items: Json
-          p_pay_later?: boolean
-          p_pays_with_amount?: number
-          p_preferred_payment_method?: string
-          p_restaurant_id?: string
-          p_service_type: string
-          p_shipping_cost?: number
-        }
-        Returns: Json
-      }
-      update_counter_order: {
-        Args: {
-          p_changes: Json
-          p_confirm_total_increase?: boolean
-          p_order_id: string
-        }
-        Returns: Json
-      }
-      record_payments: {
-        Args: {
-          p_amount: number
-          p_auto_close?: boolean
-          p_bill_id: string
-          p_cash_session_id?: string
-          p_items?: Json
-          p_payments: Json
-          p_request_id: string
-          p_tip_amount?: number
-        }
         Returns: Json
       }
       void_payment_with_refund: {

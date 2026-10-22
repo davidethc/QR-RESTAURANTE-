@@ -197,15 +197,15 @@ export function TablesPanel({
                     gridTemplateRows: `repeat(${z.gridRows}, minmax(3rem, 1fr))`,
                   }}
                 >
-                  {z.tables.map((t) => (
+                  {placeTables(z.tables, z.gridCols).map(({ table: t, col, row }) => (
                     <TableTile
                       key={t.id}
                       table={t}
                       occupied={isOccupied(t, justOpened)}
                       onSelect={() => setSelectedId(t.id)}
                       style={{
-                        gridColumn: `${(t.col ?? 0) + 1} / span ${t.widthCells}`,
-                        gridRow: `${(t.row ?? 0) + 1} / span ${t.heightCells}`,
+                        gridColumn: `${col + 1} / span ${t.widthCells}`,
+                        gridRow: `${row + 1} / span ${t.heightCells}`,
                       }}
                     />
                   ))}
@@ -232,4 +232,30 @@ export function TablesPanel({
       )}
     </div>
   );
+}
+
+/** Mesas sin posición en el plano (creadas antes de las zonas) se acomodan en celdas libres en vez de apilarse en (0,0). */
+function placeTables<T extends { col: number | null; row: number | null; widthCells: number; heightCells: number }>(
+  tables: T[],
+  gridCols: number,
+): { table: T; col: number; row: number }[] {
+  const used = new Set<string>();
+  const mark = (c: number, r: number, w: number, h: number) => {
+    for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) used.add(`${c + i},${r + j}`);
+  };
+  for (const t of tables) if (t.col != null && t.row != null) mark(t.col, t.row, t.widthCells, t.heightCells);
+  return tables.map((t) => {
+    if (t.col != null && t.row != null) return { table: t, col: t.col, row: t.row };
+    for (let r = 0; ; r++) {
+      for (let c = 0; c + t.widthCells <= gridCols; c++) {
+        let free = true;
+        for (let i = 0; i < t.widthCells && free; i++)
+          for (let j = 0; j < t.heightCells; j++) if (used.has(`${c + i},${r + j}`)) free = false;
+        if (free) {
+          mark(c, r, t.widthCells, t.heightCells);
+          return { table: t, col: c, row: r };
+        }
+      }
+    }
+  });
 }
