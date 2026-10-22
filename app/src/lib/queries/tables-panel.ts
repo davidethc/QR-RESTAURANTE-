@@ -28,6 +28,8 @@ export type PanelTable = {
   orders: PanelOrder[];
   billRequested: boolean;
   waiterRequested: boolean;
+  /** Pedidos del QR esperando aprobación del mesero (M11). */
+  pendingApproval: number;
   total: number;
   billStatus: string | null;
   billBalance: number | null;
@@ -143,6 +145,7 @@ export async function getTablesPanel(restaurantId: string): Promise<PanelZone[]>
       orders,
       billRequested: st?.status === "BILL_REQUESTED" || calls.some((c) => c.type === "BILL"),
       waiterRequested: calls.some((c) => c.type === "WAITER"),
+      pendingApproval: orders.filter((o) => o.status === "PENDING").length,
       total: orders.reduce((sum, o) => sum + o.total, 0),
       billStatus: bill?.status ?? null,
       billBalance: bill?.balance ?? null,

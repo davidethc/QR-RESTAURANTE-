@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { setTableSession } from "@/lib/session";
+import { setQrToken, setTableSession } from "@/lib/session";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -42,6 +42,9 @@ export async function GET(
     restaurantSlug: resolved.restaurant_slug,
     tableNumber: resolved.table_number,
   });
+
+  // Para pedirle el nombre al cliente (M11) hace falta el token del QR.
+  await setQrToken(token);
 
   redirect(`/r/${resolved.restaurant_slug}/${resolved.table_number}`);
 }

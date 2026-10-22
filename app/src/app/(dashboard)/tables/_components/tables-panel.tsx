@@ -78,7 +78,15 @@ function TableTile({
         className
       )}
     >
-      {hasNew && (
+      {table.pendingApproval > 0 && (
+        <span
+          className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-wine px-1 text-tiny font-bold leading-5 text-wine-foreground"
+          aria-label={`${table.pendingApproval} pedido(s) por aprobar`}
+        >
+          {table.pendingApproval}
+        </span>
+      )}
+      {hasNew && table.pendingApproval === 0 && (
         <span
           className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-success-indicator"
           aria-label="Comanda nueva"

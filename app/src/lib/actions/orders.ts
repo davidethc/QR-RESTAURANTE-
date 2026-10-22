@@ -150,12 +150,15 @@ export async function getOrderStatus(
 export async function acceptOrder(orderId: string): Promise<ActionResult> {
   const supabase = await createClient();
 
-  const { error } = await supabase.rpc("accept_and_prepare_order", {
+  // M11: approve_customer_order acepta y manda a cocina (igual que
+  // accept_and_prepare_order) y además marca el pedido como revisado.
+  const { error } = await supabase.rpc("approve_customer_order", {
     p_order_id: orderId,
   });
   if (error) return dbFailure(error, "acceptOrder");
 
   revalidatePath("/orders");
+  revalidatePath("/tables");
   revalidatePath("/kitchen");
   return { ok: true, data: undefined };
 }
@@ -165,13 +168,14 @@ export async function rejectOrder(
   reason?: string
 ): Promise<ActionResult> {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("reject_order", {
+  const { error } = await supabase.rpc("reject_customer_order", {
     p_order_id: orderId,
     p_reason: reason,
   });
 
   if (error) return dbFailure(error, "rejectOrder");
   revalidatePath("/orders");
+  revalidatePath("/tables");
   return { ok: true, data: undefined };
 }
 

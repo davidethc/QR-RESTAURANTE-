@@ -56,6 +56,8 @@ export interface StaffOrder {
   customer_label: string | null;
   place_label: string;
   accepted_by_name: string | null;
+  /** 'digital_menu' = el cliente lo pidió desde el QR de la mesa (M11). */
+  source?: string | null;
   items: StaffOrderItem[];
 }
 
@@ -214,6 +216,8 @@ export interface RestaurantSettings {
    *  "Listos" del mesero). false = la cocina solo mira: nunca hay pedidos
    *  en READY y `mark_order_ready` queda reservada a OWNER/ADMIN. */
   kitchen_ready_step: boolean;
+  /** M11: los pedidos del cliente por QR esperan la aprobación del mesero. */
+  qr_orders_require_approval: boolean;
 }
 
 /** Una persona del personal, como la devuelve `get_restaurant_staff`. */
