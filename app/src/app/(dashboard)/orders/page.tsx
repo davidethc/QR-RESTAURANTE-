@@ -13,6 +13,11 @@ import {
 } from "@/lib/queries/staff";
 import { OrdersBoard } from "./_components/orders-board";
 import { QuickTakeOrder } from "./_components/quick-take-order";
+import { CounterOrdersPanel } from "./_components/counter-orders-panel";
+import { getPublicMenu } from "@/lib/queries/menu";
+import { getStaffProductDetails } from "@/lib/queries/staff-catalog";
+import { getCounterOrders } from "@/lib/queries/counter-orders";
+import { canHandleMoney } from "@/lib/permissions";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -54,6 +59,14 @@ export default async function OrdersPage({
     canServeTable ? getActiveTableSessionsMap(restaurantId) : Promise.resolve({}),
   ]);
 
+  const [counterOrders, menu, productDetails] = canServeTable
+    ? await Promise.all([
+        getCounterOrders(restaurantId),
+        getPublicMenu(session.restaurant.slug),
+        getStaffProductDetails(restaurantId),
+      ])
+    : [[], { categories: [] }, {}];
+
   return (
     <main>
       <PageHeader
@@ -78,6 +91,15 @@ export default async function OrdersPage({
         readyStep={settings.kitchen_ready_step}
         tableSessionMap={tableSessionMap}
       />
+      {canServeTable && (
+        <CounterOrdersPanel
+          orders={counterOrders}
+          categories={menu.categories}
+          details={productDetails}
+          billingEnabled={settings.billing_enabled}
+          canCharge={canHandleMoney(session.role)}
+        />
+      )}
       {canServeTable && <QuickTakeOrder tables={tables} />}
     </main>
   );
