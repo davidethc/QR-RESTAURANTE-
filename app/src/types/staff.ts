@@ -15,6 +15,8 @@ import type {
 export interface MyRestaurant {
   user: { id: string; full_name: string | null; avatar_url: string | null };
   role: UserRole;
+  roles?: string[];
+  cash_register_ids?: string[];
   restaurant: {
     id: string;
     name: string;

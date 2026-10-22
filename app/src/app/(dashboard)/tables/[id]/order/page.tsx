@@ -1,3 +1,4 @@
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import Link from "next/link";
@@ -36,10 +37,7 @@ export default async function TakeOrderPage({
   await connection();
   const { id } = await params;
   const session = await getMyRestaurant();
-
-  // Cocina no toma pedidos en las mesas. El RPC lo rechazaría igual; esto
-  // evita que llegue siquiera a ver una pantalla que no puede usar.
-  if (session.role === "KITCHEN") notFound();
+  requireRouteAccess(session, "/tables");
 
   const table = await getTableForOrder(id);
 
