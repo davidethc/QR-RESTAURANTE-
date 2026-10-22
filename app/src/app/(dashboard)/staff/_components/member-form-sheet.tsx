@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
-import { Delete, KeyRound, X } from "lucide-react";
+import { Check, Copy, KeyRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,7 +28,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -147,141 +146,73 @@ function Choice({
   );
 }
 
-function PinDialog({
-  assigned,
-  invalid,
-  errorId,
-  onAssign,
+function PinRevealDialog({
+  reveal,
+  onClose,
 }: {
-  assigned: boolean;
-  invalid: boolean;
-  errorId: string;
-  onAssign: (pin: string) => void;
+  reveal: { name: string; pin: string; notice?: string } | null;
+  onClose: () => void;
 }) {
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const [digits, setDigits] = useState("");
-  const [error, setError] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  function changeOpen(value: boolean) {
-    setDigits("");
-    setError(false);
-    setOpen(value);
-  }
-  function confirm() {
-    if (!/^\d{4}$/.test(digits)) {
-      setError(true);
-      input.current?.focus();
-      return;
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    if (!reveal) return;
+    try {
+      await navigator.clipboard.writeText(reveal.pin);
+      setCopied(true);
+    } catch {
+      notify.error("No se pudo copiar. Anota el PIN a mano.");
     }
-    onAssign(digits);
-    changeOpen(false);
   }
   return (
-    <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          className="min-h-11"
-          aria-invalid={invalid}
-          aria-describedby={invalid ? errorId : undefined}
-        >
-          <KeyRound aria-hidden />
-          {assigned ? "Cambiar PIN" : "Asignar PIN"}
-        </Button>
-      </DialogTrigger>
+    <Dialog
+      open={!!reveal}
+      onOpenChange={(value) => {
+        if (!value) {
+          setCopied(false);
+          onClose();
+        }
+      }}
+    >
       <DialogContent
         showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
-        onOpenAutoFocus={(event) => {
-          event.preventDefault();
-          input.current?.focus();
-        }}
+        onInteractOutside={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => event.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Asignar PIN de acceso</DialogTitle>
+          <DialogTitle>PIN de {reveal?.name}</DialogTitle>
           <DialogDescription>
-            Escribe cuatro números o usa el teclado.
+            Anótalo y entrégaselo; no se volverá a mostrar.
           </DialogDescription>
         </DialogHeader>
-        <Field data-invalid={error}>
-          <FieldLabel htmlFor={id}>PIN de 4 dígitos</FieldLabel>
-          <Input
-            ref={input}
-            id={id}
-            type="password"
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={4}
-            value={digits}
-            className="min-h-11 text-center text-title tracking-widest"
-            aria-invalid={error}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(event) => {
-              setDigits(event.target.value.replace(/\D/g, "").slice(0, 4));
-              setError(false);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                confirm();
-              }
-            }}
-          />
-          {error && (
-            <FieldError id={`${id}-error`}>
-              Ingresa exactamente 4 dígitos.
-            </FieldError>
-          )}
-        </Field>
-        <div className="grid grid-cols-3 gap-2" aria-label="Teclado numérico">
-          {[
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "Limpiar",
-            "0",
-            "Borrar",
-          ].map((key) => (
-            <Button
-              key={key}
-              type="button"
-              variant="outline"
-              className="min-h-12 text-body-lg"
-              aria-label={key === "Borrar" ? "Borrar último dígito" : key}
-              onClick={() => {
-                setError(false);
-                setDigits((value) =>
-                  key === "Limpiar"
-                    ? ""
-                    : key === "Borrar"
-                      ? value.slice(0, -1)
-                      : (value + key).slice(0, 4),
-                );
-              }}
-            >
-              {key === "Borrar" ? <Delete aria-hidden /> : key}
-            </Button>
-          ))}
-        </div>
+        <p
+          className="rounded-control bg-muted p-4 text-center font-mono text-display tracking-widest"
+          aria-label={`PIN ${reveal?.pin.split("").join(" ")}`}
+        >
+          {reveal?.pin}
+        </p>
+        {reveal?.notice && (
+          <p
+            role="status"
+            className="rounded-control bg-warning-soft p-3 text-body-sm text-warning-soft-foreground"
+          >
+            {reveal.notice}
+          </p>
+        )}
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
             className="min-h-11"
-            onClick={() => changeOpen(false)}
+            onClick={copy}
           >
-            Cancelar
+            {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+            {copied ? "Copiado" : "Copiar PIN"}
           </Button>
-          <Button type="button" className="min-h-11" onClick={confirm}>
-            Confirmar PIN
+          <Button type="button" className="min-h-11" onClick={() => {
+            setCopied(false);
+            onClose();
+          }}>
+            Ya lo anoté
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -293,6 +224,11 @@ export function MemberFormSheet(props: MemberFormSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [discard, setDiscard] = useState(false);
+  const [reveal, setReveal] = useState<{
+    name: string;
+    pin: string;
+    notice?: string;
+  } | null>(null);
   const [saving, startTransition] = useTransition();
   const dirty = useRef(false);
   const submitting = useRef(false);
@@ -326,7 +262,7 @@ export function MemberFormSheet(props: MemberFormSheetProps) {
                 try {
                   const result = await saveMember(props.restaurantId, input);
                   if (!result.ok) {
-                    onError(result.error);
+                    onError(result.error, result.field);
                     return;
                   }
                   dirty.current = false;
@@ -336,6 +272,9 @@ export function MemberFormSheet(props: MemberFormSheetProps) {
                       ? "Miembro actualizado"
                       : "Miembro agregado",
                   );
+                  const { pin, notice } = result.data;
+                  if (pin) setReveal({ name: input.fullName, pin, notice });
+                  else if (notice) notify.success(notice);
                   router.refresh();
                 } catch {
                   onError(
@@ -348,6 +287,7 @@ export function MemberFormSheet(props: MemberFormSheetProps) {
             }}
           />
         )}
+        <PinRevealDialog reveal={reveal} onClose={() => setReveal(null)} />
         <AlertDialog open={discard} onOpenChange={setDiscard}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -394,7 +334,7 @@ function MemberForm({
   onCancel: () => void;
   onSubmit: (
     input: ReturnType<typeof memberFormInput>,
-    onError: (message: string) => void,
+    onError: (message: string, field?: string) => void,
   ) => void;
 }) {
   const id = useId();
@@ -412,14 +352,15 @@ function MemberForm({
         cashRegisterIds: [],
       },
   );
-  const [pin, setPin] = useState("");
+  const [generatePin, setGeneratePin] = useState(false);
   const [password, setPassword] = useState("");
+  const [confirmPin, setConfirmPin] = useState(false);
   const [changePassword, setChangePassword] = useState(false);
   const [errors, setErrors] = useState<MemberFormErrors>({});
   const [serverError, setServerError] = useState("");
   const editing = !!initialMember;
   const cashier = member.roles.includes("CASHIER");
-  const pinAssigned = !!pin || initialMember?.hasPin === true;
+  const pinAssigned = generatePin || initialMember?.hasPin === true;
   const selectedRegisters = registers.filter((register) =>
     member.cashRegisterIds.includes(register.id),
   );
@@ -437,7 +378,7 @@ function MemberForm({
     if (saving) return;
     const input = memberFormInput(
       member,
-      { pin, password },
+      { generatePin, password },
       initialMember?.memberId,
     );
     const validation = memberFormErrors(
@@ -457,9 +398,12 @@ function MemberForm({
       return;
     }
     setServerError("");
-    onSubmit(input, (message) => {
+    onSubmit(input, (message, serverField) => {
       setServerError(message);
-      const field = memberServerErrorField(message);
+      const field =
+        serverField === "email" || serverField === "password"
+          ? serverField
+          : memberServerErrorField(message);
       if (field) setErrors((value) => ({ ...value, [field]: message }));
       requestAnimationFrame(() => errorRef.current?.focus());
     });
@@ -557,40 +501,80 @@ function MemberForm({
                   Acceso al local
                 </h3>
                 <p className="text-body-sm text-muted-foreground">
-                  Este PIN se usa para iniciar sesión en los dispositivos del
-                  local.
+                  El PIN se genera automáticamente y se muestra una sola vez al
+                  guardar.
                 </p>
                 <Field>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <Badge
                       variant="secondary"
                       className={
-                        pinAssigned
+                        editing && !generatePin && initialMember.hasPin !== false
                           ? "bg-primary-soft text-primary"
                           : "bg-warning-soft text-warning-soft-foreground"
                       }
                     >
-                      {pinAssigned
-                        ? pin
-                          ? "PIN nuevo · ••••"
-                          : "PIN asignado · ••••"
-                        : editing && initialMember.hasPin === null
-                          ? "PIN actual sin consultar"
-                          : "PIN pendiente"}
+                      {!editing
+                        ? "Se generará al guardar"
+                        : generatePin
+                          ? "PIN nuevo al guardar"
+                          : initialMember.hasPin === false
+                            ? "Sin PIN"
+                            : "PIN asignado · ••••"}
                     </Badge>
-                    <PinDialog
-                      assigned={pinAssigned}
-                      invalid={!!errors.pin}
-                      errorId={`${id}-pin-error`}
-                      onAssign={(value) => {
-                        setPin(value);
-                        clearError("pin");
-                        markDirty();
-                      }}
-                    />
+                    {editing &&
+                      (generatePin ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-11"
+                          onClick={() => setGeneratePin(false)}
+                        >
+                          Conservar PIN actual
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-11"
+                          aria-invalid={!!errors.pin}
+                          aria-describedby={errorId("pin")}
+                          onClick={() => setConfirmPin(true)}
+                        >
+                          <KeyRound aria-hidden />
+                          Generar nuevo PIN
+                        </Button>
+                      ))}
                   </div>
                   {fieldError("pin")}
                 </Field>
+                <AlertDialog open={confirmPin} onOpenChange={setConfirmPin}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Generar un PIN nuevo?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        El PIN anterior deja de servir en cuanto guardes.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="min-h-11">
+                        Cancelar
+                      </AlertDialogCancel>
+                      <Button
+                        type="button"
+                        className="min-h-11"
+                        onClick={() => {
+                          setGeneratePin(true);
+                          clearError("pin");
+                          markDirty();
+                          setConfirmPin(false);
+                        }}
+                      >
+                        Generar nuevo PIN
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <p className="text-body-sm text-muted-foreground">
                   El acceso por correo está habilitado para todos los miembros.
                 </p>
@@ -833,11 +817,15 @@ function MemberForm({
               <div className="my-5 border-t" />
               <h4 className="font-medium">Acceso</h4>
               <p className="mt-2 text-body-sm text-muted-foreground">
-                {pinAssigned
-                  ? "PIN asignado"
-                  : editing && initialMember.hasPin === null
-                    ? "PIN actual sin consultar"
-                    : "PIN pendiente"}
+                {!editing
+                  ? "PIN se generará al guardar"
+                  : generatePin
+                    ? "PIN nuevo al guardar"
+                    : pinAssigned
+                      ? "PIN asignado"
+                      : initialMember.hasPin === null
+                        ? "PIN actual sin consultar"
+                        : "Sin PIN"}
               </p>
               <p className="mt-1 break-words text-body-sm text-muted-foreground">
                 {member.email || "Correo pendiente"}

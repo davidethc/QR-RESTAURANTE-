@@ -19,17 +19,20 @@ export type MemberFormInitial = MemberFormValues & {
 };
 export type MemberFormInput = Omit<
   SaveMemberInput,
-  "memberId" | "pin" | "password" | "cashRegisterIds"
+  "memberId" | "generatePin" | "password" | "cashRegisterIds"
 > &
   Partial<
-    Pick<SaveMemberInput, "memberId" | "pin" | "password" | "cashRegisterIds">
+    Pick<
+      SaveMemberInput,
+      "memberId" | "generatePin" | "password" | "cashRegisterIds"
+    >
   >;
 export type MemberFormField = keyof MemberFormValues | "pin" | "password";
 export type MemberFormErrors = Partial<Record<MemberFormField, string>>;
 
 export function memberFormInput(
   values: MemberFormValues,
-  credentials: { pin: string; password: string },
+  credentials: { generatePin: boolean; password: string },
   memberId?: string,
 ): MemberFormInput {
   return {
@@ -42,7 +45,7 @@ export function memberFormInput(
     ...(values.roles.includes("CASHIER")
       ? { cashRegisterIds: values.cashRegisterIds }
       : {}),
-    ...(!memberId || credentials.pin ? { pin: credentials.pin } : {}),
+    ...(memberId && credentials.generatePin ? { generatePin: true } : {}),
     ...(!memberId || credentials.password
       ? { password: credentials.password }
       : {}),
@@ -77,8 +80,8 @@ export function memberFormErrors(
   }
   if (!values.firstName.trim()) errors.firstName = "Completa este campo.";
   if (!values.lastName.trim()) errors.lastName = "Completa este campo.";
-  if (hasPin === false && !input.pin)
-    errors.pin = "Asigna un PIN de 4 dígitos.";
+  if (input.memberId && hasPin === false && !input.generatePin)
+    errors.pin = "Este miembro no tiene PIN. Genera uno nuevo.";
   return errors;
 }
 
@@ -86,6 +89,7 @@ export function memberFormErrors(
 export function memberServerErrorField(
   message: string,
 ): MemberFormField | undefined {
+  if (/otro negocio/i.test(message)) return "email";
   if (/\bPIN\b/i.test(message)) return "pin";
   if (/\bcorreo\b/i.test(message)) return "email";
   if (/\bclave\b|contraseña/i.test(message)) return "password";

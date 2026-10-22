@@ -10,6 +10,7 @@ import { getCashRegisters } from "@/lib/queries/cash";
 import { MEMBER_ROLES } from "@/lib/validations/staff";
 import { Button } from "@/components/ui/button";
 import { MemberFormSheet } from "./_components/member-form-sheet";
+import { UnlockPinButton } from "./_components/unlock-pin-button";
 import { StaffList } from "./_components/staff-list";
 
 // Ver la nota en (dashboard)/layout.tsx.
@@ -67,6 +68,7 @@ export default async function StaffPage() {
             desactivar personas.
           </p>
         )}
+        <UnlockPinButton restaurantId={session.restaurant.id} />
         <StaffList
           staff={staff}
           roles={[...assignableRoles]}

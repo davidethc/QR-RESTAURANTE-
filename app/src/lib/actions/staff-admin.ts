@@ -7,6 +7,7 @@ import { callUntypedRpc } from "@/lib/supabase/untyped-rpc";
 import {
   createStaffSchema,
   resetPasswordSchema,
+  unlockPinLoginSchema,
   updateStaffSchema,
 } from "@/lib/validations/staff";
 import type { ActionResult } from "@/types/actions";
@@ -137,5 +138,23 @@ export async function resetStaffPassword(input: unknown): Promise<ActionResult> 
     return { ok: false, error: GENERIC_ERROR };
   }
 
+  return { ok: true, data: undefined };
+}
+
+/**
+ * Quita el bloqueo del acceso por PIN del local (tras demasiados intentos
+ * fallidos). La RPC verifica que quien llama sea OWNER/ADMIN.
+ */
+export async function unlockPinLogin(input: unknown): Promise<ActionResult> {
+  const parsed = unlockPinLoginSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Sucursal inválida." };
+
+  const supabase = await createClient();
+  const { error } = await callUntypedRpc<unknown>(supabase, "unlock_pin_login", {
+    p_restaurant_id: parsed.data.restaurantId,
+  });
+  if (error) return { ok: false, error: rpcError("unlock_pin_login", error) };
+
+  revalidatePath("/staff");
   return { ok: true, data: undefined };
 }
