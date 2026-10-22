@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cashCountsSchema, closeCashSessionSchema } from "./cash";
+import { cashCountsSchema, cashCutSchema, closeCashSessionSchema } from "./cash";
 
 /**
  * Regresión del bug P1 de QA 2026-09-26: dejar Tarjeta/Transferencia/Otro en
@@ -83,5 +83,25 @@ describe("closeCashSessionSchema", () => {
       const cashIssue = result.error.issues.find((i) => i.path.join(".") === "counts.CASH");
       expect(cashIssue).toBeDefined();
     }
+  });
+});
+
+describe("cashCutSchema", () => {
+  const id = "3f8a1c52-7d3e-4b6a-9c11-2e5d8f0a7b44";
+  it("acepta corte con fondo y sin omitir pendientes", () => {
+    const r = cashCutSchema.safeParse({ cashSessionId: id, counts: { CASH: 100 }, cashFloatLeft: 40 });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.skipPendingOrders).toBe(false);
+  });
+  it("rechaza fondo mayor que el efectivo contado", () => {
+    const r = cashCutSchema.safeParse({ cashSessionId: id, counts: { CASH: 30 }, cashFloatLeft: 40 });
+    expect(r.success).toBe(false);
+  });
+  it("exige efectivo contado", () => {
+    expect(cashCutSchema.safeParse({ cashSessionId: id, counts: { CARD: 5 } }).success).toBe(false);
+  });
+  it("el fondo vacío es 0", () => {
+    const r = cashCutSchema.safeParse({ cashSessionId: id, counts: { CASH: 10 } });
+    expect(r.success && r.data.cashFloatLeft).toBe(0);
   });
 });
