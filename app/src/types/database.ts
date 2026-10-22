@@ -17,6 +17,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      availability: {
+        Row: {
+          available: boolean
+          group_id: string | null
+          item_id: string
+          item_type: string
+          product_id: string | null
+          restaurant_id: string
+        }
+        Insert: {
+          available?: boolean
+          group_id?: string | null
+          item_id: string
+          item_type: string
+          product_id?: string | null
+          restaurant_id: string
+        }
+        Update: {
+          available?: boolean
+          group_id?: string | null
+          item_id?: string
+          item_type?: string
+          product_id?: string | null
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_modifier_group_restaurant_fkey"
+            columns: ["group_id", "restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_groups"
+            referencedColumns: ["id", "restaurant_id"]
+          },
+          {
+            foreignKeyName: "availability_modifier_option_fkey"
+            columns: ["item_id", "group_id"]
+            isOneToOne: false
+            referencedRelation: "modifier_options"
+            referencedColumns: ["id", "group_id"]
+          },
+          {
+            foreignKeyName: "availability_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_variant_fkey"
+            columns: ["item_id", "product_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id", "product_id"]
+          },
+          {
+            foreignKeyName: "availability_variant_restaurant_fkey"
+            columns: ["product_id", "restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "restaurant_id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: Database["public"]["Enums"]["audit_action"]
