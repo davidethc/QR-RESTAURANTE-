@@ -96,3 +96,9 @@ export const productModifierGroupSchema = z.object({
 
 export type ProductVariantInput = z.infer<typeof productVariantSchema>;
 export type ModifierGroupInput = z.infer<typeof modifierGroupSchema>;
+
+export const setItemAvailabilitySchema = z.object({
+  itemType: z.enum(["variant", "modifier_option"]),
+  itemId: z.string().uuid("Ítem inválido"),
+  available: z.boolean(),
+});
