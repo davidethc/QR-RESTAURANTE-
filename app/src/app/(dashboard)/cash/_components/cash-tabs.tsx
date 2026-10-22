@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { segmentedItemClass, segmentedListClass } from "@/components/shared/segmented-control";
+import { segmentedItemClass, segmentedListClass } from "@/components/shared/segmented-classes";
 import { cn } from "@/lib/utils";
 
 const TABS = [

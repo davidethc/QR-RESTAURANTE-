@@ -2484,3 +2484,43 @@ Tiempos (servidor local): carga de pantallas del panel 0,7–1,2 s a 390 px; acc
 ### Datos de prueba
 - Eliminados con la app: producto "QA Hamburguesa", personalización "QA Extras", zona "QA Terraza" (con sus mesas), pedidos de mostrador no pagados (cancelados con motivo). "Café QA" quedó disponible.
 - Quedan (pagos registrados, la app no permite cancelarlos): cuenta #37 (Mesa 2, $13,50 efectivo) y cuenta #38 ("Para llevar #1", $7,75 en 3 métodos), más los pedidos y comandas asociados, y los pedidos cancelados. Afectan los reportes de hoy de monky-qa.
+
+## S3 — 2026-10-22
+
+Ronda en navegador (Playwright, Chromium) sobre `integracion/s3` (build de producción local, puerto 3210), base de producción **solo en `monky-qa`**. Cuentas `QA_MONKY_*`; mesa 2 para el flujo QR (la mesa 1 tiene una cuenta abierta de rondas anteriores y el QR responde "cuenta pendiente", correcto). Tras los arreglos: `tsc`, lint y 457 tests en verde.
+
+| Flujo | Resultado | Notas |
+|---|---|---|
+| M11 QR: nombre → pedido → "esperando aprobación" | Pasa | Pantalla de nombre al escanear; el pedido queda "Esperando aprobación del mesero" y el mesero lo ve en Pedidos con Aprobar/Rechazar |
+| M11 aprobar → cocina | Pasa | Pasa a "En cocina" en el cliente y llega a cocina (ver M09) |
+| M11 rechazar con motivo | Pasa | Motivos predefinidos; el cliente ve "Pedido #N rechazado · Producto agotado" en ~6 s sin recargar |
+| M11 Llamar mesero + cooldown | Pasa | Pide confirmación; "Mesero avisado" → "en camino" al atender; al marcar atendida el botón queda "Llamar mesero · 0:36" y deshabilitado (cooldown de 60 s, cuenta desde la llamada) |
+| M11 Ver cuenta | Pasa | Muestra "QA Hamburguesa · Doble + Queso ($0,25) $3,25" y el total. Para probarlo el pedido lo tomó el mesero: la carta del cliente no ofrece variantes (ver pendientes) |
+| M11 Pedir la cuenta | Pasa | "Cuenta pedida"; el botón "Agregar al pedido" queda deshabilitado; el mesero ve la solicitud con el total y "La cuenta la cobra el administrador" |
+| M09 comanda en cocina sin esperar ~20 s | Pasa | Aparece en ~4,4 s (incluye el clic) con "en vivo" |
+| M09 insignias del menú | Pasa | "Pedidos 1 pendientes" (mesero), "Cocina 1" y "Mesas 1" (dueño) aparecen y bajan solas |
+| M08 caja abierta, entrada y salida | Pasa | Ya había una caja abierta del 22-oct; +$2,00 refuerzo y −$1,00 gasto, el esperado pasó de $77 a $78 (la tarjeta tardó ~3 s en reflejar la entrada) |
+| M08 corte a ciegas + calculadora | Pasa | Calculadora: $50+$20+$10+3×$1+2×$0,25 = $83,50; con pedidos sin cobrar "Guardar corte" queda bloqueado y aparece "Falta cobrar 1 pedido #25" con "Ir a cobrar" |
+| M08 omitir pedidos pendientes | Pasa | Confirmación "Omitir y guardar corte"; detalle: esperado $83,75 / contado $83,50 / −$0,25 "Faltante", folios omitidos, movimientos |
+| M08 historial y detalle | Pasa tras arreglo | Bug: `/cash/cortes` y `/cash/movimientos` fallaban con "Algo salió mal" (ver abajo); el detalle mostraba `FLOAT_TOPUP`/`EXPENSE` en vez de "Refuerzo de fondo"/"Gasto" |
+| M08 abrir caja tras el corte | Pasa | "Abrir caja" viene con el fondo de $20 del corte anterior |
+| M10 vincular dispositivo, /activar, login por PIN, revocar | No probado | `SUPABASE_SECRET_KEY` no está en el entorno: /staff avisa que no se puede vincular. Solo se verificó que `/pin` ("Este dispositivo no está vinculado") y `/activar` ("Este enlace ya no sirve") responden bien sin vínculo |
+| Regresión: mesa → cocina → cobro | Pasa | Comanda de mesero (variante + extra), cocina completa ambas, cobro en efectivo $4,50 en Caja (cuenta #42); el cliente ve "Cuenta pagada · ¡gracias!". La mesa se libera al marcar "Entregado" |
+| Regresión: venta de mostrador | Pasa | Venta rápida Agua QA $1,25 → confirmar → llega a cocina → cobrada en efectivo (cuenta #43); la caja suma $1,25 |
+
+### Arreglos (rama `fix/s3-qa`)
+- `/cash/cortes` y `/cash/movimientos` rompían en producción: `segmentedListClass` vivía en un módulo `"use client"` y las páginas de servidor lo llamaban. Ahora está en `components/shared/segmented-classes.ts` (sin `"use client"`).
+- El detalle del corte, la lista de movimientos y el panel de turno mostraban el código del motivo (`FLOAT_TOPUP`): `REASON_LABEL` se importaba desde un módulo cliente y llegaba como referencia. Movido a `lib/cash-labels.ts`.
+
+### Hallazgos pendientes (no arreglados)
+- La carta del cliente por QR (`product-sheet.tsx`) no muestra variantes ni personalizaciones: un producto con variantes obligatorias se puede pedir al precio base "Desde" sin elegir variante. Solo el mesero/mostrador las ofrecen.
+- Marcar "Entregado" una vez (mesero, pedido ya cobrado) pareció funcionar y el pedido volvió a "En cocina" tras refrescar; el segundo intento sí quedó. No se reprodujo, vale la pena vigilarlo.
+- El cliente tarda ~4 s en pasar de "Mesero en camino" al cooldown tras marcar atendida (muestra el estado anterior en ese lapso).
+- La solicitud de cuenta pendiente del mesero sigue "Pendiente" después de que el administrador cobra, hasta marcar el pedido como entregado.
+- En /cash la venta de mostrador "Para llevar #5" figura como "Para comer aquí #5" (etiqueta armada en SQL, ya listada en S2).
+- El log del servidor muestra "During prerendering, fetch() rejects" desde `getTableStatus` en `/r/[slug]/[mesa]` (sin efecto visible).
+- Guardar un producto tarda más de 3,5 s; un segundo clic creó un producto duplicado.
+
+### Datos de prueba
+- Eliminados con la app: productos "QA Hamburguesa" (x2) y personalización "QA Extras".
+- Quedan (no se pueden cancelar con la app): cuentas #42 ($4,50) y #43 ($1,25) en efectivo, movimientos +$2 / −$1, el corte #4 (omitió folio #25) y la caja abierta nueva (fondo $20); pedidos QR #170 y #171 (rechazado). Mesa 2 conserva una sesión de cliente "Ana QA" y las mesas 1 y 3 siguen con las cuentas de $1,25 de antes.

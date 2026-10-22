@@ -7,7 +7,7 @@ import { getMyRestaurant } from "@/lib/queries/staff";
 import { getLastCashFloat, listCashCuts } from "@/lib/actions/cash";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { segmentedItemClass, segmentedListClass } from "@/components/shared/segmented-control";
+import { segmentedItemClass, segmentedListClass } from "@/components/shared/segmented-classes";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCutDate } from "@/lib/cash-cut";
 import { cn, formatPrice } from "@/lib/utils";
