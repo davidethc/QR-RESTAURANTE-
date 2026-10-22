@@ -20,6 +20,8 @@ const notes = z
 
 export const orderLineSchema = z.object({
   productId: z.uuid({ message: "Producto inválido." }),
+  /** Variante elegida (M01). Sin ella la base cobra products.price. */
+  variantId: z.uuid({ message: "Variante inválida." }).optional(),
   quantity: z
     .number({ message: "Cantidad inválida." })
     .int("La cantidad debe ser un número entero.")

@@ -20,9 +20,12 @@ function firstIssue(error: { issues: { message: string }[] }): string {
   return error.issues[0]?.message ?? "Pedido inválido.";
 }
 
-function toRpcItems(items: { productId: string; quantity: number; notes: string | null }[]) {
+function toRpcItems(
+  items: { productId: string; variantId?: string; quantity: number; notes: string | null }[]
+) {
   return items.map((item) => ({
     product_id: item.productId,
+    ...(item.variantId ? { variant_id: item.variantId } : {}),
     quantity: item.quantity,
     notes: item.notes,
   }));
