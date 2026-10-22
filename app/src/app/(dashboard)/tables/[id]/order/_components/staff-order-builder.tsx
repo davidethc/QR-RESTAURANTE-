@@ -370,7 +370,7 @@ export function StaffOrderBuilder({
   );
 }
 
-function ProductList({
+export function ProductList({
   products,
   onAdd,
   quantityOf,
