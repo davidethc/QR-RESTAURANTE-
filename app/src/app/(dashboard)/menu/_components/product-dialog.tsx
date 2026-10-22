@@ -1,15 +1,14 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Plus, Pencil } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageFileInput } from "@/components/shared/image-file-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -24,21 +23,60 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-  SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { notify } from "@/lib/notifications";
 import {
+  createCategory,
   createProduct,
+  getCatalog,
+  getModifierGroups,
+  linkProductModifierGroup,
+  unlinkProductModifierGroup,
   updateProduct,
   uploadProductImage,
 } from "@/lib/actions/menu";
-import { productSchema, type ProductInput } from "@/lib/validations/menu";
+import { productSchema } from "@/lib/validations/menu";
+import { formatPrice } from "@/lib/utils";
 import type { AdminCategory, AdminProduct } from "@/types/staff";
+import { filterModifiers, type ModifierGroup } from "./modifier-model";
 
-const NO_CATEGORY = "__none__";
-const NO_PAIRED_DRINK = "__none__";
+const NONE = "__none__";
+const TOUCH = "min-h-11 min-w-11";
+
+type VariantDraft = { key: string; id?: string; name: string; price: string };
+type Channels = Record<string, boolean>;
+
+const POS_CHANNELS = [
+  ["pos_tables", "Mesas"],
+  ["pos_dine_in", "En el local"],
+  ["pos_takeout", "Para llevar"],
+  ["pos_delivery", "Domicilio"],
+] as const;
+const DIGITAL_CHANNELS = [
+  ["menu_tables", "Mesas"],
+  ["menu_pickup", "Recoger"],
+  ["menu_delivery", "Domicilio"],
+] as const;
+const ALL_ON: Channels = Object.fromEntries(
+  [...POS_CHANNELS, ...DIGITAL_CHANNELS].map(([k]) => [k, true]),
+);
+
+let keySeq = 0;
+const newKey = () => `v${++keySeq}`;
+
+function parseMoney(value: string) {
+  return value.trim() === "" ? NaN : Number(value.replace(",", "."));
+}
 
 export function ProductDialog({
   restaurantId,
@@ -53,268 +91,668 @@ export function ProductDialog({
   product?: AdminProduct;
   defaultCategoryId?: string;
 }) {
-  // Ver la nota en SettingsForm: React Hook Form lee refs al invocar
-  // `handleSubmit`, incompatible con el React Compiler.
-  "use no memo";
+  const isEdit = !!product;
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isEdit = !!product;
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    setError,
-    formState: { errors },
-  } = useForm<ProductInput>({
-    resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: product?.name ?? "",
-      description: product?.description ?? "",
-      price: product?.price ?? 0,
-      category_id: product?.category_id ?? defaultCategoryId ?? "",
-      available: product?.available ?? true,
-      featured: product?.featured ?? false,
-      paired_drink_id: product?.paired_drink_id ?? "",
-    },
-  });
+  const [name, setName] = useState(product?.name ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [categoryId, setCategoryId] = useState(product?.category_id ?? defaultCategoryId ?? "");
+  const [extraCategories, setExtraCategories] = useState<AdminCategory[]>([]);
+  const [variants, setVariants] = useState<VariantDraft[]>([
+    { key: newKey(), name: "", price: product ? String(product.price) : "" },
+  ]);
+  const [available, setAvailable] = useState(product?.available ?? true);
+  const [featured, setFeatured] = useState(product?.featured ?? false);
+  const [pairedDrinkId, setPairedDrinkId] = useState(product?.paired_drink_id ?? "");
+  const [channels, setChannels] = useState<Channels>(ALL_ON);
+  const [imageUrl, setImageUrl] = useState<string | null>(product?.image_url ?? null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [rootError, setRootError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
 
-  const pairedDrinkOptions = allProducts.filter((p) => p.id !== product?.id);
+  const [groups, setGroups] = useState<ModifierGroup[] | null>(null);
+  const [groupsError, setGroupsError] = useState(false);
+  const [linkedIds, setLinkedIds] = useState<string[]>([]);
+  const [initialLinked, setInitialLinked] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
 
-  function onSubmit(values: ProductInput) {
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatError, setNewCatError] = useState<string | null>(null);
+  const [newCatPending, startNewCat] = useTransition();
+
+  const allCategories = [...categories, ...extraCategories];
+  const pairedOptions = allProducts.filter((p) => p.id !== product?.id);
+
+  function touch<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setDirty(true);
+      setter(v);
+    };
+  }
+
+  // Al abrir se cargan variantes y vínculos guardados, y la biblioteca de grupos.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setGroupsError(false);
+    Promise.all([
+      getModifierGroups(restaurantId),
+      isEdit ? getCatalog(restaurantId) : Promise.resolve(null),
+    ]).then(([groupResult, catalog]) => {
+      if (cancelled) return;
+      if (!groupResult.ok) setGroupsError(true);
+      else setGroups(groupResult.data);
+      if (catalog?.ok && product) {
+        const row = catalog.data.products.find((p) => p.id === product.id);
+        if (row) {
+          const vs = [...row.product_variants].sort((a, b) => a.position - b.position);
+          if (vs.length) {
+            setVariants(
+              vs.map((v) => ({ key: v.id, id: v.id, name: v.name, price: String(v.price) })),
+            );
+          }
+          const ids = [...row.product_modifier_groups]
+            .sort((a, b) => a.position - b.position)
+            .map((l) => l.group_id);
+          setLinkedIds(ids);
+          setInitialLinked(ids);
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, restaurantId, isEdit, product]);
+
+  const previewUrl = useMemo(() => imageUrl, [imageUrl]);
+  const linkedGroups = linkedIds
+    .map((id) => groups?.find((g) => g.id === id))
+    .filter((g): g is ModifierGroup => !!g);
+  const availableGroups = filterModifiers(groups ?? [], search, false).filter(
+    (g) => !linkedIds.includes(g.id),
+  );
+
+  const prices = variants.map((v) => parseMoney(v.price)).filter((n) => Number.isFinite(n));
+  const minPrice = prices.length ? Math.min(...prices) : null;
+  const multiple = variants.length > 1;
+
+  function updateVariant(key: string, patch: Partial<VariantDraft>) {
+    setDirty(true);
+    setVariants((vs) => vs.map((v) => (v.key === key ? { ...v, ...patch } : v)));
+  }
+
+  function moveLinked(index: number, delta: number) {
+    setDirty(true);
+    setLinkedIds((ids) => {
+      const next = [...ids];
+      const target = index + delta;
+      if (target < 0 || target >= next.length) return ids;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  function onFileChange() {
+    const file = fileInputRef.current?.files?.[0];
+    setImageError(null);
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const probe = new window.Image();
+    probe.onload = () => {
+      setDirty(true);
+      setImageUrl(url);
+    };
+    probe.onerror = () => {
+      URL.revokeObjectURL(url);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setImageError("No pudimos leer esta imagen. Elige otra foto.");
+    };
+    probe.src = url;
+  }
+
+  function validate() {
+    const next: Record<string, string> = {};
+    const nums = variants.map((v) => parseMoney(v.price));
+    const payload = {
+      name,
+      description,
+      price: multiple ? Math.min(...nums.filter(Number.isFinite), Infinity) : nums[0],
+      category_id: categoryId,
+      available,
+      featured,
+      paired_drink_id: pairedDrinkId,
+      variants: variants.map((v, i) => ({
+        ...(v.id ? { id: v.id } : {}),
+        name: multiple ? v.name.trim() : "",
+        price: nums[i],
+      })),
+    };
+    if (!Number.isFinite(payload.price)) payload.price = Number.NaN;
+    const parsed = productSchema.safeParse(payload);
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        const [first, index, field] = issue.path;
+        if (first === "variants" && typeof index === "number") {
+          const key = variants[index]?.key;
+          next[`${key}.${field === "name" ? "name" : "price"}`] ??=
+            Number.isNaN(nums[index]) && field !== "name"
+              ? "Escribe un precio de 0 o más, con hasta 2 decimales."
+              : issue.message;
+        } else if (first === "price") {
+          next[`${variants[0].key}.price`] ??= "Escribe un precio de 0 o más, con hasta 2 decimales.";
+        } else {
+          next[String(first)] ??= issue.message;
+        }
+      }
+    }
+    // Una fila vacía agregada por accidente no se guarda en silencio.
+    if (multiple) {
+      variants.forEach((v) => {
+        if (!v.name.trim()) next[`${v.key}.name`] ??= "Nombra esta variante.";
+        if (!v.price.trim()) next[`${v.key}.price`] ??= "Escribe un precio.";
+      });
+    } else if (!variants[0].price.trim()) {
+      next[`${variants[0].key}.price`] ??= "Escribe un precio.";
+    }
+    setErrors(next);
+    return Object.keys(next).length ? null : payload;
+  }
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isPending) return;
+    setRootError(null);
+    const payload = validate();
+    if (!payload) return;
     startTransition(async () => {
       let productId: string;
-
       if (isEdit) {
-        const result = await updateProduct(product.id, values);
-        if (!result.ok) {
-          setError("root", { message: result.error });
-          return;
-        }
+        const result = await updateProduct(product.id, payload);
+        if (!result.ok) return setRootError(result.error);
         productId = product.id;
       } else {
-        const result = await createProduct(restaurantId, values);
-        if (!result.ok) {
-          setError("root", { message: result.error });
-          return;
-        }
+        const result = await createProduct(restaurantId, payload);
+        if (!result.ok) return setRootError(result.error);
         productId = result.data;
+      }
+
+      let partial: string | null = null;
+      for (const id of initialLinked.filter((g) => !linkedIds.includes(g))) {
+        const r = await unlinkProductModifierGroup(productId, id);
+        if (!r.ok) partial = r.error;
+      }
+      for (const [position, groupId] of linkedIds.entries()) {
+        const r = await linkProductModifierGroup({ product_id: productId, group_id: groupId, position });
+        if (!r.ok) partial = r.error;
       }
 
       const file = fileInputRef.current?.files?.[0];
       if (file) {
         const formData = new FormData();
         formData.set("file", file);
-        const uploadResult = await uploadProductImage(
-          restaurantId,
-          productId,
-          formData
-        );
-        if (!uploadResult.ok) {
-          notify.error(uploadResult.error);
-        }
+        const uploadResult = await uploadProductImage(restaurantId, productId, formData);
+        if (!uploadResult.ok) partial = `El producto ya se guardó, pero la foto falló: ${uploadResult.error}`;
       }
 
-      notify.success(isEdit ? "Producto actualizado" : "Producto creado");
+      if (partial) notify.error(partial);
+      else notify.success(isEdit ? "Producto actualizado" : "Producto creado");
       setOpen(false);
-      reset();
+      setDirty(false);
       router.refresh();
     });
   }
 
+  function requestOpenChange(next: boolean) {
+    if (!next && dirty && !isPending) return setConfirmClose(true);
+    setOpen(next);
+  }
+
+  function addCategory() {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return setNewCatError("El nombre es obligatorio");
+    startNewCat(async () => {
+      const result = await createCategory(restaurantId, { name: trimmed });
+      if (!result.ok) return setNewCatError(result.error);
+      setExtraCategories((c) => [
+        ...c,
+        { id: result.data, name: trimmed, description: null } as AdminCategory,
+      ]);
+      setCategoryId(result.data);
+      setDirty(true);
+      setNewCatOpen(false);
+      setNewCatName("");
+      setNewCatError(null);
+    });
+  }
+
+  const noChannel = Object.values(channels).every((v) => !v);
+
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        {isEdit ? (
-          <Button variant="ghost" size="icon" aria-label="Editar producto">
-            <Pencil className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button variant="outline" size="sm">
-            <Plus /> Producto
-          </Button>
-        )}
-      </SheetTrigger>
-      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
-        <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
-          <SheetTitle className="text-title-sm font-semibold">
-            {isEdit ? "Editar producto" : "Nuevo producto"}
-          </SheetTitle>
-          <SheetDescription>
-            Aparecerá en la carta del QR cuando lo guardes.
-          </SheetDescription>
-        </SheetHeader>
-        {/* Ver la nota en SettingsForm: falso positivo conocido de
-            React Hook Form con este eslint rule puntual. */}
-        <form
-          // eslint-disable-next-line react-hooks/refs
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="flex flex-1 flex-col overflow-hidden"
-        >
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <FieldGroup>
-              <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
-                Datos del producto
-              </p>
-              <Field>
-                <FieldLabel htmlFor="prod-name">Nombre</FieldLabel>
-                <Input id="prod-name" {...register("name")} />
-                <FieldError errors={[errors.name]} />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="prod-description">
-                  Descripción (opcional)
-                </FieldLabel>
-                <Textarea id="prod-description" rows={2} {...register("description")} />
-                <FieldError errors={[errors.description]} />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="prod-price">Precio</FieldLabel>
-                <Input
-                  id="prod-price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register("price", { valueAsNumber: true })}
-                />
-                <FieldError errors={[errors.price]} />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="prod-category">Categoría</FieldLabel>
-                <Controller
-                  control={control}
-                  name="category_id"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value || NO_CATEGORY}
-                      onValueChange={(v) =>
-                        field.onChange(v === NO_CATEGORY ? "" : v)
-                      }
-                    >
-                      <SelectTrigger id="prod-category" className="w-full">
-                        <SelectValue placeholder="Sin categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_CATEGORY}>Sin categoría</SelectItem>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </Field>
-
-              <div className="flex flex-col gap-4 border-t border-border pt-5">
-                <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
-                  Foto
-                </p>
-                <Field>
-                  <FieldLabel htmlFor="prod-image">
-                    Foto (opcional, JPEG/PNG/WebP, máx. 5 MB)
-                  </FieldLabel>
-                  <ImageFileInput id="prod-image" ref={fileInputRef} />
-                </Field>
-              </div>
-
-              <div className="flex flex-col gap-4 border-t border-border pt-5">
-                <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
-                  En la carta
-                </p>
-                <Field orientation="horizontal">
-                  <FieldLabel htmlFor="prod-available">Disponible</FieldLabel>
-                  <Controller
-                    control={control}
-                    name="available"
-                    render={({ field }) => (
-                      <Switch
-                        id="prod-available"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
+    <>
+      <Sheet open={open} onOpenChange={requestOpenChange}>
+        <SheetTrigger asChild>
+          {isEdit ? (
+            <Button variant="ghost" size="icon" className={TOUCH} aria-label="Editar producto">
+              <Pencil className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="min-h-11">
+              <Plus /> Producto
+            </Button>
+          )}
+        </SheetTrigger>
+        <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md lg:max-w-4xl">
+          <SheetHeader className="shrink-0 border-b border-border px-4 py-5 sm:px-6">
+            <SheetTitle className="text-title-sm font-semibold">
+              {isEdit ? "Editar producto" : "Nuevo producto"}
+            </SheetTitle>
+            <SheetDescription>Aparecerá en la carta cuando lo guardes.</SheetDescription>
+          </SheetHeader>
+          <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+            <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <FieldGroup className="min-w-0">
+                <Field data-invalid={!!errors.name}>
+                  <FieldLabel htmlFor="prod-name">Nombre</FieldLabel>
+                  <Input
+                    id="prod-name"
+                    value={name}
+                    aria-invalid={!!errors.name}
+                    onChange={(e) => touch(setName)(e.target.value)}
                   />
-                </Field>
-
-                <Field orientation="horizontal">
-                  <FieldLabel htmlFor="prod-featured">
-                    Destacado — aparece en &ldquo;Sugerencias&rdquo;
-                  </FieldLabel>
-                  <Controller
-                    control={control}
-                    name="featured"
-                    render={({ field }) => (
-                      <Switch
-                        id="prod-featured"
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
-                  />
+                  {errors.name && <FieldError>{errors.name}</FieldError>}
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="prod-paired-drink">
-                    Bebida del combo (opcional)
-                  </FieldLabel>
-                  <Controller
-                    control={control}
-                    name="paired_drink_id"
-                    render={({ field }) => (
-                      <Select
-                        value={field.value || NO_PAIRED_DRINK}
-                        onValueChange={(v) =>
-                          field.onChange(v === NO_PAIRED_DRINK ? "" : v)
-                        }
-                      >
-                        <SelectTrigger id="prod-paired-drink" className="w-full">
-                          <SelectValue placeholder="Sin bebida asociada" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={NO_PAIRED_DRINK}>
-                            Sin bebida asociada
-                          </SelectItem>
-                          {pairedDrinkOptions.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                  <FieldLabel htmlFor="prod-category">Categoría</FieldLabel>
+                  <Select
+                    value={categoryId || NONE}
+                    onValueChange={(v) => {
+                      if (v === "__new__") return setNewCatOpen(true);
+                      touch(setCategoryId)(v === NONE ? "" : v);
+                    }}
+                  >
+                    <SelectTrigger id="prod-category" className="min-h-11 w-full">
+                      <SelectValue placeholder="Sin categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>Sin categoría</SelectItem>
+                      {allCategories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__new__">+ Nueva categoría</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field data-invalid={!!errors.description}>
+                  <FieldLabel htmlFor="prod-description">Descripción (opcional)</FieldLabel>
+                  <Textarea
+                    id="prod-description"
+                    rows={2}
+                    value={description}
+                    onChange={(e) => touch(setDescription)(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Si eliges una bebida, este plato aparecerá en
-                    &ldquo;Sugerencias para ti&rdquo; combinado con ella.
+                  {errors.description && <FieldError>{errors.description}</FieldError>}
+                </Field>
+
+                <Field data-invalid={!!imageError}>
+                  <FieldLabel htmlFor="prod-image">Foto (opcional, JPEG/PNG/WebP, máx. 5 MB)</FieldLabel>
+                  <div onChange={onFileChange}>
+                    <ImageFileInput id="prod-image" ref={fileInputRef} aria-describedby="prod-image-error" />
+                  </div>
+                  <div id="prod-image-error">{imageError && <FieldError>{imageError}</FieldError>}</div>
+                </Field>
+
+                <section aria-labelledby="prod-prices" className="flex flex-col gap-3 border-t border-border pt-5">
+                  <p id="prod-prices" className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                    {multiple ? "Precios por variante" : "Precio"}
                   </p>
-                </Field>
-              </div>
+                  {variants.map((v, i) => (
+                    <div key={v.key} className="flex flex-col gap-2">
+                      <div className="flex items-start gap-2">
+                        {multiple && (
+                          <div className="min-w-0 flex-1">
+                            <Input
+                              aria-label={`Nombre de variante ${i + 1}`}
+                              placeholder="Nombre de variante"
+                              className="min-h-11"
+                              value={v.name}
+                              aria-invalid={!!errors[`${v.key}.name`]}
+                              onChange={(e) => updateVariant(v.key, { name: e.target.value })}
+                            />
+                            {errors[`${v.key}.name`] && <FieldError>{errors[`${v.key}.name`]}</FieldError>}
+                          </div>
+                        )}
+                        <div className={multiple ? "w-28 shrink-0" : "min-w-0 flex-1"}>
+                          <Input
+                            aria-label={multiple ? `Precio de variante ${i + 1}` : "Precio"}
+                            inputMode="decimal"
+                            placeholder="0.00"
+                            className="min-h-11"
+                            value={v.price}
+                            aria-invalid={!!errors[`${v.key}.price`]}
+                            onChange={(e) => updateVariant(v.key, { price: e.target.value })}
+                          />
+                          {errors[`${v.key}.price`] && <FieldError>{errors[`${v.key}.price`]}</FieldError>}
+                        </div>
+                        {multiple && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className={TOUCH}
+                            aria-label={`Quitar variante ${i + 1}`}
+                            onClick={() => {
+                              setDirty(true);
+                              setVariants((vs) => vs.filter((x) => x.key !== v.key));
+                            }}
+                          >
+                            <X />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 self-start"
+                    onClick={() => {
+                      setDirty(true);
+                      setVariants((vs) => [...vs, { key: newKey(), name: "", price: "" }]);
+                    }}
+                  >
+                    <Plus /> Agregar otro precio
+                  </Button>
+                </section>
 
-              <FieldError errors={[errors.root]} />
-            </FieldGroup>
-          </div>
-          <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border px-6 py-4">
-            <SheetClose asChild>
-              <Button type="button" variant="outline">
+                <section aria-labelledby="prod-mods" className="flex flex-col gap-3 border-t border-border pt-5">
+                  <p id="prod-mods" className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                    Personalizaciones
+                  </p>
+                  {groupsError ? (
+                    <p className="text-body-sm text-destructive" role="alert">
+                      No pudimos cargar las personalizaciones. Cierra y vuelve a abrir el formulario.
+                    </p>
+                  ) : groups === null ? (
+                    <p className="text-body-sm text-muted-foreground">Cargando personalizaciones…</p>
+                  ) : (
+                    <>
+                      {linkedGroups.length > 0 && (
+                        <ul className="flex flex-col gap-2">
+                          {linkedGroups.map((g, i) => (
+                            <li key={g.id} className="flex items-center gap-1 rounded-control border border-border p-2">
+                              <div className="min-w-0 flex-1 px-1">
+                                <p className="wrap-anywhere text-body-sm font-medium">{g.name}</p>
+                                <p className="text-caption text-muted-foreground">
+                                  {g.min_select > 0 ? "Obligatorio" : "Opcional"} · hasta {g.max_select} ·{" "}
+                                  {g.modifier_options.length} opciones
+                                </p>
+                              </div>
+                              <Button type="button" variant="ghost" size="icon" className={TOUCH} aria-label={`Subir ${g.name}`} disabled={i === 0} onClick={() => moveLinked(i, -1)}>
+                                <ArrowUp />
+                              </Button>
+                              <Button type="button" variant="ghost" size="icon" className={TOUCH} aria-label={`Bajar ${g.name}`} disabled={i === linkedGroups.length - 1} onClick={() => moveLinked(i, 1)}>
+                                <ArrowDown />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className={TOUCH}
+                                aria-label={`Quitar ${g.name}`}
+                                onClick={() => {
+                                  setDirty(true);
+                                  setLinkedIds((ids) => ids.filter((x) => x !== g.id));
+                                }}
+                              >
+                                <X />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {groups.length === 0 ? (
+                        <p className="text-body-sm text-muted-foreground">No se han creado personalizaciones.</p>
+                      ) : (
+                        <>
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              aria-label="Buscar personalización"
+                              placeholder="Buscar personalización"
+                              className="min-h-11 pl-9"
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                            />
+                          </div>
+                          {availableGroups.length === 0 ? (
+                            <p className="text-body-sm text-muted-foreground">
+                              {search ? "Ninguna personalización coincide." : "Ya agregaste todas."}
+                              {search && (
+                                <Button type="button" variant="link" className="min-h-11" onClick={() => setSearch("")}>
+                                  Limpiar búsqueda
+                                </Button>
+                              )}
+                            </p>
+                          ) : (
+                            <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto">
+                              {availableGroups.map((g) => (
+                                <li key={g.id} className="flex items-center gap-2">
+                                  <span className="min-w-0 flex-1 wrap-anywhere text-body-sm">{g.name}</span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="min-h-11"
+                                    onClick={() => {
+                                      setDirty(true);
+                                      setLinkedIds((ids) => [...ids, g.id]);
+                                    }}
+                                  >
+                                    <Plus /> Agregar
+                                  </Button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </section>
+
+                <details className="group border-t border-border pt-5">
+                  <summary className="flex min-h-11 cursor-pointer items-center text-body-sm font-medium">
+                    Más opciones
+                  </summary>
+                  <div className="flex flex-col gap-5 pt-3">
+                    <fieldset className="flex flex-col gap-3">
+                      <legend className="mb-2 text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                        Opciones de servicio
+                      </legend>
+                      {[
+                        ["POS", POS_CHANNELS],
+                        ["Menú digital", DIGITAL_CHANNELS],
+                      ].map(([title, list]) => (
+                        <div key={title as string} className="flex flex-col gap-1">
+                          <p className="text-body-sm font-medium">{title as string}</p>
+                          {(list as readonly (readonly [string, string])[]).map(([key, label]) => (
+                            <Field key={key} orientation="horizontal" className="min-h-11">
+                              <FieldLabel htmlFor={`ch-${key}`}>{label}</FieldLabel>
+                              <Switch
+                                id={`ch-${key}`}
+                                checked={channels[key]}
+                                onCheckedChange={(c) => {
+                                  setDirty(true);
+                                  setChannels((s) => ({ ...s, [key]: c }));
+                                }}
+                              />
+                            </Field>
+                          ))}
+                        </div>
+                      ))}
+                      {noChannel && (
+                        <p className="text-body-sm text-warning-foreground" role="status">
+                          Este producto no podrá pedirse.
+                        </p>
+                      )}
+                      <p className="text-caption text-muted-foreground">
+                        Los canales se aplicarán cuando el servidor los soporte; por ahora no se guardan.
+                      </p>
+                    </fieldset>
+
+                    <div className="flex flex-col gap-3">
+                      <p className="text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                        En la carta
+                      </p>
+                      <Field orientation="horizontal" className="min-h-11">
+                        <FieldLabel htmlFor="prod-available">Disponible</FieldLabel>
+                        <Switch id="prod-available" checked={available} onCheckedChange={touch(setAvailable)} />
+                      </Field>
+                      <Field orientation="horizontal" className="min-h-11">
+                        <FieldLabel htmlFor="prod-featured">
+                          Destacado — aparece en &ldquo;Sugerencias&rdquo;
+                        </FieldLabel>
+                        <Switch id="prod-featured" checked={featured} onCheckedChange={touch(setFeatured)} />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="prod-paired-drink">Bebida del combo (opcional)</FieldLabel>
+                        <Select
+                          value={pairedDrinkId || NONE}
+                          onValueChange={(v) => touch(setPairedDrinkId)(v === NONE ? "" : v)}
+                        >
+                          <SelectTrigger id="prod-paired-drink" className="min-h-11 w-full">
+                            <SelectValue placeholder="Sin bebida asociada" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE}>Sin bebida asociada</SelectItem>
+                            {pairedOptions.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+                  </div>
+                </details>
+
+                {rootError && <FieldError>{rootError}</FieldError>}
+              </FieldGroup>
+
+              <aside aria-label="Vista previa" className="min-w-0 lg:sticky lg:top-0 lg:self-start">
+                <p className="mb-2 text-caption font-medium uppercase tracking-wider text-muted-foreground">
+                  Vista previa
+                </p>
+                <div className="overflow-hidden rounded-card border border-border bg-card">
+                  <div className="flex aspect-square items-center justify-center bg-muted text-muted-foreground">
+                    {previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={previewUrl} alt="" className="size-full object-cover" />
+                    ) : (
+                      <span className="text-body-sm">Sin foto</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1 p-4">
+                    <p className="wrap-anywhere text-body font-semibold">{name || "Nombre del producto"}</p>
+                    {description && (
+                      <p className="wrap-anywhere text-body-sm text-muted-foreground">{description}</p>
+                    )}
+                    <p className="text-body-sm font-medium tabular-nums">
+                      {minPrice === null ? "—" : `${multiple ? "Desde " : ""}${formatPrice(minPrice)}`}
+                    </p>
+                    {linkedGroups.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {linkedGroups.map((g) => (
+                          <Badge key={g.id} variant="secondary">
+                            {g.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            </div>
+            <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border px-4 py-4 sm:px-6">
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => requestOpenChange(false)}>
                 Cancelar
               </Button>
-            </SheetClose>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="animate-spin" />}
-              {isEdit ? "Guardar" : "Crear"}
+              <Button type="submit" className="min-h-11" disabled={isPending}>
+                {isPending && <Loader2 className="animate-spin" />}
+                {isPending ? "Guardando…" : isEdit ? "Guardar" : "Crear"}
+              </Button>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={newCatOpen} onOpenChange={setNewCatOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nueva categoría</DialogTitle>
+            <DialogDescription>Se agregará al menú general.</DialogDescription>
+          </DialogHeader>
+          <Field data-invalid={!!newCatError}>
+            <FieldLabel htmlFor="new-cat-name">Nombre</FieldLabel>
+            <Input
+              id="new-cat-name"
+              className="min-h-11"
+              value={newCatName}
+              aria-invalid={!!newCatError}
+              onChange={(e) => {
+                setNewCatName(e.target.value);
+                setNewCatError(null);
+              }}
+            />
+            {newCatError && <FieldError>{newCatError}</FieldError>}
+          </Field>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setNewCatOpen(false)}>
+              Cancelar
             </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+            <Button type="button" className="min-h-11" disabled={newCatPending} onClick={addCategory}>
+              {newCatPending && <Loader2 className="animate-spin" />}
+              Agregar categoría
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Descartar los cambios?</DialogTitle>
+            <DialogDescription>Los cambios que no guardaste se perderán.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setConfirmClose(false)}>
+              Seguir editando
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="min-h-11"
+              onClick={() => {
+                setConfirmClose(false);
+                setDirty(false);
+                setOpen(false);
+              }}
+            >
+              Descartar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
