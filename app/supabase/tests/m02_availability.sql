@@ -42,27 +42,33 @@ begin
 
   insert into _m02_ctx values
     ('restaurant', v_restaurant), ('owner', v_owner),
-    ('admin', gen_random_uuid()), ('reader', gen_random_uuid()),
+    ('admin', gen_random_uuid()), ('waiter', gen_random_uuid()),
+    ('kitchen', gen_random_uuid()), ('cashier', gen_random_uuid()),
     ('inactive', gen_random_uuid()), ('outsider', gen_random_uuid()),
     ('cross_restaurant', gen_random_uuid()), ('false_product', gen_random_uuid()),
     ('cross_product', gen_random_uuid()), ('cross_group', gen_random_uuid()),
     ('owner_product', gen_random_uuid()), ('admin_product', gen_random_uuid()),
-    ('reader_product', gen_random_uuid()), ('inactive_product', gen_random_uuid()),
+    ('waiter_product', gen_random_uuid()), ('kitchen_product', gen_random_uuid()),
+    ('cashier_product', gen_random_uuid()), ('inactive_product', gen_random_uuid()),
     ('outsider_product', gen_random_uuid());
 
   insert into auth.users (id, instance_id, aud, role, email, created_at, updated_at)
   select v, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
          'qa-m02-' || v || '@example.invalid', now(), now()
-  from _m02_ctx where k in ('admin', 'reader', 'inactive', 'outsider');
+  from _m02_ctx where k in ('admin', 'waiter', 'kitchen', 'cashier', 'inactive', 'outsider');
   insert into public.profiles (id, full_name)
   select v, 'QA M02 ' || k from _m02_ctx
-  where k in ('admin', 'reader', 'inactive', 'outsider')
+  where k in ('admin', 'waiter', 'kitchen', 'cashier', 'inactive', 'outsider')
   on conflict (id) do nothing;
   insert into public.restaurant_members (restaurant_id, user_id, role, status)
   select (select v from _m02_ctx where k = 'restaurant'), v,
-         (case when k in ('inactive', 'reader') then 'WAITER' else upper(k) end)::public.member_role,
+         (case when k = 'inactive' then 'WAITER' else upper(k) end)::public.member_role,
          (case k when 'inactive' then 'INACTIVE' else 'ACTIVE' end)::public.member_status
-  from _m02_ctx where k in ('admin', 'reader', 'inactive');
+  from _m02_ctx
+  where k in ('admin', 'waiter', 'kitchen', 'inactive')
+     or (k = 'cashier' and exists (
+          select 1 from pg_enum e where e.enumtypid = 'public.member_role'::regtype
+            and e.enumlabel = 'CASHIER'));
 
   -- A second synthetic tenant exists only inside this transaction so its item
   -- IDs can be tested against monky-qa. No existing restaurant is modified.
@@ -199,12 +205,12 @@ $$;
 -- unicidad previa impida distinguir RLS de un duplicado.
 insert into public.products (id, restaurant_id, name, price)
 select c.v, (select v from _m02_ctx where k = 'restaurant'), 'QA M02 role ' || c.k, 1
-from _m02_ctx c where c.k in ('owner_product','admin_product','reader_product','inactive_product','outsider_product');
+from _m02_ctx c where c.k in ('owner_product','admin_product','waiter_product','kitchen_product','cashier_product','inactive_product','outsider_product');
 delete from public.availability a
 using public.product_variants v
 where a.item_type = 'variant' and a.item_id = v.id
   and v.product_id in (select v from _m02_ctx where k in
-    ('owner_product','admin_product','reader_product','inactive_product','outsider_product'));
+    ('owner_product','admin_product','waiter_product','kitchen_product','cashier_product','inactive_product','outsider_product'));
 
 -- RLS real: OWNER y ADMIN leen/escriben; WAITER activo solo lee;
 -- miembro inactivo y usuario ajeno no ven filas. (La política SQL sigue el
@@ -219,10 +225,21 @@ declare
   v_changed integer;
   v_error text;
   v_row uuid;
+  v_roles text[];
 begin
-  foreach v_role in array array['owner', 'admin', 'reader', 'inactive', 'outsider'] loop
+  -- Hoy member_role no incluye CASHIER: solo se prueba si el enum lo tiene.
+  v_roles := array['owner', 'admin', 'waiter', 'kitchen', 'inactive', 'outsider'];
+  if exists (select 1 from pg_enum e where e.enumtypid = 'public.member_role'::regtype
+             and e.enumlabel = 'CASHIER') then
+    v_roles := v_roles || 'cashier';
+  end if;
+  select item_id into v_row from public.availability
+  where restaurant_id = (select v from pg_temp._m02_ctx where k = 'restaurant')
+    and item_type = 'variant' order by item_id limit 1;
+
+  foreach v_role in array v_roles loop
     select v into v_uid from pg_temp._m02_ctx where k = v_role;
-    v_expected_read := case when v_role in ('owner','admin','reader') then 1 else 0 end;
+    v_expected_read := case when v_role in ('owner','admin','waiter','kitchen','cashier') then 1 else 0 end;
     v_expected_write := v_role in ('owner','admin');
     perform set_config('request.jwt.claims', json_build_object('sub', v_uid, 'role', 'authenticated')::text, true);
     perform set_config('role', 'authenticated', true);
@@ -233,9 +250,6 @@ begin
     perform pg_temp.m02_assert(v_role || ' SELECT solo rows activas',
       (v_seen > 0) = (v_expected_read = 1));
 
-    select item_id into v_row from public.availability
-    where restaurant_id = (select v from pg_temp._m02_ctx where k = 'restaurant')
-      and item_type = 'variant' limit 1;
     update public.availability set available = available
     where restaurant_id = (select v from pg_temp._m02_ctx where k = 'restaurant')
       and item_type = 'variant' and item_id = v_row;
@@ -254,13 +268,17 @@ begin
     end;
     perform pg_temp.m02_assert(v_role || ' INSERT per role',
       (v_error is null and v_changed = 1) = v_expected_write);
-    if v_expected_write then
-      delete from public.availability
-      where restaurant_id = (select v from pg_temp._m02_ctx where k = 'restaurant')
-        and item_id in (select id from public.product_variants
-          where product_id = (select v from pg_temp._m02_ctx where k = v_role || '_product'))
-        and item_type = 'variant';
-    end if;
+    -- DELETE: quien escribe borra su fila recién insertada; el resto no puede
+    -- borrar una fila existente (RLS la filtra o la política la niega: 0 filas).
+    delete from public.availability
+    where restaurant_id = (select v from pg_temp._m02_ctx where k = 'restaurant')
+      and item_type = 'variant'
+      and item_id = case when v_expected_write
+        then (select id from public.product_variants
+              where product_id = (select v from pg_temp._m02_ctx where k = v_role || '_product') limit 1)
+        else v_row end;
+    get diagnostics v_changed = row_count;
+    perform pg_temp.m02_assert(v_role || ' DELETE per role', (v_changed = 1) = v_expected_write);
     perform set_config('role', 'none', true);
   end loop;
 end;
