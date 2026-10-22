@@ -383,7 +383,6 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 
 *Este log usa formato consistente `## [FECHA] operacion | descripcion` para ser parseable.*
 
-<<<<<<< HEAD
 ## [2026-10-21] código | M01-T04: acciones de catálogo y validación
 
 - **Resumen**: extensión de `actions/menu.ts` para productos con variantes, grupos de personalización, opciones y vínculos; tipos manuales de las cuatro tablas de T02/T03 y traducciones controladas de 22023/23514 vía `dbFailure`. Se conserva el contrato de precio único de producción.
@@ -448,7 +447,7 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Pendiente de BD**: no existe lectura segura de has_pin para authenticated. Tipo opcional y TODO claro; se requiere ampliar get_restaurant_staff para devolver solo el booleano de presencia, manteniendo permisos y sin exponer pin_hash. Petición detallada en app/TESTING.md.
 - **Verificación**: typegen, tsc --noEmit y lint en verde; Vitest 140/140 en 11 archivos. Sin cambios en app/supabase/, sin commit ni push.
 - **Páginas conceptuales actualizadas**: ninguna.
-=======
+
 ## [2026-10-21] code | M00-T06: matriz de permisos y navegación combinable
 
 - **Resumen**: matriz pura y unión de roles, sesión enriquecida desde restaurant_members, redirección de entrada y guard por página/proxy, filtro del sidebar sin cambios visuales y separación de Inicio de las consultas de ventas.
@@ -456,4 +455,3 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Decisiones/dudas**: primer rol operativo según el orden guardado; gestores parciales no reciben ADMIN; módulos M02/M12/M16 aún sin páginas; las autorizaciones backend legacy requieren otra entrega para garantizar toda §6 en vivo. No se modifica app/supabase ni se hacen commits.
 - **Páginas wiki actualizadas**: ninguna; registro técnico en app/TESTING.md.
 - **Verificación**: next typegen, tsc --noEmit, lint y Vitest en verde (12 archivos, 153 tests); git diff --check sin incidencias. No se ejecutó QA contra la base.
->>>>>>> origin/feat/M00-T06-permissions

@@ -61,6 +61,7 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, Permission>> = {
   "/reports": "reports.view",
   "/inventory": "inventory.manage",
   "/settings": "branch.edit",
+  "/security": "members.manageAdmins",
   // Rutas especificadas en M02/M16, todavía sin páginas en esta rama.
   "/disponibilidad": "availability.edit",
   "/ajustes/impresion": "printing.manage",

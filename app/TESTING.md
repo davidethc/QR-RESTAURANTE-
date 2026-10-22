@@ -2228,7 +2228,6 @@ Resultado: **0 Critical/Serious en todas las vistas** (axe vacío en todas).
 Restaurante `monky-qa` con 3 mesas, 2 categorías, 4 productos. Las capturas y el reporte (`report.json`) quedaron en el scratchpad local de la sesión; nunca se versionan (están fuera del repo).
 
 
-<<<<<<< HEAD
 ## 2026-10-21 — M01-T04: acciones del catálogo
 
 Worktree `.claude/worktrees/M01-T04`, rama `feat/M01-T04-catalog-actions`. Referencias: `docs/pos-spec/M01-catalogo.md` y `M00-base.md`; esquema tomado exclusivamente de las migraciones `20261020150000_m01_product_variants.sql` y `20261020160000_m01_modifier_groups.sql`.
@@ -2348,7 +2347,7 @@ Esta ronda sustituye el comportamiento de prototipo descrito en la fase 1. Solo 
 - Códigos de validación: `FULL_NAME_INVALID`, `ROLES_INVALID`, `CASH_REGISTER_INVALID`, `EMAIL_INVALID`, `PASSWORD_INVALID`, `PIN_INVALID`, `EMAIL_LOGIN_INVALID`. Casos de negocio: `EMAIL_EXISTS`, `EMAIL_LOGIN_REQUIRED`, `ROLES_FORBIDDEN`, `ROLE_COMPATIBILITY_REQUIRED`; RPC de PIN: `PIN_INVALID`, `PIN_FORBIDDEN`, `PIN_SAVE_FAILED`. Errores generales conservan código estable sin atribución arbitraria a un campo. No se devuelven ni registran mensajes de Auth/SQL con PIN/hash.
 - Ejecutado: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todo en verde: **140/140 tests en 11 archivos** (47 de acciones, 6 de listado). Pruebas de autorización previa, sucursal/IDs, orden, arrays vacíos reales, ausencia de PIN/hash, datos concurrentes y fallos de lectura; errores por campo, correo repetido en alta/edición, contraseña débil y errores sanitizados de PIN.
 - Verificación local con mocks; sin QA en navegador ni escrituras en Supabase. `git diff --check` limpio. Sin tocar `app/supabase/`, sin commit ni push.
-=======
+
 ## 2026-10-21 — M00-T06: permisos y navegación por roles
 
 - Worktree `M00-T06`, rama `feat/M00-T06-permissions`. Verificación local, sin conexiones ni cambios en datos de producción.
@@ -2364,4 +2363,3 @@ Esta ronda sustituye el comportamiento de prototipo descrito en la fase 1. Solo 
 - Disponibilidad (`/disponibilidad`, M02), Impresión (`/ajustes/impresion`, M16) y Menú digital son capacidades definidas en la matriz. Sus pantallas no existen en esta rama: no se agregan enlaces a páginas inexistentes ni se inventa una ruta de administración de Menú digital.
 - M00-T01 agrega/backfillea `roles[]`, pero deja explícitamente las RPC/RLS legacy. Las pantallas y acciones que todavía exigen OWNER/ADMIN/WAITER/KITCHEN en la base necesitan una entrega backend para funcionar con roles nuevos sin errores. Este trabajo no modifica ni elude esas autorizaciones. Por ello, los tests de frontend no certifican el criterio completo de §6 contra la base (por ejemplo Caja con CASHIER cuyo `role` legacy es WAITER).
 - La matriz declara `members.manage` separado de `members.manageAdmins` y `branch.edit` separado de crear/eliminar sucursales; su enforcement de escritura corresponde a las acciones/RPC de esos módulos. La condición de caja asignada para cobrar corresponde al backend; no se sustituye por el permiso de navegar a Caja.
->>>>>>> origin/feat/M00-T06-permissions
