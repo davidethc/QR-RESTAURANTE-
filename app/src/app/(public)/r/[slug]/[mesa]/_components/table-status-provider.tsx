@@ -35,6 +35,13 @@ interface TableStatusValue {
   hasAnyOrder: boolean;
   /** La cuenta de la sesión ya se cobró (módulo de cobro). */
   billPaid: boolean;
+  /** Se puede agregar productos (la cuenta aún no se pidió). */
+  canOrder: boolean;
+  billRequested: boolean;
+  customerLabel: string | null;
+  /** Instante (epoch ms) en que se puede volver a llamar; 0 = ya se puede. */
+  waiterCooldownEnds: number;
+  billCooldownEnds: number;
 }
 
 /**
@@ -48,6 +55,11 @@ const TableStatusContext = createContext<TableStatusValue>({
   calls: [],
   hasAnyOrder: false,
   billPaid: false,
+  canOrder: true,
+  billRequested: false,
+  customerLabel: null,
+  waiterCooldownEnds: 0,
+  billCooldownEnds: 0,
 });
 
 export function useTableStatus() {
@@ -60,7 +72,17 @@ function countsForBill(order: SessionOrderSummary): boolean {
 }
 
 function derive(status: TableStatus): TableStatusValue {
+  const info = status.info;
+  // El servidor da segundos restantes; se convierten a un instante absoluto
+  // en el momento de recibirlos para que el reloj del celular cuente solo.
+  const base = Date.now();
+  const ends = (left: number | undefined) => (left && left > 0 ? base + left * 1000 : 0);
   return {
+    canOrder: info ? info.canOrder : true,
+    billRequested: info?.billRequested ?? false,
+    customerLabel: info?.customerLabel ?? null,
+    waiterCooldownEnds: ends(info?.waiterCooldownLeft),
+    billCooldownEnds: ends(info?.billCooldownLeft),
     orders: status.orders.filter((o) => ACTIVE_ORDER_STATUSES.has(o.status)),
     calls: status.calls.filter((c) => ACTIVE_CALL_STATUSES.includes(c.status)),
     hasAnyOrder: status.orders.some(countsForBill),
@@ -75,6 +97,9 @@ function signature(v: TableStatusValue): string {
     ...v.calls.map((c) => `c${c.id}:${c.status}`),
     `b${v.hasAnyOrder}`,
     `p${v.billPaid}`,
+    `a${v.canOrder}${v.billRequested}`,
+    `w${Math.round(v.waiterCooldownEnds / 4000)}`,
+    `l${Math.round(v.billCooldownEnds / 4000)}`,
   ].join("|");
 }
 
@@ -115,6 +140,9 @@ export function TableStatusProvider({
   const prevCalls = useRef<Map<string, SessionCall["status"]>>(
     new Map(initialStatus.calls.map((c) => [c.id, c.status]))
   );
+  const prevOrders = useRef<Map<string, string>>(
+    new Map(initialStatus.orders.map((o) => [o.id, o.status]))
+  );
   const failures = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -140,6 +168,15 @@ export function TableStatusProvider({
         notify.callDone(call.type);
       }
     }
+    // Un pedido que esperaba aprobación y el mesero rechazó: se avisa al
+    // cliente con el motivo (el tablero de "en curso" ya no lo muestra).
+    for (const order of result.data.orders) {
+      const prev = prevOrders.current.get(order.id);
+      if (prev === "PENDING" && order.status === "REJECTED") {
+        notify.orderRejected(order.order_number, order.rejection_reason);
+      }
+    }
+    prevOrders.current = new Map(result.data.orders.map((o) => [o.id, o.status]));
     prevCalls.current = new Map(result.data.calls.map((c) => [c.id, c.status]));
 
     // Solo se cambia el valor del contexto si algo cambió de verdad: un

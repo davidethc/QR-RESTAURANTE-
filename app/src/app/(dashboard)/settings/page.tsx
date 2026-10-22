@@ -6,6 +6,7 @@ import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
 import { SettingsForm } from "./_components/settings-form";
 import { ZonesSection } from "./_components/zones-section";
 import { getZones } from "@/lib/queries/zones";
+import { QrSettingsForm } from "./_components/qr-settings-form";
 import { BillingSettingsForm } from "./_components/billing-settings-form";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
@@ -35,6 +36,9 @@ export default async function SettingsPage() {
       />
       <div className="flex flex-col gap-8 px-4 pb-10 md:px-8">
         <SettingsForm restaurant={restaurant} />
+        {(session.role === "OWNER" || session.role === "ADMIN") && (
+          <QrSettingsForm restaurant={restaurant} />
+        )}
         <ZonesSection restaurantId={session.restaurant.id} zones={zones} />
         {session.role === "OWNER" && <BillingSettingsForm restaurant={restaurant} />}
       </div>

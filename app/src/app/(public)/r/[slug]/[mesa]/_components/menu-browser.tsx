@@ -10,6 +10,7 @@ import { SuggestionsRow } from "./suggestions-row";
 import { ProductSheet } from "./product-sheet";
 import { CartSheet } from "./cart-sheet";
 import { ServiceButtons } from "./service-buttons";
+import { useTableStatus } from "./table-status-provider";
 import { useLiveMenuCategories } from "@/hooks/use-live-menu";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
@@ -71,6 +72,7 @@ export function MenuBrowser({
   // Mesa 0 = carrito del modo carta. Las mesas reales empiezan en 1,
   // así que nunca se pisa con el carrito de una mesa de verdad.
   const cart = useCart(slug, tableNumber ?? 0);
+  const { canOrder } = useTableStatus();
 
   // Enlace de "solo conversar", sin pedido: el que lleva el pedido
   // redactado vive en el carrito.
@@ -305,6 +307,7 @@ export function MenuBrowser({
         onClearCart={cart.clearCart}
         slug={slug}
         tableNumber={tableNumber}
+        orderingClosed={!canOrder}
         restaurantName={restaurantName}
         whatsappPhone={whatsappPhone}
         suggestedProducts={suggestedProducts}

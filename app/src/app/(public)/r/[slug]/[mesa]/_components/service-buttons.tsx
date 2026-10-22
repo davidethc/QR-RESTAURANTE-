@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { Bell, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -8,6 +8,7 @@ import { notify } from "@/lib/notifications";
 import { callWaiter } from "@/lib/actions/waiter-calls";
 import { useTableStatus } from "./table-status-provider";
 import { cn } from "@/lib/utils";
+import { formatCountdown, secondsLeft } from "@/lib/validations/qr-client";
 import type { SessionCall } from "@/types/orders";
 
 // Pasado este tiempo, una solicitud sin atender vuelve a permitir
@@ -53,6 +54,23 @@ function usePastDeadline(deadline: number | null): boolean {
 }
 
 /**
+ * Segundos que faltan para `endsAt` (epoch ms), contando de uno en uno.
+ * 0 = ya se puede. El primer render del servidor siempre da 0 (sin reloj).
+ */
+function useCountdown(endsAt: number): number {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    if (endsAt <= 0) return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+  if (endsAt <= 0 || now === null) return 0;
+  return secondsLeft(endsAt, now);
+}
+
+/**
  * Llamar al mesero y pedir la cuenta.
  *
  * Cada botón muestra el estado de su propia solicitud. Antes ese estado
@@ -62,7 +80,10 @@ function usePastDeadline(deadline: number | null): boolean {
  * control que provoca el estado es el que debe mostrarlo.
  */
 export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
-  const { calls, hasAnyOrder, billPaid } = useTableStatus();
+  const { calls, hasAnyOrder, billPaid, billRequested, waiterCooldownEnds, billCooldownEnds } =
+    useTableStatus();
+  const waiterLeft = useCountdown(waiterCooldownEnds);
+  const billLeft = useCountdown(billCooldownEnds);
 
   if (billPaid) {
     return (
@@ -80,6 +101,7 @@ export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
       <ServiceButton
         call={calls.find((c) => c.type === "WAITER")}
         icon={<Bell />}
+        cooldownLeft={waiterLeft}
         idleLabel="Llamar mesero"
         pendingLabel="Mesero avisado"
         acceptedLabel="Mesero en camino"
@@ -92,6 +114,8 @@ export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
       <ServiceButton
         call={calls.find((c) => c.type === "BILL")}
         icon={<Receipt />}
+        cooldownLeft={billLeft}
+        requested={billRequested}
         idleLabel="Pedir cuenta"
         pendingLabel="Cuenta pedida"
         acceptedLabel="Cuenta en camino"
@@ -124,6 +148,8 @@ function ServiceButton({
   onConfirm,
   blocked = false,
   blockedLabel,
+  cooldownLeft = 0,
+  requested = false,
 }: {
   call: SessionCall | undefined;
   icon: React.ReactNode;
@@ -142,6 +168,10 @@ function ServiceButton({
    *  la pediste; aquí aún no puedes. */
   blocked?: boolean;
   blockedLabel?: string;
+  /** Segundos de espera antes de poder repetir la misma llamada. */
+  cooldownLeft?: number;
+  /** Ya se pidió y quedó atendida: no se vuelve a ofrecer. */
+  requested?: boolean;
 }) {
   const stale = usePastDeadline(
     call?.status === "PENDING"
@@ -149,10 +179,15 @@ function ServiceButton({
       : null
   );
 
-  const waiting = call !== undefined && !stale;
+  const cooling = cooldownLeft > 0 && !requested && call === undefined;
+  const waiting = (call !== undefined && !stale) || requested;
   const label = blocked
     ? (blockedLabel ?? idleLabel)
-    : !waiting
+    : requested && call === undefined
+      ? pendingLabel
+      : cooling
+        ? `${idleLabel} · ${formatCountdown(cooldownLeft)}`
+        : !waiting
       ? stale
         ? staleLabel
         : idleLabel
@@ -166,7 +201,7 @@ function ServiceButton({
   const trigger = (
     <Button
       variant="ghost"
-      disabled={waiting || blocked}
+      disabled={waiting || blocked || cooling}
       className={cn(
         "h-12 flex-1 rounded-2xl text-[15px] font-semibold",
         // Bloqueado se apaga del todo: ni relleno de estado ni ícono con
@@ -176,7 +211,11 @@ function ServiceButton({
           waiting &&
           "bg-primary-soft text-primary-soft-foreground disabled:opacity-100 [&_svg]:text-primary/70",
         !blocked &&
+          cooling &&
+          "border border-border bg-card text-muted-foreground disabled:opacity-100",
+        !blocked &&
           !waiting &&
+          !cooling &&
           !stale &&
           "border border-border bg-card hover:bg-muted [&_svg]:text-primary",
         !blocked &&
@@ -189,7 +228,7 @@ function ServiceButton({
     </Button>
   );
 
-  if (waiting || blocked) return trigger;
+  if (waiting || blocked || cooling) return trigger;
 
   return (
     <ConfirmDialog

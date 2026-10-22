@@ -87,6 +87,7 @@ function OrderRow({
   nested?: boolean;
 }) {
   return (
+    <>
     <Link
       href={href}
       className={cn(
@@ -105,5 +106,15 @@ function OrderRow({
       <OrderStatusBadge status={order.status} />
       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
     </Link>
+    {order.status === "PENDING" && (
+      <p
+        role="status"
+        className="flex items-center gap-2 bg-warning/10 px-4 py-2 text-[13px] font-medium text-foreground"
+      >
+        <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-warning" />
+        Esperando aprobación del mesero
+      </p>
+    )}
+    </>
   );
 }

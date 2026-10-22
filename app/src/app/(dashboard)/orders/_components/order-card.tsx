@@ -63,6 +63,11 @@ export function OrderCard({
             <span className="rounded-badge bg-secondary px-2 py-0.5 text-tiny font-semibold tabular-nums leading-tight text-muted-foreground">
               #{order.order_number}
             </span>
+            {order.source === "digital_menu" && (
+              <span className="rounded-badge bg-honey-soft px-2 py-0.5 text-tiny font-semibold leading-tight text-honey-soft-foreground">
+                Pedido por QR
+              </span>
+            )}
             <ElapsedTimer since={order.created_at} warnAfterMinutes={10} />
           </div>
         </div>
@@ -103,10 +108,10 @@ export function OrderCard({
           <ActionButton
             onSuccess={onDone}
             action={() => acceptOrder(order.id)}
-            successMessage="Pedido aceptado — en preparación"
+            successMessage="Pedido aprobado — va a cocina"
             className="h-11 flex-1 rounded-control text-body font-semibold"
           >
-            Aceptar
+            {order.source === "digital_menu" ? "Aprobar" : "Aceptar"}
           </ActionButton>
           <RejectDialog orderId={order.id} onDone={onDone} />
         </div>
