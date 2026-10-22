@@ -54,8 +54,12 @@ describe("personalizaciones", () => {
       expect(modifierGroupSchema.safeParse({ ...group, ...invalid }).success).toBe(false);
     }
   });
-  it("el máximo no supera opciones aunque permita repetición", () => {
-    expect(modifierGroupSchema.safeParse({ ...group, allow_repeat: true, max_select: 2 }).success).toBe(false);
+  it("el máximo puede superar las opciones solo si permite repetición", () => {
+    const one = { ...group, options: [option], min_select: 0, max_select: 3 };
+    expect(modifierGroupSchema.safeParse({ ...one, allow_repeat: true }).success).toBe(true);
+    const r = modifierGroupSchema.safeParse({ ...one, allow_repeat: false });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues.some((i) => i.path[0] === "max_select")).toBe(true);
   });
   it("rechaza precios negativos, nombres vacíos e ids repetidos", () => {
     expect(modifierOptionSchema.safeParse({ ...option, price: -0.01 }).success).toBe(false);
