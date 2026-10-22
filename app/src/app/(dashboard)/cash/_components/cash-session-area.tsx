@@ -1,47 +1,38 @@
-"use client";
-
-import { useState } from "react";
 import { OpenCashCard } from "./open-cash-card";
 import { CashSessionPanel } from "./cash-session-panel";
-import { CashCloseResultCard } from "./cash-close-result-card";
-import type { CashRegisterOption } from "@/lib/queries/cash";
-import type { UserRole } from "@/config/constants";
-import type { CashSessionSummary } from "@/types/billing";
+import type { CashSessionSummary, RegisterCashStatus } from "@/types/billing";
 
 /**
- * Envuelve el estado de la caja (abierta o cerrada) en un client component
- * para poder mostrar la tarjeta de resultado del último cierre (bug P1 de
- * QA 2026-09-26) por encima de "Abrir caja" sin perderla cuando el server
- * component (page.tsx) vuelve a renderizar tras `router.refresh()`.
+ * Cajas del usuario: las abiertas muestran su turno y el corte; las cerradas
+ * se abren desde una sola tarjeta que sugiere el último fondo registrado.
  */
 export function CashSessionArea({
-  summary,
+  summaries,
   registers,
-  role,
   timeZone,
 }: {
-  summary: CashSessionSummary | null;
-  registers: CashRegisterOption[];
-  role: UserRole;
+  summaries: CashSessionSummary[];
+  registers: RegisterCashStatus[];
   timeZone: string;
 }) {
-  const isAdmin = role === "OWNER" || role === "ADMIN";
-  const [closeResult, setCloseResult] = useState<CashSessionSummary | null>(null);
-
+  const closed = registers.filter((r) => !r.open_session_id);
   return (
     <div className="flex flex-col gap-4">
-      {isAdmin && closeResult && (
-        <CashCloseResultCard result={closeResult} onDismiss={() => setCloseResult(null)} />
-      )}
-      {summary ? (
-        <CashSessionPanel
-          summary={summary}
-          role={role}
-          timeZone={timeZone}
-          onClosed={isAdmin ? setCloseResult : undefined}
+      {summaries.map((s) => (
+        <CashSessionPanel key={s.id} summary={s} timeZone={timeZone} />
+      ))}
+      {closed.length > 0 && (
+        <OpenCashCard
+          registers={closed.map((r) => ({ id: r.register_id, name: r.register_name }))}
+          suggestedFloats={Object.fromEntries(
+            closed.filter((r) => r.cash_float_left !== null).map((r) => [r.register_id, r.cash_float_left as number])
+          )}
         />
-      ) : (
-        <OpenCashCard registers={registers} />
+      )}
+      {registers.length === 0 && (
+        <p className="text-meta text-muted-foreground">
+          No tienes cajas asignadas. Pídele a un administrador que te asigne una.
+        </p>
       )}
     </div>
   );

@@ -11,6 +11,7 @@ import { ProductSheet } from "./product-sheet";
 import { CartSheet } from "./cart-sheet";
 import { ServiceButtons } from "./service-buttons";
 import { useTableStatus } from "./table-status-provider";
+import { useLiveMenuCategories } from "@/hooks/use-live-menu";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
@@ -20,7 +21,7 @@ import { formatPrice, cn, normalizeText } from "@/lib/utils";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
 export function MenuBrowser({
-  categories,
+  categories: initialCategories,
   slug,
   tableNumber,
   restaurantName,
@@ -34,6 +35,8 @@ export function MenuBrowser({
   whatsappPhone: string | null;
 }) {
   const inTable = tableNumber !== null;
+  // M09: la disponibilidad se actualiza sola mientras la carta está abierta.
+  const categories = useLiveMenuCategories(slug, initialCategories);
   const [query, setQuery] = useState("");
   // Todas las categorías arrancan cerradas — el cliente ve la lista
   // completa de nombres de un vistazo y toca la que le interesa, en

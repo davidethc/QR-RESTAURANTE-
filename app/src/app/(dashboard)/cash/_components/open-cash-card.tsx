@@ -24,20 +24,28 @@ import type { CashRegisterOption } from "@/lib/queries/cash";
  * (resolve_open_cash_session la exige) — es lo primero que ve cualquier
  * rol al entrar a /cash si nadie la abrió todavía hoy.
  */
-export function OpenCashCard({ registers }: { registers: CashRegisterOption[] }) {
+export function OpenCashCard({
+  registers,
+  suggestedFloats = {},
+}: {
+  registers: CashRegisterOption[];
+  /** Último fondo de caja registrado por caja (id -> monto). */
+  suggestedFloats?: Record<string, number>;
+}) {
   "use no memo";
   const router = useRouter();
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<OpenCashSessionInput>({
     resolver: zodResolver(openCashSessionSchema),
     defaultValues: {
       registerId: registers[0]?.id ?? "",
-      openingFloat: 0,
+      openingFloat: suggestedFloats[registers[0]?.id ?? ""] ?? 0,
     },
   });
 
@@ -73,7 +81,13 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
                 control={control}
                 name="registerId"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      setValue("openingFloat", suggestedFloats[v] ?? 0);
+                    }}
+                  >
                     <SelectTrigger id="cash-register" className="h-12 w-full">
                       <SelectValue placeholder="Elige una caja" />
                     </SelectTrigger>
@@ -104,7 +118,7 @@ export function OpenCashCard({ registers }: { registers: CashRegisterOption[] })
                 setValueAs: (v: string) => (v === "" ? 0 : Number(v)),
               })}
             />
-            <FieldDescription>El efectivo con el que arranca la caja hoy.</FieldDescription>
+            <FieldDescription>El efectivo con el que arranca el turno. Si hay un fondo del corte anterior, ya viene escrito: revísalo.</FieldDescription>
             <FieldError errors={[errors.openingFloat]} />
           </Field>
 

@@ -200,6 +200,7 @@ export type CashSessionOpened = {
 
 export type CashMovement = {
   id: string;
+  number?: number | null;
   type: CashMovementType;
   reason: CashMovementReason;
   amount: number;
@@ -247,6 +248,67 @@ export type CashSessionSummary = {
   by_method?: CashMethodSummary[];
   movements?: CashMovement[];
   voided_payments_count?: number;
+  /** M08 */
+  cut_number?: number | null;
+  cash_float_left?: number | null;
+  cash_to_withdraw?: number | null;
+  result?: "EXACT" | "SHORT" | "OVER" | null;
+  skipped_pending_orders?: boolean;
+  skipped_order_folios?: number[];
+};
+
+/** get_cash_cut_precheck: nunca trae montos esperados (corte a ciegas). */
+export type CashCutPrecheck = {
+  pending_count: number;
+  pending_folios: number[];
+  has_card_payments: boolean;
+  has_transfer_payments: boolean;
+};
+
+/** get_last_cash_float: una fila por caja que el usuario puede operar. */
+export type RegisterCashStatus = {
+  register_id: string;
+  register_name: string;
+  open_session_id: string | null;
+  cash_float_left: number | null;
+  cut_number: number | null;
+  set_by: string | null;
+  set_by_name: string | null;
+  set_at: string | null;
+};
+
+export type CashCutRow = {
+  id: string;
+  cut_number: number;
+  register_id: string;
+  register_name: string;
+  closed_at: string;
+  closed_by: string | null;
+  closed_by_name: string | null;
+  result: "EXACT" | "SHORT" | "OVER" | null;
+  expected_total: number | null;
+  counted_total: number | null;
+  difference_total: number | null;
+  cash_float_left: number | null;
+  cash_to_withdraw: number | null;
+  skipped_pending_orders: boolean;
+  skipped_order_folios: number[];
+};
+
+export type CashMovementRow = {
+  id: string;
+  number: number | null;
+  type: CashMovementType;
+  reason: CashMovementReason;
+  amount: number;
+  description: string | null;
+  cash_session_id: string;
+  cut_number: number | null;
+  register_id: string;
+  register_name: string;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string;
 };
 
 /** Respuesta de create_counter_sale (C5). `replayed` = reintento con la misma clave. */

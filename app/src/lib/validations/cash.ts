@@ -59,6 +59,26 @@ export const closeCashSessionSchema = z.object({
   notes: z.string().trim().max(500, "Máximo 500 caracteres.").optional(),
 });
 
+export const cashCutSchema = z
+  .object({
+    cashSessionId: z.uuid({ message: "Turno de caja inválido" }),
+    counts: cashCountsSchema,
+    cashFloatLeft: money("Fondo de caja").default(0),
+    notes: z.string().trim().max(500, "Máximo 500 caracteres.").optional(),
+    skipPendingOrders: z.boolean().default(false),
+  })
+  .refine((v) => v.cashFloatLeft <= (v.counts.CASH ?? 0), {
+    message: "El fondo que queda no puede ser mayor que el efectivo contado.",
+    path: ["cashFloatLeft"],
+  });
+
+export const cashListSchema = z.object({
+  registerId: z.uuid().optional(),
+  cashSessionId: z.uuid().optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+});
+
+export type CashCutInput = z.input<typeof cashCutSchema>;
 export type OpenCashSessionInput = z.input<typeof openCashSessionSchema>;
 export type AddCashMovementInput = z.input<typeof addCashMovementSchema>;
 export type CloseCashSessionInput = z.input<typeof closeCashSessionSchema>;

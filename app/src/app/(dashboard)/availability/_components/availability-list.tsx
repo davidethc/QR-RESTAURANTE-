@@ -12,6 +12,7 @@ import {
   SegmentedControl,
 } from "@/components/shared/segmented-control";
 import { notify } from "@/lib/notifications";
+import { useStaffRealtime } from "@/hooks/use-staff-realtime";
 import { setItemAvailability } from "@/lib/actions/availability";
 import type { AvailabilityItem } from "@/lib/queries/availability";
 
@@ -19,7 +20,13 @@ const PAGE_SIZE = 20;
 
 type Tab = "all" | "off";
 
-export function AvailabilityList({ items }: { items: AvailabilityItem[] }) {
+export function AvailabilityList({
+  items,
+  restaurantId,
+}: {
+  items: AvailabilityItem[];
+  restaurantId: string;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [tab, setTab] = useState<Tab>("all");
@@ -27,6 +34,16 @@ export function AvailabilityList({ items }: { items: AvailabilityItem[] }) {
   const [page, setPage] = useState(0);
   // Cambios optimistas por clave hasta que llegue el refresco del servidor.
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+
+  // M09: otro dispositivo cambió la disponibilidad -> estado fresco.
+  useStaffRealtime(
+    restaurantId,
+    () => {
+      setOverrides({});
+      router.refresh();
+    },
+    { channelName: "staff-availability", tables: ["availability"] }
+  );
 
   const rows = useMemo(
     () => items.map((i) => ({ ...i, available: overrides[i.key] ?? i.available })),
