@@ -38,7 +38,9 @@ export function composeOrderMessage(
 ): string {
   const lines = items.map((item) => {
     const notes = item.notes ? ` (${item.notes})` : "";
-    return `• ${item.quantity} × ${item.product.name}${notes} — ${formatPrice(
+    const variant = item.variantName ? ` [${item.variantName}]` : "";
+    const extras = item.modifiers ? ` + ${item.modifiers}` : "";
+    return `• ${item.quantity} × ${item.product.name}${variant}${extras}${notes} — ${formatPrice(
       item.subtotal
     )}`;
   });

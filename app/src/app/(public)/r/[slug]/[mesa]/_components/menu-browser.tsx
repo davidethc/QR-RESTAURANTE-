@@ -18,16 +18,20 @@ import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatPrice, cn, normalizeText } from "@/lib/utils";
-import type { PublicCategory, PublicProduct } from "@/types/menu";
+import { needsChoice } from "@/lib/order-lines";
+import type { PublicCategory, PublicProduct, StaffProductDetail } from "@/types/menu";
 
 export function MenuBrowser({
   categories: initialCategories,
+  productDetails,
   slug,
   tableNumber,
   restaurantName,
   whatsappPhone,
 }: {
   categories: PublicCategory[];
+  /** Variantes y extras por producto (id). */
+  productDetails: Record<string, StaffProductDetail>;
   slug: string;
   /** null = modo carta: sin mesa, el pedido se envía por WhatsApp. */
   tableNumber: number | null;
@@ -241,6 +245,12 @@ export function MenuBrowser({
           suggestions={suggestions}
           onSelectProduct={setSelectedProduct}
           onAddCombo={(dish, drink) => {
+            // Si algo del combo exige elegir variante/extras, se abre su ficha.
+            const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
+            if (pick) {
+              setSelectedProduct(pick);
+              return;
+            }
             cart.addItems([
               { product: dish, quantity: 1, notes: "" },
               { product: drink, quantity: 1, notes: "" },
@@ -290,9 +300,10 @@ export function MenuBrowser({
 
       <ProductSheet
         product={selectedProduct}
+        detail={selectedProduct ? productDetails[selectedProduct.id] : undefined}
         onOpenChange={(open) => !open && setSelectedProduct(null)}
-        onAdd={(product, quantity, notes) => {
-          cart.addItem(product, quantity, notes);
+        onAdd={(product, quantity, notes, choice) => {
+          cart.addItem(product, quantity, notes, choice);
           notify.itemAdded(product.name);
         }}
       />
@@ -312,6 +323,11 @@ export function MenuBrowser({
         whatsappPhone={whatsappPhone}
         suggestedProducts={suggestedProducts}
         onAddSuggestion={(product) => {
+          if (needsChoice(productDetails[product.id])) {
+            setCartOpen(false);
+            setSelectedProduct(product);
+            return;
+          }
           cart.addItem(product, 1, "");
           notify.itemAdded(product.name);
         }}

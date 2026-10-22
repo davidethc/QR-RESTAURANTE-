@@ -45,3 +45,31 @@ export async function handleCall(
   revalidatePath("/orders");
   return { ok: true, data: undefined };
 }
+
+/**
+ * Cuenta pagada por completo pero con pedidos aún en curso: la base no cierra
+ * la mesa (finalize_bill espera a la entrega) y la solicitud "Pedir cuenta"
+ * se quedaba en Pendiente. Se marca atendida con la RPC de siempre.
+ */
+export async function attendPaidBillCalls(
+  tableSessionId: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: calls, error } = await supabase
+    .from("waiter_calls")
+    .select("id")
+    .eq("table_session_id", tableSessionId)
+    .eq("type", "BILL")
+    .in("status", ["PENDING", "ACCEPTED"]);
+  if (error) return dbFailure(error, "attendPaidBillCalls");
+
+  for (const call of calls ?? []) {
+    const { error: rpcError } = await supabase.rpc("handle_waiter_call", {
+      p_call_id: call.id,
+      p_status: "ATTENDED",
+    });
+    if (rpcError) return dbFailure(rpcError, "attendPaidBillCalls");
+  }
+  revalidatePath("/orders");
+  return { ok: true, data: undefined };
+}

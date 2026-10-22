@@ -113,6 +113,7 @@ export function ProductDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const submittingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(product?.name ?? "");
@@ -286,11 +287,22 @@ export function ProductDialog({
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isPending) return;
+    // El ref cierra la ventana entre el clic y el re-render con isPending.
+    if (isPending || submittingRef.current) return;
     setRootError(null);
     const payload = validate();
     if (!payload) return;
+    submittingRef.current = true;
     startTransition(async () => {
+      try {
+        await save(payload);
+      } finally {
+        submittingRef.current = false;
+      }
+    });
+  }
+
+  async function save(payload: NonNullable<ReturnType<typeof validate>>) {
       let productId: string;
       if (isEdit) {
         const result = await updateProduct(product.id, payload);
@@ -325,7 +337,6 @@ export function ProductDialog({
       setOpen(false);
       setDirty(false);
       router.refresh();
-    });
   }
 
   function requestOpenChange(next: boolean) {
