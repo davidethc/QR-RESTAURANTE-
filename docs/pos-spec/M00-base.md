@@ -2,7 +2,7 @@
 
 ## Estado en Monky
 
-**Existe:** `restaurants` (negocio y sucursal fusionados en una sola entidad: `id`, `name`, `slug`, `opening_hours`, zona horaria fija `America/Guayaquil` resuelta por `restaurant_tz`/`business_date`/`business_today`/`business_day_bounds`), `restaurant_members` (`role` con un único valor fijo del enum `member_role`: `OWNER | ADMIN | WAITER | KITCHEN`, `status`: `ACTIVE | INACTIVE`), y `audit_logs` (tabla de auditoría genérica ya en producción, con un enum `audit_action` de ~24 valores que ya cubre eventos sensibles como `CANCEL_ORDER`, `APPLY_DISCOUNT`, `REMOVE_DISCOUNT`, `VOID_PAYMENT`, `VOID_BILL`, `CLOSE_CASH_SESSION`, `CASH_MOVEMENT`, `FORCE_CLOSE_SESSION`, `LOGIN`/`LOGOUT`).
+**Existe:** `restaurants` (negocio y sucursal fusionados en una sola entidad: `id`, `name`, `slug`, `opening_hours`, zona horaria fija `America/Guayaquil` resuelta por `restaurant_tz`/`business_date`/`business_today`/`business_day_bounds`), `restaurant_members` (`role` con un único valor fijo del enum `member_role`: `OWNER | ADMIN | WAITER | KITCHEN`, `status`: `ACTIVE | INACTIVE`), y `audit_logs` (tabla de auditoría genérica ya en producción, con un enum `audit_action` de 24 valores que ya cubre eventos sensibles como `APPLY_DISCOUNT`, `REMOVE_DISCOUNT`, `VOID_PAYMENT`, `VOID_BILL`, `CLOSE_CASH_SESSION`, `CASH_MOVEMENT`, `FORCE_CLOSE_SESSION`, `LOGIN`/`LOGOUT`).
 
 **Se adapta:** el modelo de roles pasa de un valor único por miembro a un conjunto combinable de roles, se agrega el rol Cajero (hoy no existe como tal — el cobro lo puede operar cualquier `ADMIN`/`OWNER`), y se añade acceso por PIN de 4 dígitos como método alterno al login por correo (`auth.ts` hoy solo soporta correo/contraseña vía Supabase Auth).
 
@@ -34,7 +34,19 @@ Ninguna — es el módulo raíz. Todos los demás módulos dependen de M00 para 
 | `restaurants` | Sin cambios de fondo mientras el negocio tenga una sola sucursal. Si se aborda M17, separar en `companies` (nombre, moneda, país, slug) y `branches` (`company_id`, alias, dirección, ubicación, logo, portada, `is_main`) | Ver M17 §3 para el detalle de esa migración |
 | `restaurant_members` | `pin_hash` (texto, hash del PIN de 4 dígitos), `roles` (arreglo de texto, en paralelo a `role` durante la transición — backfill: `OWNER → ['ADMIN']` con bandera de dueño implícita, `ADMIN → ['ADMIN']`, `WAITER → ['WAITER']`, `KITCHEN → ['KITCHEN']`), `cash_register_ids` (arreglo de uuid, solo relevante si `roles` incluye `CASHIER`), `email_login_enabled` (booleano) | Un miembro puede tener cero o más roles del catálogo de §6 |
 | Catálogo de roles (constraint o tabla de referencia) | `SUPER_ADMIN` (no asignable, es el dueño que registró el negocio), `ADMIN`, `MEMBERS_ADMIN`, `BRANCH_MANAGER`, `MENU_MANAGER`, `CASHIER`, `WAITER`, `KITCHEN` | Ver §6 para las descripciones oficiales de cada uno |
-| `security_events` (nueva, o vista filtrada sobre `audit_logs`) | Puede reutilizar `audit_logs` tal cual, ya que su enum `audit_action` ya cubre los eventos sensibles necesarios; si se necesita un subconjunto curado para el panel de "Historial de seguridad", crear una vista sobre `audit_logs` en vez de una tabla nueva | Evita duplicar lo que ya funciona |
+| Vista de eventos de seguridad sobre `audit_logs` (decidido: vista, no tabla nueva) | Puede reutilizar `audit_logs` tal cual, ya que su enum `audit_action` ya cubre los eventos sensibles necesarios; si se necesita un subconjunto curado para el panel de "Historial de seguridad", crear una vista sobre `audit_logs` en vez de una tabla nueva | Evita duplicar lo que ya funciona |
+
+**Mapeo de los 7 tipos de eventos de seguridad a `audit_action`** (lo que no existe o es parcial queda para M00-T08):
+
+| Tipo de evento | Valor de `audit_action` | Estado |
+|---|---|---|
+| Cancelar pedido | `REJECT_ORDER` (y `VOID_BILL` si se anula la cuenta) | Parcial: no hay valor para cancelar un pedido ya aceptado |
+| Reembolso | `VOID_PAYMENT` | Parcial: hoy se anula un pago; no existe el reembolso como tal |
+| Retiro de efectivo | `CASH_MOVEMENT` (filtrar por salida o motivo) | Existe |
+| Corte con diferencia | `CLOSE_CASH_SESSION` (filtrar diferencia ≠ 0 en el detalle) | Existe; verificar que el detalle guarda la diferencia |
+| Cancelar producto | — | Falta |
+| Bajar precio | — | Falta |
+| Bajar total | `APPLY_DISCOUNT` | Existe |
 
 **Índices:** `restaurant_members(restaurant_id)`, `restaurant_members(pin_hash)` para login rápido por PIN, `audit_logs(restaurant_id, created_at desc)` (ya existe).
 
@@ -160,7 +172,7 @@ Usar el texto existente de Monky donde ya exista una pantalla equivalente (login
 | ID | Tarea | Tipo | Agente sugerido | Tamaño | Depende de | Criterio de hecho |
 |---|---|---|---|---|---|---|
 | M00-T01 | Migración: agregar `pin_hash`, `roles text[]`, `cash_register_ids uuid[]`, `email_login_enabled` a `restaurant_members`; backfill desde `role` sin quitar la columna actual | BD | db-architect | M | — | Migración aplicada; tipos regenerados; `role` sigue funcionando en paralelo |
-| M00-T02 | Vista o tabla curada de eventos de seguridad sobre `audit_logs`, con RLS por restaurante | BD | db-architect | S | M00-T01 | Solo lectura para ADMIN/OWNER; no expone eventos de otros miembros a roles operativos |
+| M00-T02 | Vista curada de eventos de seguridad sobre `audit_logs`, con RLS por restaurante | BD | db-architect | S | M00-T01 | Solo lectura para ADMIN/OWNER; no expone eventos de otros miembros a roles operativos |
 | M00-T03 | RPC de verificación de PIN con límite de intentos | BD | db-architect | M | M00-T01 | Devuelve el miembro o un error genérico; no revela si el PIN existe |
 | M00-T04 | Server action: guardar miembro con roles combinables y validación condicional de "Cajas asignadas" | Backend | general-purpose | M | M00-T01 | La validación solo exige los campos visibles según los roles marcados |
 | M00-T05 | UI de alta/edición de miembro (roles como casillas, PIN con teclado numérico, vista previa) | Frontend | ui-caja | L | M00-T04 | Reproduce §7.1 con textos propios de Monky |
