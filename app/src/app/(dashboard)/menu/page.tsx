@@ -1,5 +1,7 @@
 import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { connection } from "next/server";
 import { getMyRestaurant, getAdminMenu } from "@/lib/queries/staff";
 import { MenuAdminBoard } from "./_components/menu-admin-board";
@@ -27,7 +29,10 @@ export default async function MenuAdminPage() {
       <CatalogTabs
         restaurantId={session.restaurant.id}
         description={`${menu.categories.length} categorías · ${menu.products.length} productos`}
-        action={<CategoryDialog restaurantId={session.restaurant.id} />}
+        action={<div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="min-h-11"><Link href="/menu/horarios">Horarios</Link></Button>
+          <CategoryDialog restaurantId={session.restaurant.id} />
+        </div>}
       >
         <MenuAdminBoard
           restaurantId={session.restaurant.id}

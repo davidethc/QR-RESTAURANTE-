@@ -455,3 +455,30 @@ Registro cronológico de todas las operaciones en el wiki. Se actualiza en cada 
 - **Decisiones/dudas**: primer rol operativo según el orden guardado; gestores parciales no reciben ADMIN; módulos M02/M12/M16 aún sin páginas; las autorizaciones backend legacy requieren otra entrega para garantizar toda §6 en vivo. No se modifica app/supabase ni se hacen commits.
 - **Páginas wiki actualizadas**: ninguna; registro técnico en app/TESTING.md.
 - **Verificación**: next typegen, tsc --noEmit, lint y Vitest en verde (12 archivos, 153 tests); git diff --check sin incidencias. No se ejecutó QA contra la base.
+
+## [2026-10-21] código | M01-T07: editor reutilizable de horarios básicos
+
+- **Resumen**: tipos manuales de `schedules`/`schedule_shifts` según la migración M01-T01, validación Zod con A1/B2/C1 y solapamientos, acciones OWNER/ADMIN y editor reutilizable con tokens existentes y controles de al menos 44 px. Sin cambios SQL ni al layout del admin.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, `app/supabase/migrations/20261020130000_m01_schedules_service_options.sql`, `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro técnico en `app/TESTING.md`.
+- **Verificación**: typegen, tsc, lint; Vitest 96/96. No se verificó UI en navegador. La validación de solapamientos no es atómica entre sesiones concurrentes con la API y el SQL existentes.
+- **Contradicciones detectadas**: A1 del encargo precisa que un día sin turnos queda cerrado cuando hay turnos en otros días; cero turnos en todo el horario significa 24 h.
+- **Duración**: sesión M01-T07.
+
+## [2026-10-21] código | M01-T07: segunda pasada de horarios según diseño
+
+- **Resumen**: editor ajustado a la maqueta de horarios, mensajes exactos por campo, resumen semanal durante la edición y confirmación del último turno. La validación detecta la cola nocturna sobre el día siguiente, incluido el cruce semanal.
+- **Referencias**: `_capturas/diseno-sprint1/M01-T07-horarios/README.md` y `maqueta.html` del repo principal (solo lectura); `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; se amplía el registro de QA.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 99/99 (11 archivos). Sin QA visual ni cambios SQL.
+- **Contradicciones detectadas**: ninguna; el encargo confirma que la superposición también incluye intervalos que empiezan en días distintos.
+- **Duración**: segunda pasada M01-T07.
+
+## [2026-10-21] código | M01-T07: acceso a Horarios y estados de guardado
+
+- **Resumen**: página `/menu/horarios` con getSchedules y enlace desde Menú, lista vacía, esqueleto y errores recuperables. Editor con explicación previa al alta, resumen de datos guardados, distintivos de cambios pendientes, feedback accesible por turno y horas HH:mm.
+- **Referencias**: `docs/pos-spec/M01-catalogo.md`, revisión de diseño del encargo y `app/TESTING.md`.
+- **Páginas actualizadas**: ninguna página conceptual; registro de QA ampliado.
+- **Verificación**: typegen, tsc y lint sin errores; Vitest 107/107 (12 archivos). Ocho pruebas nuevas de presentación y estados; sin QA interactivo ni escrituras en Supabase.
+- **Contradicciones detectadas**: ninguna; el resumen ahora distingue datos persistidos de las ediciones locales.
+- **Duración**: revisión de diseño M01-T07.

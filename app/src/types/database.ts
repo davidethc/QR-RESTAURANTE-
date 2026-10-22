@@ -1237,6 +1237,70 @@ export type Database = {
         }
         Relationships: []
       }
+      schedules: {
+        Row: {
+          id: string
+          restaurant_id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          name?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_shifts: {
+        Row: {
+          id: string
+          schedule_id: string
+          weekday: number
+          starts_at: string
+          ends_at: string
+        }
+        Insert: {
+          id?: string
+          schedule_id: string
+          weekday: number
+          starts_at: string
+          ends_at: string
+        }
+        Update: {
+          id?: string
+          schedule_id?: string
+          weekday?: number
+          starts_at?: string
+          ends_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_shifts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_members: {
         Row: {
           pin_hash: string | null

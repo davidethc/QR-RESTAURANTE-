@@ -2377,3 +2377,34 @@ Worktree `.claude/worktrees/M01-T06`, rama `feat/M01-T06-modifiers-ui`, sobre M0
 - **Discrepancias reportadas:** el schema limita `max_select <= options.length` incluso con repetición (la maqueta propone permitir excederlo); la UI respeta el schema y muestra el error junto a Máximo. Las actions permiten solo OWNER/ADMIN, no Gestor de Menú. CRUD real no verificable mientras la tabla no esté disponible; se conservan las limitaciones de atomicidad de grupos documentadas en M01-T04.
 - **Evidencia:** `_capturas/M01-T06/README.md`, `report.json`, scripts de QA y PNG dentro del worktree; Git los ignora. Sin cambios en actions, SQL, Zod ni wiki; sin commit, push o PR.
 - **Cierre de accesibilidad y teclado:** axe-core sobre lista y Sheet en los cuatro anchos (WCAG 2 A/AA, 2.1 AA y 2.2 AA): **0 violaciones en 8 auditorías**. Foco inicial en Nombre del grupo, 25 pulsaciones de Tab permanecen dentro del Sheet, Escape devuelve el foco al disparador. Cero errores JavaScript de página. Evidencia final: **38 PNG** (34 simulados + 4 de lectura real). Estado de autenticación temporal retirado y servidor dev de esta tarea detenido.
+
+## 2026-10-21 — M01-T07: horarios básicos
+
+Worktree `.claude/worktrees/M01-T07`, rama `feat/M01-T07-horarios`.
+
+- Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`.
+- Resultado: typegen, TypeScript y ESLint sin errores; Vitest **96/96** (11 archivos), incluidos 10 casos de reglas de horarios y 10 de acciones con Supabase simulado.
+- A1: cero turnos abre 24 h toda la semana; con algún turno, los demás días sin turnos quedan cerrados. B2: turno nocturno pertenece al día de inicio, continúa al siguiente y excluye el instante de cierre; probado sábado → domingo. C1: UI lunes → domingo conservando domingo = 0. Solapamientos: duplicados, contención y cruce nocturno rechazados en el mismo día; extremos contiguos permitidos.
+- Acciones: sesión requerida, membresía ACTIVE, OWNER/ADMIN, pertenencia del horario al restaurante, nombre duplicado en español, validación contra turnos persistidos y detección de escrituras con cero filas.
+- Editor reutilizable: `src/components/schedules/schedule-editor.tsx`; props `restaurantId`, `initialSchedule?`, `onSaved?`. Usar `key={initialSchedule?.id ?? "new"}` al seleccionar otro horario. Crea el horario vacío y guarda/agrega/quita cada turno por separado; controles con altura mínima de 44 px y tokens existentes. Sin integración en rutas ni cambios al layout del admin.
+- Límite: las lecturas y escrituras REST separadas no evitan una carrera de solapamientos entre sesiones concurrentes. La migración existente no tiene exclusión de intervalos ni RPC transaccional; esta entrega no modifica SQL. El editor bloquea cambios simultáneos dentro de su propia instancia.
+- Alcance de QA: pruebas automatizadas locales; sin pruebas visuales en navegador ni escrituras en Supabase.
+
+## 2026-10-21 — M01-T07: segunda pasada según maqueta
+
+- Referencia de solo lectura: `_capturas/diseno-sprint1/M01-T07-horarios/README.md` y `maqueta.html` del repo principal.
+- Editor: + Turno por día, tiempos apilados en móvil y en pareja desde 768 px, resumen semanal que refleja la edición y queda lateral desde 1024 px; confirmación antes de borrar el último turno persistido. Sin cambios al layout del admin.
+- Textos exactos: «Termina al día siguiente» bajo Hasta; igualdad de horas «La hora final no puede ser igual al inicio.» junto a Hasta; superposición «Este turno se superpone con otro, incluido el que termina al día siguiente.» junto a Desde. Se conserva el aviso completo de 24 horas sin turnos.
+- Solapamientos: ahora se comparan intervalos semanales con sus continuaciones nocturnas; regresiones para los siete cambios de día, domingo → lunes y sábado → domingo incluidos, en ambos órdenes de entrada. Intervalos contiguos al cierre nocturno siguen siendo válidos. La acción usa la misma validación contra turnos persistidos.
+- Verificación ejecutada: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`. Todos en verde: **99/99 tests**, 11 archivos (12 casos de validación de horarios y 11 de acciones).
+- Sin QA visual en navegador ni escrituras en Supabase. Se mantiene el límite documentado de concurrencia entre sesiones.
+
+## 2026-10-21 — M01-T07: página Horarios y correcciones de revisión
+
+- Ruta `/menu/horarios`, enlazada desde la cabecera de Menú, sin modificar el layout del dashboard. Carga mediante `getSchedules` con el restaurante de la sesión; exige OWNER/ADMIN. Permite seleccionar horarios existentes o abrir el editor de uno nuevo.
+- Estados: lista vacía con «Todavía no hay horarios» y CTA «Crear horario»; `loading.tsx` y esqueleto de reintento sin datos de disponibilidad provisionales; error esperado con Reintentar y sin editor, más `error.tsx` para fallos inesperados. El reintento vuelve a consultar `getSchedules`.
+- Editor nuevo: bajo «Turnos de la semana», «Crea el horario para agregar turnos.»; los siete botones + Turno están explícitamente deshabilitados hasta crear. Se añade «Cada turno se guarda por separado.».
+- Resumen: muestra únicamente nombre y turnos persistidos. Los borradores y las ediciones marcan «Cambios sin guardar» en el día y el resumen; volver a las horas originales elimina el estado pendiente. El resumen de un horario aún no creado explica que primero hay que crearlo.
+- Feedback persistente en `role=status`: «Turno guardado» / «Turno quitado», también tras desmontarse la fila guardada o retirada. Inputs con `step={60}` y valores HH:mm; resumen recorta los TIME de PostgreSQL a minutos.
+- Verificación: `cd app && npx next typegen && npx tsc --noEmit && npm run lint && npm test`, todo en verde. **107/107 tests, 12 archivos**. Ocho casos nuevos de helpers y renderizado SSR de editor, contenedor y esqueleto; incluyen que el error no monte un editor y que carga no muestre 24 h. Las pruebas de reglas y acciones siguen pasando.
+- Alcance de esta ronda: sin QA interactivo de navegador ni escrituras en Supabase; sin commit ni push.
