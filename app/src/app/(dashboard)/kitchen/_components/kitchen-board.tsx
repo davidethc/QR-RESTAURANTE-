@@ -42,7 +42,8 @@ export function KitchenBoard({
   }, [restaurantId]);
 
   const { connected, refresh } = useStaffRealtime(restaurantId, refetch, {
-    tables: ["orders"],
+    // tickets: la comanda llega al instante; el sondeo de 20 s queda de respaldo.
+    tables: ["orders", "tickets"],
   });
 
   if (!data.kds_enabled) {
