@@ -140,7 +140,6 @@ export function ProductDialog({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setGroupsError(false);
     Promise.all([
       getModifierGroups(restaurantId),
       isEdit ? getCatalog(restaurantId) : Promise.resolve(null),
