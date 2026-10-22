@@ -22,7 +22,8 @@ export function useStaffCart() {
         (i) =>
           i.productId === line.productId &&
           i.variantId === line.variantId &&
-          i.notes === line.notes
+          i.notes === line.notes &&
+          (i.modifiers ?? "") === (line.modifiers ?? "")
       );
       if (index === -1) return [...current, { ...line, id: crypto.randomUUID() }];
       return current.map((i, k) =>

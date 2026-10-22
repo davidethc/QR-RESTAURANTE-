@@ -1,4 +1,3 @@
-import { MAX_NOTES_LENGTH } from "@/lib/validations/orders";
 import type {
   StaffModifierGroup,
   StaffProductDetail,
@@ -113,11 +112,27 @@ export function modifiersSummary(
     .join(", ");
 }
 
-/**
- * La base aún no recibe personalizaciones estructuradas: viajan en la nota de
- * la línea, antes de la nota libre, recortadas al máximo permitido.
- */
-export function composeNote(modifiers: string, note: string): string {
-  const parts = [modifiers.trim(), note.trim()].filter(Boolean);
-  return parts.join(" · ").slice(0, MAX_NOTES_LENGTH);
+/** Opciones elegidas en el formato que espera la base: [{optionId, qty}]. */
+export function modifierPicks(
+  groups: StaffModifierGroup[],
+  selections: Record<string, Record<string, number>>
+): { optionId: string; qty: number }[] {
+  return groups.flatMap((g) =>
+    g.options
+      .filter((o) => (selections[g.id]?.[o.id] ?? 0) > 0)
+      .map((o) => ({ optionId: o.id, qty: selections[g.id][o.id] }))
+  );
+}
+
+/** Suma informativa de las opciones (precio x veces); el cobro lo calcula la base. */
+export function modifiersPrice(
+  groups: StaffModifierGroup[],
+  selections: Record<string, Record<string, number>>
+): number {
+  return groups.reduce(
+    (sum, g) =>
+      sum +
+      g.options.reduce((s, o) => s + o.price * (selections[g.id]?.[o.id] ?? 0), 0),
+    0
+  );
 }

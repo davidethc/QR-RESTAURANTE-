@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { addTicket } from "@/lib/actions/orders";
 import { notify } from "@/lib/notifications";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
-import { fromPrice } from "@/lib/order-lines";
+import { fromPrice, modifiersPrice } from "@/lib/order-lines";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { useStaffCart } from "@/hooks/use-staff-cart";
 import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
@@ -60,6 +60,7 @@ export function StaffOrderBuilder({
         variantId: item.variantId,
         quantity: item.quantity,
         notes: item.notes || undefined,
+        ...(item.modifierPicks ? { modifiers: item.modifierPicks } : {}),
       })),
     [cart.items]
   );
@@ -266,6 +267,11 @@ export function StaffOrderBuilder({
                         {item.name}
                         {item.variantName ? ` · ${item.variantName}` : ""}
                       </span>
+                      {item.modifiers && (
+                        <span className="block text-meta text-muted-foreground">
+                          {item.modifiers}
+                        </span>
+                      )}
                       {item.notes && (
                         <span className="block truncate text-meta text-muted-foreground">
                           {item.notes}
@@ -284,7 +290,13 @@ export function StaffOrderBuilder({
                       className="min-h-11 rounded-full"
                       onClick={() =>
                         setSheet({
-                          product: { id: item.productId, name: item.name, price: item.price },
+                          product: {
+                            id: item.productId,
+                            name: item.name,
+                            price:
+                              item.price -
+                              modifiersPrice(details[item.productId]?.groups ?? [], item.selections ?? {}),
+                          },
                           editing: item,
                         })
                       }

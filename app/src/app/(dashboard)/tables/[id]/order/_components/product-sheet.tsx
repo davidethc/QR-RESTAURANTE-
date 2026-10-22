@@ -16,8 +16,9 @@ import { QuantityStepper } from "@/components/shared/quantity-stepper";
 import { cn, formatPrice } from "@/lib/utils";
 import {
   bumpOption,
-  composeNote,
   groupError,
+  modifierPicks,
+  modifiersPrice,
   modifiersSummary,
   selectedCount,
   variantRequired,
@@ -44,6 +45,7 @@ export function ProductSheet({
   product,
   detail = EMPTY_DETAIL,
   initial,
+  sentLine = false,
   onClose,
   onConfirm,
 }: {
@@ -51,6 +53,11 @@ export function ProductSheet({
   detail?: StaffProductDetail;
   /** Línea del carrito que se edita (null = producto nuevo). */
   initial: StaffCartItem | null;
+  /**
+   * Línea ya enviada a cocina: solo se cambia variante y nota (sin cantidad
+   * ni personalizaciones); el precio lo recalcula la base.
+   */
+  sentLine?: boolean;
   onClose: () => void;
   onConfirm: (line: NewCartLine) => void;
 }) {
@@ -61,36 +68,31 @@ export function ProductSheet({
   const [selections, setSelections] = useState<Record<string, Record<string, number>>>(
     initial?.selections ?? {}
   );
-  const [note, setNote] = useState(() => {
-    // La nota libre es lo que queda tras quitar el resumen de personalizaciones.
-    if (!initial) return "";
-    const prefix = initial.modifiers ?? "";
-    if (!prefix) return initial.notes;
-    return initial.notes.startsWith(prefix)
-      ? initial.notes.slice(prefix.length).replace(/^ · /, "")
-      : initial.notes;
-  });
+  const [note, setNote] = useState(initial?.notes ?? "");
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [submitted, setSubmitted] = useState(false);
 
   const variant = detail.variants.find((v) => v.id === variantId);
-  const unitPrice = variant?.price ?? product.price;
+  const groups = sentLine ? [] : detail.groups;
+  const optionsPrice = modifiersPrice(groups, selections);
+  const unitPrice = (variant?.price ?? product.price) + optionsPrice;
   const variantError = submitted && required && !variantId;
 
   function confirm() {
     setSubmitted(true);
     if (required && !variantId) return;
-    if (detail.groups.some((g) => groupError(g, selections[g.id] ?? {}))) return;
-    const modifiers = modifiersSummary(detail.groups, selections);
+    if (groups.some((g) => groupError(g, selections[g.id] ?? {}))) return;
+    const modifiers = modifiersSummary(groups, selections);
     onConfirm({
       productId: product.id,
       name: product.name,
       price: unitPrice,
       quantity,
-      notes: composeNote(modifiers, note),
+      notes: note.trim(),
       variantId: variantId ?? undefined,
       variantName: variant?.name || undefined,
       modifiers: modifiers || undefined,
+      modifierPicks: sentLine ? undefined : modifierPicks(groups, selections),
       selections,
     });
   }
@@ -101,7 +103,7 @@ export function ProductSheet({
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
           <DialogDescription>
-            {product.description || formatPrice(unitPrice)}
+            {sentLine ? "El precio lo recalcula la base al guardar" : product.description || formatPrice(unitPrice)}
           </DialogDescription>
         </DialogHeader>
 
@@ -142,7 +144,7 @@ export function ProductSheet({
           </fieldset>
         )}
 
-        {detail.groups.map((group) => {
+        {groups.map((group) => {
           const sel = selections[group.id] ?? {};
           const error = submitted ? groupError(group, sel) : null;
           const single = group.max_select === 1;
@@ -239,9 +241,14 @@ export function ProductSheet({
         </div>
 
         <DialogFooter className="items-center gap-3 sm:justify-between">
-          <QuantityStepper label={product.name} value={quantity} onChange={setQuantity} />
+          {sentLine ? (
+            <span />
+          ) : (
+            <QuantityStepper label={product.name} value={quantity} onChange={setQuantity} />
+          )}
           <Button type="button" size="lg" className="min-h-11 flex-1 rounded-control sm:flex-none" onClick={confirm}>
-            {initial ? "Guardar cambios" : "Agregar"} · {formatPrice(unitPrice * quantity)}
+            {initial ? "Guardar cambios" : "Agregar"}
+            {sentLine ? "" : ` · ${formatPrice(unitPrice * quantity)}`}
           </Button>
         </DialogFooter>
       </DialogContent>

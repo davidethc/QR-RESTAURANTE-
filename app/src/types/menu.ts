@@ -74,14 +74,18 @@ export interface StaffCartItem {
   id: string;
   productId: string;
   name: string;
+  /** Precio unitario informativo: variante + Σ opción×veces. */
   price: number;
   quantity: number;
+  /** Nota libre de la línea. */
   notes: string;
   /** Variante elegida (siempre se envía; la base cobra su precio). */
   variantId?: string;
   variantName?: string;
-  /** Resumen de personalizaciones elegidas; viaja dentro de la nota. */
+  /** Resumen legible de las personalizaciones (solo para mostrar). */
   modifiers?: string;
+  /** Personalizaciones estructuradas que se envían a la base. */
+  modifierPicks?: { optionId: string; qty: number }[];
   /** Selección estructurada para reabrir la ficha: grupo -> opción -> veces. */
   selections?: Record<string, Record<string, number>>;
 }

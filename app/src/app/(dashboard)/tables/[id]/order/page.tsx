@@ -76,9 +76,9 @@ export default async function TakeOrderPage({
       />
       {order && (
         <TicketsDetail
-          orderId={order.id}
           tableLabel={tableLabel}
           tickets={order.tickets}
+          tableSessionId={order.billRequested ? order.tableSessionId : null}
           details={details}
         />
       )}

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   bumpOption,
-  composeNote,
+  modifierPicks,
+  modifiersPrice,
   fromPrice,
   groupError,
   splitLineInList,
@@ -95,10 +96,22 @@ describe("personalizaciones", () => {
   });
 });
 
-describe("composeNote", () => {
-  it("une y recorta a 200", () => {
-    expect(composeNote("BBQ", "sin sal")).toBe("BBQ · sin sal");
-    expect(composeNote("", " x ")).toBe("x");
-    expect(composeNote("a".repeat(300), "")).toHaveLength(200);
+describe("modifierPicks y modifiersPrice", () => {
+  const groups = [
+    {
+      id: "g1", name: "Extras", min_select: 0, max_select: 3, allow_repeat: true,
+      options: [
+        { id: "o1", name: "Queso", price: 1.5 },
+        { id: "o2", name: "Tocino", price: 2 },
+      ],
+    },
+  ];
+  it("lista las opciones elegidas con su cantidad", () => {
+    expect(modifierPicks(groups, { g1: { o1: 2 } })).toEqual([{ optionId: "o1", qty: 2 }]);
+    expect(modifierPicks(groups, {})).toEqual([]);
+  });
+  it("suma precio x veces", () => {
+    expect(modifiersPrice(groups, { g1: { o1: 2, o2: 1 } })).toBe(5);
+    expect(modifiersPrice(groups, {})).toBe(0);
   });
 });

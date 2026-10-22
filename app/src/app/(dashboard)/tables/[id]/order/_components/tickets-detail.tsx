@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Pencil, Printer, XCircle, Loader2 } from "lucide-react";
+import { ChevronDown, Pencil, Printer, RotateCcw, XCircle, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { addTicket, cancelOrderItem } from "@/lib/actions/orders";
+import { cancelOrderItem, editOrderItem, reopenTable } from "@/lib/actions/orders";
 import { notify } from "@/lib/notifications";
-import { newRequestId } from "@/lib/request-id";
 import { cn, formatPrice } from "@/lib/utils";
 import {
   MAX_REASON_LENGTH,
@@ -37,12 +36,13 @@ function hour(iso: string) {
  * editan sus productos, se cancela un producto con motivo o se imprime.
  */
 export function TicketsDetail({
-  orderId,
   tableLabel,
   tickets,
+  tableSessionId,
   details,
 }: {
-  orderId: string;
+  /** Solo si la mesa tiene la cuenta pedida: habilita "Reabrir mesa". */
+  tableSessionId: string | null;
   tableLabel: string;
   tickets: TicketView[];
   details: Record<string, StaffProductDetail>;
@@ -53,6 +53,8 @@ export function TicketsDetail({
   const [cancelling, setCancelling] = useState<TicketItemView | null>(null);
   const [editing, setEditing] = useState<{ ticket: TicketView; item: TicketItemView } | null>(null);
   const [printId, setPrintId] = useState<string | null>(null);
+  const [reopening, startReopen] = useTransition();
+  const [reopenError, setReopenError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!printId) return;
@@ -67,6 +69,40 @@ export function TicketsDetail({
 
   return (
     <section className="px-4 pt-4" aria-label="Comandas del pedido">
+      {tableSessionId && (
+        <div className="mb-3 rounded-card border border-border bg-secondary p-3">
+          <p className="text-body-sm font-medium">
+            La mesa pidió la cuenta. Reábrela para agregar productos.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-2 min-h-11 rounded-control"
+            disabled={reopening}
+            onClick={() => {
+              setReopenError(null);
+              startReopen(async () => {
+                const r = await reopenTable(tableSessionId);
+                if (!r.ok) {
+                  setReopenError(r.error);
+                  notify.error(r.error);
+                  return;
+                }
+                notify.success("Mesa reabierta");
+                router.refresh();
+              });
+            }}
+          >
+            {reopening ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+            Reabrir mesa
+          </Button>
+          {reopenError && (
+            <p role="alert" className="mt-1.5 text-body-sm font-medium text-destructive">
+              {reopenError}
+            </p>
+          )}
+        </div>
+      )}
       <h2 className="mb-2 text-tiny font-bold uppercase tracking-[0.14em] text-muted-foreground">
         Comandas
       </h2>
@@ -104,6 +140,11 @@ export function TicketsDetail({
                           <span className="block text-body-sm font-medium">
                             {item.quantity} × {item.productName}
                           </span>
+                          {item.options.length > 0 && (
+                            <span className="block text-meta text-muted-foreground">
+                              {item.options.join(", ")}
+                            </span>
+                          )}
                           {item.notes && (
                             <span className="block text-meta text-muted-foreground">{item.notes}</span>
                           )}
@@ -191,33 +232,23 @@ export function TicketsDetail({
             price: editing.item.unitPrice,
             quantity: editing.item.quantity,
             notes: editing.item.notes ?? "",
+            variantId: editing.item.variantId ?? undefined,
           }}
+          sentLine
           onClose={() => setEditing(null)}
           onConfirm={async (line) => {
-            const { ticket, item } = editing;
+            const { item } = editing;
+            const changes: { variantId?: string; notes?: string } = {};
+            if (line.variantId && line.variantId !== item.variantId) changes.variantId = line.variantId;
+            if (line.notes !== (item.notes ?? "")) changes.notes = line.notes;
+            if (changes.variantId === undefined && changes.notes === undefined) {
+              setEditing(null);
+              return notify.error("No hay cambios que guardar");
+            }
+            const result = await editOrderItem(item.id, changes);
+            if (!result.ok) return notify.error(result.error);
             setEditing(null);
-            // Sin RPC de edición: la corrección es una comanda nueva y la
-            // línea vieja se cancela con motivo (primero se agrega, así
-            // nunca se pierde el producto si la cancelación falla).
-            const added = await addTicket({
-              orderId,
-              items: [
-                {
-                  productId: line.productId,
-                  variantId: line.variantId,
-                  quantity: line.quantity,
-                  notes: line.notes || undefined,
-                },
-              ],
-              requestId: newRequestId(),
-            });
-            if (!added.ok) return notify.error(added.error);
-            const cancelled = await cancelOrderItem(
-              item.id,
-              `Corrección en comanda #${ticket.number}`
-            );
-            if (!cancelled.ok) notify.error(cancelled.error);
-            else notify.success(`Producto corregido en la comanda #${added.data.ticketNumber}`);
+            notify.success("Producto actualizado");
             router.refresh();
           }}
         />
@@ -327,6 +358,7 @@ function PrintTicket({ tableLabel, ticket }: { tableLabel: string; ticket: Ticke
               <p className="font-bold">
                 {i.quantity} x {i.productName}
               </p>
+              {i.options.length > 0 && <p>  {i.options.join(", ")}</p>}
               {i.notes && <p>  {i.notes}</p>}
             </div>
           ))}

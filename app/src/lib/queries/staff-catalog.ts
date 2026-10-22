@@ -57,6 +57,10 @@ export interface TicketItemView {
   notes: string | null;
   cancelled: boolean;
   unitPrice: number;
+  /** Variante guardada en la línea (null si no tenía). */
+  variantId: string | null;
+  /** Personalizaciones elegidas: "Extra queso x2". */
+  options: string[];
 }
 
 export interface TicketView {
@@ -70,6 +74,10 @@ export interface TicketView {
 export interface ActiveOrderView {
   id: string;
   folio: number;
+  /** Sesión de mesa vigente (para reabrir). */
+  tableSessionId: string | null;
+  /** La mesa tiene la cuenta pedida (llamada BILL viva). */
+  billRequested: boolean;
   tickets: TicketView[];
 }
 
@@ -80,7 +88,7 @@ export async function getActiveOrderForTable(
   const supabase = await createClient();
   const { data: order, error } = await supabase
     .from("orders")
-    .select("id, folio, table_sessions!inner(status)")
+    .select("id, folio, table_session_id, table_sessions!inner(status)")
     .eq("table_id", tableId)
     .eq("cancelled", false)
     .eq("table_sessions.status", "ACTIVE")
@@ -106,6 +114,37 @@ export async function getActiveOrderForTable(
     .order("created_at");
   if (lErr) throw lErr;
 
+  // variant_id y order_item_options.qty aún no están en database.ts.
+  const { data: extra } = (await supabase
+    .from("order_items")
+    .select("id, variant_id" as string)
+    .eq("order_id", order.id)) as unknown as {
+    data: { id: string; variant_id: string | null }[] | null;
+  };
+  const variantOf = new Map((extra ?? []).map((r) => [r.id, r.variant_id]));
+  const lineIds = (lines ?? []).map((l) => l.id);
+  const optionsOf = new Map<string, string[]>();
+  if (lineIds.length) {
+    const { data: opts } = (await supabase
+      .from("order_item_options")
+      .select("order_item_id, value_name, qty" as string)
+      .in("order_item_id", lineIds)) as unknown as {
+      data: { order_item_id: string; value_name: string; qty: number | null }[] | null;
+    };
+    for (const o of opts ?? []) {
+      const label = (o.qty ?? 1) > 1 ? `${o.value_name} x${o.qty}` : o.value_name;
+      optionsOf.set(o.order_item_id, [...(optionsOf.get(o.order_item_id) ?? []), label]);
+    }
+  }
+
+  const { data: billCalls } = await supabase
+    .from("waiter_calls")
+    .select("id")
+    .eq("table_id", tableId)
+    .eq("type", "BILL")
+    .in("status", ["PENDING", "ACCEPTED"])
+    .limit(1);
+
   const authorIds = [
     ...new Set((tickets ?? []).map((t) => t.created_by).filter(Boolean)),
   ] as string[];
@@ -121,6 +160,8 @@ export async function getActiveOrderForTable(
   return {
     id: order.id,
     folio: order.folio,
+    tableSessionId: order.table_session_id,
+    billRequested: (billCalls ?? []).length > 0,
     tickets: (tickets ?? []).map((t) => ({
       id: t.id,
       number: t.number,
@@ -136,6 +177,8 @@ export async function getActiveOrderForTable(
         notes: i.notes,
         cancelled: i.cancelled,
         unitPrice: Number(i.unit_price),
+        variantId: variantOf.get(i.id) ?? null,
+        options: optionsOf.get(i.id) ?? [],
       })),
     })),
   };
