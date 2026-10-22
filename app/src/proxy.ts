@@ -1,3 +1,5 @@
+import { DEVICE_COOKIE } from "@/lib/devices/constants";
+import { checkDevice } from "@/lib/devices/service";
 import { readMemberSession } from "@/lib/auth/member-session";
 import { getLandingPath, getRouteRedirect } from "@/lib/permissions";
 import type { Database } from "@/types/database";
@@ -36,13 +38,27 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isStaffArea = STAFF_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 
-  function redirectTo(destination: string) {
+  function redirectTo(destination: string, search = "") {
     const url = request.nextUrl.clone();
     url.pathname = destination;
-    url.search = "";
+    url.search = search;
     const redirected = NextResponse.redirect(url);
     response.cookies.getAll().forEach((cookie) => redirected.cookies.set(cookie));
     return redirected;
+  }
+
+  // M10: un dispositivo vinculado se valida en cada request. Si lo revocaron,
+  // se cierra la sesión y se borra la cookie; si no se pudo comprobar, no se
+  // corta a nadie por un fallo de red (la revocación se aplica al volver).
+  const deviceSecret = request.cookies.get(DEVICE_COOKIE)?.value;
+  if (deviceSecret && isStaffArea) {
+    const device = await checkDevice(deviceSecret);
+    if (device.state === "revoked") {
+      await supabase.auth.signOut();
+      const redirected = redirectTo("/pin", "?motivo=revocado");
+      redirected.cookies.delete(DEVICE_COOKIE);
+      return redirected;
+    }
   }
 
   if (!user && isStaffArea) {

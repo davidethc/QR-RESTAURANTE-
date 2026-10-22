@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DEVICE_COOKIE } from "@/lib/devices/constants";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/validations/auth";
 import type { ActionResult } from "@/types/actions";
@@ -27,5 +29,7 @@ export async function signIn(
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  // En un dispositivo vinculado, "Salir" vuelve al teclado de PIN sin desvincularlo.
+  const linked = (await cookies()).has(DEVICE_COOKIE);
+  redirect(linked ? "/pin" : "/login");
 }
