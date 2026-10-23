@@ -1,3 +1,5 @@
+import { connection } from "next/server";
+
 /**
  * Latido de sesión del panel. No hace nada por sí mismo: su valor está en
  * que la petición pasa por `proxy.ts` (cubierta por `/today/:path*`), que
@@ -9,7 +11,9 @@
  * y ya no pasan por el proxy: sin este latido, una tablet revocada que no
  * navega seguiría recibiendo pedidos en vivo.
  */
-export function GET() {
+export async function GET() {
+  // Sin esto el build intenta prerenderizarla y falla con el 204.
+  await connection();
   return new Response(null, {
     status: 204,
     headers: { "Cache-Control": "no-store" },
