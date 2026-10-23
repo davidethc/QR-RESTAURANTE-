@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,9 +27,12 @@ import type { AdminCategory } from "@/types/staff";
 export function CategoryDialog({
   restaurantId,
   category,
+  trigger,
 }: {
   restaurantId: string;
   category?: AdminCategory;
+  /** Custom trigger; defaults to a pencil (edit) or "+ Categoría" (create). */
+  trigger?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -70,7 +73,7 @@ export function CategoryDialog({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        {isEdit ? (
+        {trigger ?? (isEdit ? (
           <Button variant="ghost" size="icon" aria-label="Editar categoría">
             <Pencil className="h-4 w-4" />
           </Button>
@@ -78,7 +81,7 @@ export function CategoryDialog({
           <Button variant="outline">
             <Plus /> Categoría
           </Button>
-        )}
+        ))}
       </SheetTrigger>
       <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
         <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
@@ -98,7 +101,7 @@ export function CategoryDialog({
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="cat-name">Nombre</FieldLabel>
-                <Input id="cat-name" {...register("name")} />
+                <Input id="cat-name" className="min-h-12" {...register("name")} />
                 <FieldError errors={[errors.name]} />
               </Field>
               <Field>
@@ -113,11 +116,11 @@ export function CategoryDialog({
           </div>
           <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border px-6 py-4">
             <SheetClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" className="min-h-12">
                 Cancelar
               </Button>
             </SheetClose>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" className="min-h-12" disabled={isPending}>
               {isPending && <Loader2 className="animate-spin" />}
               {isEdit ? "Guardar" : "Crear"}
             </Button>

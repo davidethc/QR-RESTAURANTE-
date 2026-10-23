@@ -115,7 +115,7 @@ export function ModifierBoard({ restaurantId }: { restaurantId: string }) {
   const newAction = <Button ref={newButton} className="min-h-11" onClick={(event) => { trigger.current = event.currentTarget; openEditor(); }}><Plus aria-hidden /> Nueva personalización</Button>;
 
   return (
-    <section aria-label="Personalizaciones" className="space-y-6 px-4 pb-12 md:px-8 [&_button]:min-h-11">
+    <section aria-label="Personalizaciones" className="space-y-6 pb-12 [&_button]:min-h-11">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><h2 className="font-display text-title font-semibold">Personalizaciones</h2><p className="mt-1 text-body-sm text-muted-foreground">Crea grupos que puedes reutilizar en varios productos.</p></div>
         {newAction}

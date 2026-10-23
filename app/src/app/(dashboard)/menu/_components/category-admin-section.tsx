@@ -1,17 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { GripVertical, Trash2, ChevronUp, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp, FolderOpen, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { EmptyState } from "@/components/shared/empty-state";
+import { posPressable, toneSoft } from "@/components/shared/pos-tone";
 import { CategoryDialog } from "./category-dialog";
-import { ProductDialog } from "./product-dialog";
-import { ProductRow } from "./product-row";
+import { ProductEditor } from "./product-editor";
+import { ProductCard } from "./product-card";
 import { deleteCategory } from "@/lib/actions/menu";
 import { cn } from "@/lib/utils";
 import type { AdminCategory, AdminProduct } from "@/types/staff";
 
+const ICON_BUTTON =
+  "flex size-11 shrink-0 items-center justify-center rounded-button text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30";
+
+/**
+ * A category: a white header card (name, counts, actions) and its products as
+ * a grid of cards right below, on the page background. Header and grid are
+ * siblings — no card inside a card — and categories are spaced apart.
+ */
 export function CategoryAdminSection({
   category,
   products,
@@ -52,80 +59,100 @@ export function CategoryAdminSection({
   onProductMove: (id: string, direction: "up" | "down") => void;
 }) {
   const router = useRouter();
+  const soldOut = products.filter((p) => !p.available).length;
+  const name = category?.name ?? "Sin categoría";
+
+  const addProduct = (label: string, variant: "solid" | "outline") => (
+    <ProductEditor
+      restaurantId={restaurantId}
+      categories={allCategories}
+      allProducts={allProducts}
+      defaultCategoryId={category?.id}
+      trigger={
+        <button
+          type="button"
+          className={cn(
+            posPressable,
+            "flex min-h-11 items-center gap-1.5 rounded-button px-3 text-body-sm font-semibold",
+            variant === "solid"
+              ? "bg-foreground text-background hover:bg-foreground/90"
+              : "border-2 border-border bg-card text-foreground hover:border-border-strong"
+          )}
+        >
+          <Plus className="size-4" aria-hidden /> {label}
+        </button>
+      }
+    />
+  );
 
   return (
     <section
-      className={cn(isDragging && "opacity-40")}
+      aria-label={name}
+      className={cn("flex scroll-mt-4 flex-col gap-3 transition-opacity duration-150", isDragging && "opacity-40")}
+      id={category ? `cat-${category.id}` : "cat-none"}
       onDragOver={category ? (e) => e.preventDefault() : undefined}
       onDrop={category ? onCategoryDrop : undefined}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-secondary px-4 py-2.5 md:px-5">
-        <div className="flex min-w-0 items-center gap-2">
-          {category && (
-            <div className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
-              <span
-                draggable
-                onDragStart={onCategoryDragStart}
-                onDragEnd={onCategoryDragEnd}
-                className="cursor-grab active:cursor-grabbing"
-                aria-hidden="true"
-              >
-                <GripVertical className="h-3.5 w-3.5" />
-              </span>
-              <div className="flex flex-col">
-                <button
-                  type="button"
-                  onClick={onCategoryMoveUp}
-                  disabled={isFirstCategory}
-                  aria-label="Mover categoría arriba"
-                  className="disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
-                >
-                  <ChevronUp className="h-3 w-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={onCategoryMoveDown}
-                  disabled={isLastCategory}
-                  aria-label="Mover categoría abajo"
-                  className="disabled:pointer-events-none disabled:opacity-30 hover:text-foreground"
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="min-w-0">
-            <span className="text-body-sm font-semibold text-foreground">
-              {category?.name ?? "Sin categoría"}
-              <span className="ml-1.5 font-normal text-muted-foreground">
-                {products.length}
-              </span>
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-card border border-border bg-card px-3 py-2 shadow-sm">
+        {category && (
+          <div className="flex shrink-0 items-center">
+            <span
+              draggable
+              onDragStart={onCategoryDragStart}
+              onDragEnd={onCategoryDragEnd}
+              className="flex size-11 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing max-md:hidden"
+              title="Arrastra para reordenar"
+              aria-hidden="true"
+            >
+              <GripVertical className="size-4" />
             </span>
-            {category?.description && (
-              <p className="truncate text-caption text-muted-foreground">
-                {category.description}
-              </p>
-            )}
+            <button type="button" onClick={onCategoryMoveUp} disabled={isFirstCategory} aria-label={`Mover ${name} arriba`} className={cn(posPressable, ICON_BUTTON)}>
+              <ChevronUp className="size-4" aria-hidden />
+            </button>
+            <button type="button" onClick={onCategoryMoveDown} disabled={isLastCategory} aria-label={`Mover ${name} abajo`} className={cn(posPressable, ICON_BUTTON)}>
+              <ChevronDown className="size-4" aria-hidden />
+            </button>
           </div>
+        )}
+        {!category && (
+          <span className="ml-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <FolderOpen className="size-4" aria-hidden />
+          </span>
+        )}
+        <div className="min-w-0 flex-1 basis-40">
+          <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lead font-semibold leading-tight text-foreground">
+            <span className="wrap-anywhere">{name}</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-caption font-semibold tabular-nums text-muted-foreground">
+              {products.length} {products.length === 1 ? "producto" : "productos"}
+            </span>
+            {soldOut > 0 && (
+              <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-caption font-semibold tabular-nums", toneSoft["money-out"])}>
+                <X className="size-3.5" strokeWidth={3} aria-hidden /> {soldOut} {soldOut === 1 ? "agotado" : "agotados"}
+              </span>
+            )}
+          </h2>
+          {category?.description && (
+            <p className="mt-0.5 truncate text-meta text-muted-foreground">{category.description}</p>
+          )}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <ProductDialog
-            restaurantId={restaurantId}
-            categories={allCategories}
-            allProducts={allProducts}
-            defaultCategoryId={category?.id}
-          />
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {addProduct("Producto", "outline")}
           {category && (
             <>
               <CategoryDialog
                 restaurantId={restaurantId}
                 category={category}
+                trigger={
+                  <button type="button" aria-label={`Editar categoría ${name}`} className={cn(posPressable, ICON_BUTTON)}>
+                    <Pencil className="size-4" aria-hidden />
+                  </button>
+                }
               />
               <ConfirmDialog
                 trigger={
-                  <Button variant="ghost" size="icon" aria-label="Eliminar categoría">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <button type="button" aria-label={`Eliminar categoría ${name}`} className={cn(posPressable, ICON_BUTTON, "hover:bg-money-out-soft hover:text-money-out-soft-foreground")}>
+                    <Trash2 className="size-4" aria-hidden />
+                  </button>
                 }
                 title="¿Eliminar esta categoría?"
                 description={
@@ -142,30 +169,36 @@ export function CategoryAdminSection({
             </>
           )}
         </div>
-      </div>
+      </header>
 
       {products.length === 0 ? (
-        <EmptyState title="Sin productos todavía" />
-      ) : (
-        <div className="divide-y divide-border">
-            {products.map((product, index) => (
-              <ProductRow
-                key={product.id}
-                product={product}
-                restaurantId={restaurantId}
-                categories={allCategories}
-                allProducts={allProducts}
-                isDragging={draggedProductId === product.id}
-                onDragStart={() => onProductDragStart(product.id)}
-                onDragEnd={onProductDragEnd}
-                onDrop={() => onProductDrop(product.id)}
-                onMoveUp={() => onProductMove(product.id, "up")}
-                onMoveDown={() => onProductMove(product.id, "down")}
-                isFirst={index === 0}
-                isLast={index === products.length - 1}
-              />
-            ))}
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-card border-2 border-dashed border-border bg-card/60 px-4 py-6 text-center">
+          <p className="text-body-sm text-muted-foreground">Esta categoría aún no tiene productos.</p>
+          {addProduct("Agregar producto", "solid")}
         </div>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {products.map((product, index) => (
+            <li key={product.id} className="flex">
+              <div className="flex w-full animate-in fade-in duration-150 motion-reduce:animate-none [&>article]:w-full">
+                <ProductCard
+                  product={product}
+                  restaurantId={restaurantId}
+                  categories={allCategories}
+                  allProducts={allProducts}
+                  isDragging={draggedProductId === product.id}
+                  onDragStart={() => onProductDragStart(product.id)}
+                  onDragEnd={onProductDragEnd}
+                  onDrop={() => onProductDrop(product.id)}
+                  onMoveUp={() => onProductMove(product.id, "up")}
+                  onMoveDown={() => onProductMove(product.id, "down")}
+                  isFirst={index === 0}
+                  isLast={index === products.length - 1}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
