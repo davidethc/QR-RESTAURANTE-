@@ -17,7 +17,7 @@ export default async function KitchenHistoryPage() {
   const initial = await getKitchenTickets(restaurantId, "completed", 20, 0);
 
   return (
-    <main className="flex min-h-full flex-col">
+    <main data-caja className="flex min-h-full flex-col bg-background">
       <KitchenHistory restaurantId={restaurantId} initial={initial} />
     </main>
   );
