@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChefHat, CircleCheck, Clock } from "lucide-react";
-import { cn, formatPrice } from "@/lib/utils";
-import { formatElapsed, minutesOpen, placeKind, queueStatus, sortQueue } from "@/lib/bill-queue";
+import { useEffect, useId, useState } from "react";
+import { ChefHat, CircleCheck, Clock, ListFilter, Search, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { posPressable } from "@/components/shared/pos-tone";
+import { cn, formatPrice, normalizeText } from "@/lib/utils";
+import { formatElapsed, minutesOpen, placeKind, queueStatus, sortQueue, type PlaceKind } from "@/lib/bill-queue";
 import { toneSoft } from "@/components/shared/pos-tone";
 import type { OpenBillSummary } from "@/types/billing";
 import { PlaceIcon } from "./place-icon";
@@ -31,9 +40,18 @@ const RAIL = {
   info: "bg-info",
 } as const;
 
+const KIND_FILTERS: { value: PlaceKind | "ALL"; label: string }[] = [
+  { value: "ALL", label: "Todas" },
+  { value: "TABLE", label: "Mesas" },
+  { value: "TAKEAWAY", label: "Para llevar" },
+  { value: "DINE_IN", label: "Para comer aquí" },
+  { value: "DELIVERY", label: "Domicilio" },
+];
+
 /**
- * Cuentas vivas en dos grupos: "Por cobrar" (con saldo) y "Pagadas · por
- * entregar" (sin saldo, esperando cocina). Cada tarjeta: lugar con su icono,
+ * Cuentas vivas en dos pestañas: "Por cobrar" (con saldo) y "Pagadas" (sin
+ * saldo, esperando cocina), con búsqueda y filtro por tipo de lugar sobre
+ * lo que ya está cargado. Cada tarjeta: lugar con su icono,
  * estado (color + icono + texto), tiempo abierta, lo que sigue en cocina y
  * el monto. Un toque la selecciona; la elegida toma el color de su estado.
  */
@@ -49,10 +67,21 @@ export function BillQueue({
   empty: React.ReactNode;
 }) {
   const now = useNow();
+  const ids = useId();
+  const [tab, setTab] = useState<"owed" | "paid">("owed");
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState("");
+  const [kind, setKind] = useState<PlaceKind | "ALL">("ALL");
   if (bills.length === 0) return <>{empty}</>;
-  const sorted = sortQueue(bills);
+
+  const term = normalizeText(query.trim());
+  const sorted = sortQueue(bills).filter(
+    (b) => (kind === "ALL" || placeKind(b) === kind) && (!term || normalizeText(b.place_label).includes(term))
+  );
   const owed = sorted.filter((b) => queueStatus(b).tone !== "money-in");
   const paid = sorted.filter((b) => queueStatus(b).tone === "money-in");
+  const shown = tab === "owed" ? owed : paid;
+  const filtering = kind !== "ALL" || term !== "";
 
   const card = (bill: OpenBillSummary) => {
     const status = queueStatus(bill);
@@ -112,59 +141,126 @@ export function BillQueue({
     );
   };
 
-  return (
-    <div className="flex flex-col gap-5">
-      <QueueGroup id="queue-owed" title="Por cobrar" count={owed.length} tone="attention">
-        {owed.length > 0 ? (
-          <ul aria-labelledby="queue-owed" className="flex flex-col gap-2">
-            {owed.map(card)}
-          </ul>
-        ) : (
-          <p className="rounded-card border border-dashed border-border px-4 py-4 text-center text-meta text-muted-foreground">
-            Nada por cobrar ahora.
-          </p>
-        )}
-      </QueueGroup>
-      {paid.length > 0 && (
-        <QueueGroup id="queue-paid" title="Pagadas · por entregar" count={paid.length} tone="money-in">
-          <ul aria-labelledby="queue-paid" className="flex flex-col gap-2">
-            {paid.map(card)}
-          </ul>
-        </QueueGroup>
-      )}
-    </div>
-  );
-}
+  const tabs = [
+    { id: "owed" as const, label: "Por cobrar", count: owed.length, tone: "attention" as const },
+    { id: "paid" as const, label: "Pagadas", count: paid.length, tone: "money-in" as const },
+  ];
 
-function QueueGroup({
-  id,
-  title,
-  count,
-  tone,
-  children,
-}: {
-  id: string;
-  title: string;
-  count: number;
-  tone: "attention" | "money-in";
-  children: React.ReactNode;
-}) {
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 px-1">
-        <h3 id={id} className="text-body-sm font-semibold text-foreground">
-          {title}
-        </h3>
-        <span
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-1 border-b border-border">
+        <div role="tablist" aria-label="Cuentas" className="flex min-w-0 flex-1">
+          {tabs.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`${ids}-${t.id}-tab`}
+                aria-selected={active}
+                aria-controls={`${ids}-panel`}
+                onClick={() => setTab(t.id)}
+                className={cn(
+                  "relative -mb-px flex min-h-12 items-center gap-1.5 border-b-2 px-2.5 text-body-sm font-semibold whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60 motion-reduce:transition-none",
+                  active ? "border-money-in text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t.label}
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-caption leading-none tabular-nums",
+                    t.count > 0 ? toneSoft[t.tone] : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {t.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          aria-label={searching ? "Cerrar búsqueda" : "Buscar cuenta"}
+          aria-pressed={searching}
+          onClick={() => {
+            if (searching) setQuery("");
+            setSearching(!searching);
+          }}
           className={cn(
-            "rounded-full px-2 py-0.5 text-caption font-semibold tabular-nums",
-            count > 0 ? toneSoft[tone] : "bg-secondary text-muted-foreground"
+            posPressable,
+            "flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground",
+            searching && "bg-secondary text-foreground"
           )}
         >
-          {count}
-        </span>
+          <Search className="size-5" aria-hidden />
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={kind === "ALL" ? "Filtrar por tipo" : `Filtro: ${KIND_FILTERS.find((k) => k.value === kind)?.label}`}
+              className={cn(
+                posPressable,
+                "relative flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground",
+                kind !== "ALL" && "bg-secondary text-foreground"
+              )}
+            >
+              <ListFilter className="size-5" aria-hidden />
+              {kind !== "ALL" && <span aria-hidden className="absolute top-2 right-2 size-2 rounded-full bg-money-in" />}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel>Tipo de cuenta</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={kind} onValueChange={(v) => setKind(v as PlaceKind | "ALL")}>
+              {KIND_FILTERS.map((k) => (
+                <DropdownMenuRadioItem key={k.value} value={k.value} className="min-h-11">
+                  {k.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      {children}
-    </section>
+
+      {searching && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <input
+            type="search"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Mesa, número o cliente"
+            aria-label="Buscar cuenta"
+            className="h-12 w-full rounded-control border border-input bg-card pr-3 pl-9 text-body text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
+          />
+        </div>
+      )}
+
+      <div role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-${tab}-tab`}>
+        {shown.length > 0 ? (
+          <ul className="flex flex-col gap-2">{shown.map(card)}</ul>
+        ) : (
+          <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-border px-4 py-5 text-center">
+            <p className="text-meta text-muted-foreground">
+              {filtering ? "Ninguna cuenta coincide." : tab === "owed" ? "Nada por cobrar ahora." : "No hay cuentas pagadas esperando cocina."}
+            </p>
+            {filtering && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setKind("ALL");
+                }}
+                className={cn(posPressable, "flex min-h-11 items-center gap-1.5 rounded-button px-3 text-body-sm font-semibold text-foreground hover:bg-muted")}
+              >
+                <X className="size-4" aria-hidden /> Quitar filtros
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
