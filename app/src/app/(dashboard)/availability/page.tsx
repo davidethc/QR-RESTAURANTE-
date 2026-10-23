@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/shared/page-header";
 import { requireRouteAccess } from "@/lib/auth/require-route-access";
+import { canAccessRoute } from "@/lib/permissions";
 import { getMyRestaurant } from "@/lib/queries/staff";
 import { getAvailabilityItems } from "@/lib/queries/availability";
 import { AvailabilityList } from "./_components/availability-list";
@@ -21,14 +21,12 @@ export default async function AvailabilityPage() {
   const items = await getAvailabilityItems(session.restaurant.id);
 
   return (
-    <main>
-      <PageHeader
-        title="Disponibilidad"
-        description="Marca lo que hoy no hay. El cambio se refleja en el POS y la carta."
+    <main data-caja className="min-h-full bg-background">
+      <AvailabilityList
+        items={items}
+        restaurantId={session.restaurant.id}
+        canEditMenu={canAccessRoute(session, "/menu")}
       />
-      <div className="px-4 pb-12 md:px-8">
-        <AvailabilityList items={items} restaurantId={session.restaurant.id} />
-      </div>
     </main>
   );
 }
