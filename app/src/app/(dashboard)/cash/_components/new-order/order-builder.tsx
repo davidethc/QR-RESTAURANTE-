@@ -439,7 +439,7 @@ export function OrderBuilder({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="min-h-12">Seguir armando</AlertDialogCancel>
-            <AlertDialogAction className="min-h-12 bg-money-out text-money-out-foreground hover:bg-money-out/90" onClick={onClose}>
+            <AlertDialogAction variant="destructive" className="min-h-12" onClick={onClose}>
               Descartar y salir
             </AlertDialogAction>
           </AlertDialogFooter>
