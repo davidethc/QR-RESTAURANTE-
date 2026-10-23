@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, CircleCheck, Printer } from "lucide-react";
+import { Check, CircleCheck, FileText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { SPLIT_MODE } from "@/config/constants";
@@ -9,7 +9,7 @@ import type { SplitProgress } from "@/lib/split-progress";
 import type { Bill, BillPaymentContext } from "@/types/billing";
 import { ChargeTicket } from "../charge-ticket";
 import { PaymentsBlock } from "../payments-block";
-import { BillTotals } from "./bill-totals";
+import { BillTotals, DeliveredRow } from "./bill-totals";
 import { KitchenNotice } from "./kitchen-notice";
 import { StepFooter } from "./step-footer";
 
@@ -105,6 +105,13 @@ export function StepDone({
   ) : (
     <StepFooter primaryLabel="Listo" primaryTone="neutral" onPrimary={onFinish}>
       {(closed || paid) && printTicket}
+      {closed && (
+        <Button asChild variant="outline" className="h-14 flex-1 px-5 text-body font-semibold">
+          <Link href={`/cash/ticket/${bill.id}`} target="_blank" rel="noopener noreferrer">
+            <FileText aria-hidden /> Ver detalle
+          </Link>
+        </Button>
+      )}
     </StepFooter>
   );
 
@@ -184,6 +191,7 @@ export function StepDone({
                     <dd className="tabular-nums text-foreground">{formatPrice(bill.tip_total)}</dd>
                   </div>
                 )}
+                <DeliveredRow bill={bill} />
               </dl>
               {bill.payments.length > 0 && (
                 <PaymentsBlock bill={bill} context={context} onBillChange={() => {}} allowVoid={false} />

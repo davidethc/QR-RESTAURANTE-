@@ -3,6 +3,37 @@ import { cn, formatPrice } from "@/lib/utils";
 import type { Bill } from "@/types/billing";
 
 /**
+ * Productos entregados sobre el total de la cuenta (unidades), según el
+ * estado de cada pedido en cocina. Las líneas canceladas no cuentan.
+ */
+export function deliveredCount(bill: Bill): { delivered: number; total: number } {
+  let delivered = 0;
+  let total = 0;
+  for (const order of bill.orders) {
+    if (!order.billable) continue;
+    for (const item of order.items) {
+      if (item.cancelled) continue;
+      total += item.quantity;
+      if (order.status === "DELIVERED") delivered += item.quantity;
+    }
+  }
+  return { delivered, total };
+}
+
+export function DeliveredRow({ bill }: { bill: Bill }) {
+  const { delivered, total } = deliveredCount(bill);
+  if (total === 0) return null;
+  return (
+    <div className="flex justify-between gap-3">
+      <dt className="text-muted-foreground">Entregado</dt>
+      <dd className={cn("tabular-nums", delivered === total ? "text-money-in-soft-foreground" : "text-attention-soft-foreground")}>
+        {delivered} de {total} {total === 1 ? "producto" : "productos"}
+      </dd>
+    </div>
+  );
+}
+
+/**
  * Totales de la cuenta, tal como los devuelve la RPC: subtotal, descuentos,
  * total, lo ya pagado y el saldo. El saldo va resaltado: verde cuando ya no
  * falta nada, ámbar mientras falte.
@@ -48,6 +79,7 @@ export function BillTotals({
       </div>
       {bill.paid_total > 0 && <Row label="Ya pagado" value={`−${formatPrice(bill.paid_total)}`} accent />}
       {bill.tip_total > 0 && <Row label="Propinas (aparte)" value={formatPrice(bill.tip_total)} />}
+      {bill.status !== "OPEN" && <DeliveredRow bill={bill} />}
       {bill.paid_total > 0 && (
         <div
           className={cn(
