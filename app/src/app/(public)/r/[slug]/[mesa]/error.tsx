@@ -1,10 +1,11 @@
 "use client";
 
+import { RotateCw, WifiOff } from "lucide-react";
+
 /**
- * Antes no existía: si la carta fallaba (base caída, red del local,
- * sesión rota), el comensal se quedaba en la pantalla de error genérica
- * de Next sin forma de recuperarse salvo cerrar y volver a escanear.
- * `reset()` reintenta el render del segmento sin recargar toda la app.
+ * If the menu fails (database down, venue wifi, broken session) the
+ * customer gets a way back instead of Next's generic error screen.
+ * `reset()` retries rendering the segment without reloading the app.
  */
 export default function Error({
   error,
@@ -14,29 +15,30 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <main className="flex min-h-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="font-display text-xl font-bold">
-        No pudimos cargar la carta
-      </h1>
-      <p className="max-w-xs text-sm text-muted-foreground">
-        Puede ser tu conexión. Inténtalo otra vez; si sigue fallando, avisa a tu
-        mesero.
-      </p>
-      <button
-        type="button"
-        onClick={reset}
-        className="min-h-11 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground"
-      >
-        Reintentar
-      </button>
-      {/* El digest es lo único que permite cruzar este fallo con el log
-          del servidor. Discreto, pero visible si hay que pedírselo al
-          cliente por teléfono. */}
-      {error.digest && (
-        <p className="text-[11px] text-muted-foreground/60">
-          Ref. {error.digest}
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-10">
+      <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-8 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full border border-attention-border bg-attention-soft text-attention-soft-foreground">
+          <WifiOff aria-hidden className="size-6" />
+        </span>
+        <h1 className="font-display text-title font-bold">No pudimos cargar la carta</h1>
+        <p className="text-body-sm text-muted-foreground">
+          Puede ser tu conexión. Inténtalo otra vez; si sigue fallando, avisa a tu
+          mesero.
         </p>
-      )}
+        <button
+          type="button"
+          onClick={reset}
+          className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-body font-semibold text-primary-foreground"
+        >
+          <RotateCw aria-hidden className="size-4" />
+          Reintentar
+        </button>
+        {/* The digest is the only way to match this failure with the
+            server log. Discreet, but readable over the phone. */}
+        {error.digest && (
+          <p className="text-caption text-muted-foreground">Ref. {error.digest}</p>
+        )}
+      </div>
     </main>
   );
 }

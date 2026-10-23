@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { Bell, Receipt } from "lucide-react";
+import { Bell, CircleCheck, Clock, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { notify } from "@/lib/notifications";
@@ -89,15 +89,15 @@ export function ServiceButtons({ tableNumber }: { tableNumber: number }) {
     return (
       <p
         role="status"
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-success/10 text-[15px] font-semibold text-success"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-money-in-border bg-money-in-soft text-body font-semibold text-money-in-soft-foreground"
       >
-        <Receipt aria-hidden className="h-4 w-4" /> Cuenta pagada · ¡gracias!
+        <CircleCheck aria-hidden className="size-5" /> Cuenta pagada · ¡gracias!
       </p>
     );
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="grid grid-cols-2 gap-2">
       <ServiceButton
         call={calls.find((c) => c.type === "WAITER")}
         icon={<Bell />}
@@ -195,36 +195,45 @@ function ServiceButton({
         ? acceptedLabel
         : pendingLabel;
 
-  // En espera el botón se apaga por tono y el ícono pierde el verde:
-  // deja de leerse como algo que se pueda tocar. Un solo tratamiento,
-  // sin borde ni sombra encima.
+  // Each state has its own tone AND its own icon, so the customer never
+  // has to read color alone: waiting = amber clock, on the way = green
+  // check, insist again = amber outline, blocked/cooldown = muted.
+  const accepted = !blocked && waiting && call?.status === "ACCEPTED";
+  const shownIcon = blocked || cooling
+    ? icon
+    : accepted
+      ? <CircleCheck />
+      : waiting
+        ? <Clock />
+        : icon;
   const trigger = (
     <Button
       variant="ghost"
       disabled={waiting || blocked || cooling}
       className={cn(
-        "h-12 flex-1 rounded-2xl text-[15px] font-semibold",
-        // Bloqueado se apaga del todo: ni relleno de estado ni ícono con
-        // color. No pasó nada todavía, y nada hay que mirar aquí.
-        blocked && "text-muted-foreground disabled:opacity-100",
+        "h-12 min-w-0 rounded-2xl border px-3 text-body-sm font-semibold sm:text-body [&_svg]:size-[18px]",
+        blocked && "border-border bg-secondary text-muted-foreground disabled:opacity-100",
         !blocked &&
           waiting &&
-          "bg-primary-soft text-primary-soft-foreground disabled:opacity-100 [&_svg]:text-primary/70",
+          !accepted &&
+          "border-attention-border bg-attention-soft text-attention-soft-foreground disabled:opacity-100",
+        accepted &&
+          "border-money-in-border bg-money-in-soft text-money-in-soft-foreground disabled:opacity-100",
         !blocked &&
           cooling &&
-          "border border-border bg-card text-muted-foreground disabled:opacity-100",
+          "border-border bg-secondary text-muted-foreground disabled:opacity-100",
         !blocked &&
           !waiting &&
           !cooling &&
           !stale &&
-          "border border-border bg-card hover:bg-muted [&_svg]:text-primary",
+          "border-border bg-card text-foreground hover:bg-secondary [&_svg]:text-primary",
         !blocked &&
           !waiting &&
           stale &&
-          "border border-warning/45 bg-card hover:bg-muted [&_svg]:text-warning"
+          "border-attention bg-card text-foreground hover:bg-secondary [&_svg]:text-attention-soft-foreground"
       )}
     >
-      {icon} {label}
+      {shownIcon} <span className="truncate">{label}</span>
     </Button>
   );
 

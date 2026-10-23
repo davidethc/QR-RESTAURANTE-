@@ -1,29 +1,23 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
-import { ProductCardCompact } from "./product-card";
+import { ProductCard } from "./product-card";
 import type { PublicCategory } from "@/types/menu";
 
 /**
- * Una categoría de la carta, como entrada de un índice.
+ * One category of the menu, as its own bordered block.
  *
- * No es un acordeón con chevron: es una fila numerada separada por una
- * regla de 1px, como el índice de una carta impresa. El chevron y la
- * tarjeta con sombra eran justamente lo que hacía que la pantalla se
- * leyera como un componente por defecto en vez de como una carta.
- *
- * La fila dice tres cosas y en este orden: el número (posición y ritmo),
- * el nombre, y los primeros platos escritos. "16 platos" dice cuánto
- * hay; "Tigrillo · Bolón · Mote pillo" dice si te da hambre, que es lo
- * que de verdad decide si la abres.
- *
- * Abierta, los platos salen en fila horizontal: se ven varios de un
- * vistazo y la categoría no empuja el resto de la carta hacia abajo.
+ * Closed, it is an index entry: icon, name, how many dishes and the
+ * starting price, plus the first dish names ("Tigrillo · Bolón") because
+ * that is what makes you hungry enough to open it. Open, the dishes are a
+ * vertical list inside the same block, separated by 1px rules: nothing is
+ * hidden off-screen in a horizontal scroller, and every block reads as a
+ * unit separate from the next one.
  */
 export function CategorySection({
   category,
-  index,
   isOpen,
   onToggle,
   sectionRef,
@@ -31,8 +25,6 @@ export function CategorySection({
   cartQuantities,
 }: {
   category: PublicCategory;
-  /** Posición en la carta, para el número del índice (01, 02, …). */
-  index: number;
   isOpen: boolean;
   onToggle: () => void;
   sectionRef: (el: HTMLElement | null) => void;
@@ -40,87 +32,90 @@ export function CategorySection({
   cartQuantities: Record<string, number>;
 }) {
   const count = category.products.length;
-  const availablePrices = category.products
-    .filter((p) => p.available)
-    .map((p) => p.price);
+  const available = category.products.filter((p) => p.available);
   const fromPrice =
-    availablePrices.length > 0 ? Math.min(...availablePrices) : null;
+    available.length > 0 ? Math.min(...available.map((p) => p.price)) : null;
+  const soldOutCount = count - available.length;
 
-  // Tres nombres bastan para dar el sabor de la categoría; más se corta
-  // en pantalla y deja de leerse.
+  // Three names give the flavor of the category; more get cut on screen.
   const previewNames = category.products.slice(0, 3).map((p) => p.name);
   const remaining = count - previewNames.length;
+  const panelId = `cat-panel-${category.id}`;
 
   return (
     <section
       ref={sectionRef}
       id={`cat-${category.id}`}
-      className="scroll-mt-36"
+      className={cn(
+        "scroll-mt-[8.5rem] overflow-hidden rounded-2xl border bg-card transition-[border-color,box-shadow] duration-200 ease-out motion-reduce:transition-none",
+        isOpen ? "border-primary/35 shadow-sm" : "border-border"
+      )}
     >
-      {/* h2 envolviendo al botón: es el patrón de acordeón de la
-          guía WAI-ARIA, y da el nivel de encabezado que faltaba entre
-          el nombre del local (h1) y los nombres de plato (h3). */}
+      {/* h2 wrapping the button: the WAI-ARIA accordion pattern, and the
+          heading level between the restaurant (h1) and the dishes (h3). */}
       <h2>
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={isOpen}
-          className="flex w-full items-center gap-3.5 border-t border-border px-4 py-3.5 text-left transition-colors active:bg-muted"
+          aria-controls={panelId}
+          className="flex min-h-[72px] w-full items-center gap-3.5 px-4 py-3 text-left transition-colors duration-150 hover:bg-secondary/60 active:bg-secondary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
         >
-          {/* El emoji en su azulejo abombado. Es lo primero que la vista
-            engancha en una fila de texto, y da a cada categoría una cara
-            propia que ni el número ni el nombre consiguen solos. */}
           <span
             aria-hidden
-            className={cn(
-              "emoji-tile flex size-11 shrink-0 items-center justify-center rounded-2xl text-[24px] leading-none transition-transform duration-200",
-              isOpen && "scale-105",
-            )}
+            className="emoji-tile flex size-12 shrink-0 items-center justify-center rounded-xl text-title-lg leading-none"
           >
             <span className="emoji-3d">{getCategoryIcon(category.name)}</span>
           </span>
 
-          <span className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="flex items-baseline justify-between gap-3">
-              <span className="flex min-w-0 items-baseline gap-2">
-                {/* El número es además el indicador de abierto/cerrado: se
-                  pone verde. Un chevron haría lo mismo delatando el
-                  acordeón genérico. */}
-                <span
-                  className={cn(
-                    "shrink-0 text-[11px] font-bold tabular-nums transition-colors",
-                    isOpen ? "text-primary" : "text-muted-foreground/60",
-                  )}
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="font-display truncate text-[20px] font-bold leading-tight text-foreground">
-                  {category.name}
-                </span>
-              </span>
-              {fromPrice !== null && (
-                <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">
-                  desde {formatPrice(fromPrice)}
-                </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="font-display truncate text-title font-bold leading-tight text-foreground">
+              {category.name}
+            </span>
+            <span className="truncate text-meta leading-snug text-muted-foreground">
+              {isOpen ? (
+                <>
+                  {count} {count === 1 ? "plato" : "platos"}
+                  {fromPrice !== null && <> · desde {formatPrice(fromPrice)}</>}
+                  {soldOutCount > 0 && <> · {soldOutCount} agotado{soldOutCount === 1 ? "" : "s"}</>}
+                </>
+              ) : (
+                <>
+                  {previewNames.join(" · ")}
+                  {remaining > 0 && ` +${remaining}`}
+                </>
               )}
             </span>
-            <span className="truncate pl-[26px] text-[13px] leading-snug text-muted-foreground">
-              {previewNames.join(" · ")}
-              {remaining > 0 && (
-                <span className="text-muted-foreground/60"> +{remaining}</span>
+          </span>
+
+          <span className="flex shrink-0 flex-col items-end gap-1">
+            {!isOpen && fromPrice !== null && (
+              <span className="text-caption font-medium tabular-nums text-muted-foreground">
+                desde{" "}
+                <span className="font-semibold text-foreground">{formatPrice(fromPrice)}</span>
+              </span>
+            )}
+            <span
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full border transition-[transform,background-color,border-color] duration-200 ease-out motion-reduce:transition-none",
+                isOpen
+                  ? "rotate-180 border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground"
               )}
+            >
+              <ChevronDown aria-hidden className="size-4" strokeWidth={2.5} />
             </span>
           </span>
         </button>
       </h2>
 
       {isOpen && (
-        // scroll-pl-4 / scroll-pr-4: sin esto, scroll-snap alinea las
-        // tarjetas al borde del scrollport e ignora el padding, así que
-        // la primera y la última quedan pegadas al filo de la pantalla.
-        <div className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-2.5 overflow-x-auto px-4 pb-4">
+        <div
+          id={panelId}
+          className="flex flex-col divide-y divide-border border-t border-border"
+        >
           {category.products.map((product) => (
-            <ProductCardCompact
+            <ProductCard
               key={product.id}
               product={product}
               onSelect={onSelectProduct}

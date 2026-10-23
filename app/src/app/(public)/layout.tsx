@@ -1,14 +1,8 @@
-import { MotionConfig } from "framer-motion";
-
 /**
- * `reducedMotion="user"` respeta `prefers-reduced-motion` del sistema
- * para TODA animación de Framer Motion bajo la carta del cliente, sin
- * tocar cada `motion.div`/`whileHover`/`whileTap` uno por uno — Framer
- * reduce las animaciones de transform a un cambio instantáneo y deja
- * pasar las de opacidad, preservando el cambio de estado sin el
- * movimiento. Solo cubre esta ruta a propósito: el panel de personal
- * queda fuera del alcance de este pase.
+ * The customer menu no longer uses Framer Motion: every transition is CSS
+ * (150–200ms, `motion-reduce:` variants), so `prefers-reduced-motion` is
+ * honored per element and the library stays out of the customer bundle.
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+  return children;
 }

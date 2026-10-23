@@ -33,7 +33,7 @@ export default async function CartaPage({
   const productDetails = await getPublicProductDetails(menu.restaurant.id, slug);
 
   return (
-    <main className="min-h-full">
+    <main className="min-h-dvh bg-background">
       <MenuHeader restaurant={menu.restaurant} tableNumber={null} />
       <MenuBrowser
         categories={menu.categories}
