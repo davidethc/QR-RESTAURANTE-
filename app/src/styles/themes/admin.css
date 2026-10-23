@@ -42,6 +42,24 @@ body:has([data-theme="admin"]) {
     --info-soft: #EEF2F8;
     --info-soft-foreground: #3D5A80;
     --info-border: #D8E0EC;
+    /* Semántica de dinero: ver tokens.css. Fijos ante cambios de marca. */
+    --money-in: #1E7A3E;
+    --money-in-foreground: #FFFFFF;
+    --money-in-soft: #E9F6EE;
+    --money-in-soft-foreground: #17652F;
+    --money-in-border: #BFE3CB;
+    --money-out: #C2321F;
+    --money-out-foreground: #FFFFFF;
+    --money-out-soft: #FDEEEB;
+    --money-out-soft-foreground: #A12616;
+    --money-out-border: #F4C7BF;
+    --attention: #E9A23B;
+    --attention-foreground: #3D2600;
+    --attention-soft: #FFF5DE;
+    --attention-soft-foreground: #8A5300;
+    --attention-border: #F2D99B;
+    --info: #2F5FD0;
+    --info-foreground: #FFFFFF;
 
     --radius: 0.5625rem;
     --radius-role-control: 0.5625rem;

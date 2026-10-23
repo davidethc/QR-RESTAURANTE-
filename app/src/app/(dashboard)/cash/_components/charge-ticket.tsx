@@ -28,14 +28,17 @@ export function ChargeTicket({
   remainingByItem,
   selectedItems,
   onToggleItem,
+  selectable: selectableProp,
 }: {
   bill: Bill;
+  /** Forzar si las filas se pueden marcar (por defecto: modo "por ítems"). */
+  selectable?: boolean;
   remainingByItem: Record<string, number>;
   selectedItems: Record<string, boolean>;
   onToggleItem: (itemId: string, checked: boolean) => void;
 }) {
   const orders = bill.orders.filter((o) => o.billable);
-  const selectable = bill.status === "OPEN" && bill.split_mode === SPLIT_MODE.ITEMS;
+  const selectable = selectableProp ?? (bill.status === "OPEN" && bill.split_mode === SPLIT_MODE.ITEMS);
 
   if (orders.length === 0) {
     return (
@@ -81,7 +84,7 @@ export function ChargeTicket({
                       )}
                     </span>
                     <span className="flex shrink-0 items-baseline gap-2">
-                      {paid && <span className="text-caption font-semibold text-success">Pagado</span>}
+                      {paid && <span className="text-caption font-semibold text-money-in-soft-foreground">Pagado ✓</span>}
                       <span className="tabular-nums text-foreground">{formatPrice(item.subtotal)}</span>
                     </span>
                   </span>
@@ -93,7 +96,7 @@ export function ChargeTicket({
                         htmlFor={`bill-item-${item.id}`}
                         className={cn(
                           "-mx-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-control px-2 py-1.5 transition-colors active:bg-secondary",
-                          selectedItems[item.id] && "bg-primary-soft"
+                          selectedItems[item.id] && "bg-money-in-soft ring-2 ring-money-in-border"
                         )}
                       >
                         <Checkbox

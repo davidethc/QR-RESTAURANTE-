@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { canHandleMoney } from "@/lib/permissions";
+import { canHandleMoney, isManager } from "@/lib/permissions";
 import { ChargeSheet } from "./charge-sheet";
 import type { UserRole } from "@/config/constants";
 
@@ -18,6 +18,10 @@ interface OpenChargeOptions {
 
 interface ChargeSheetContextValue {
   openCharge: (options: OpenChargeOptions) => void;
+  /** Puede cobrar (cash.manage). */
+  canCharge: boolean;
+  /** OWNER/ADMIN: descuentos, anular pagos, cancelar ventas. */
+  canManage: boolean;
 }
 
 const ChargeSheetContext = createContext<ChargeSheetContextValue | null>(null);
@@ -44,6 +48,7 @@ export function ChargeSheetProvider({
   const [target, setTarget] = useState<{ tableSessionId: string; tableLabel: string } | null>(null);
 
   const canCharge = canHandleMoney(role);
+  const canManage = isManager(role);
 
   const openCharge = useCallback(
     (options: OpenChargeOptions) => {
@@ -57,7 +62,10 @@ export function ChargeSheetProvider({
     [canCharge]
   );
 
-  const value = useMemo<ChargeSheetContextValue>(() => ({ openCharge }), [openCharge]);
+  const value = useMemo<ChargeSheetContextValue>(
+    () => ({ openCharge, canCharge, canManage }),
+    [openCharge, canCharge, canManage]
+  );
 
   return (
     <ChargeSheetContext.Provider value={value}>
@@ -75,6 +83,7 @@ export function ChargeSheetProvider({
           }}
           tableSessionId={target.tableSessionId}
           tableLabel={target.tableLabel}
+          canManage={canManage}
           onSettled={() => {
             setOpen(false);
             router.refresh();

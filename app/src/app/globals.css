@@ -80,6 +80,34 @@
     --color-info-soft: var(--info-soft);
     --color-info-soft-foreground: var(--info-soft-foreground);
     --color-info-border: var(--info-border);
+    /* Movimiento del POS: corto, ease-out, solo transform/opacity. */
+    --animate-pos-step: pos-step 180ms cubic-bezier(0.23, 1, 0.32, 1);
+    --animate-pos-pop: pos-pop 360ms cubic-bezier(0.34, 1.4, 0.64, 1);
+    @keyframes pos-step {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: none; }
+    }
+    @keyframes pos-pop {
+        from { opacity: 0; transform: scale(0.85); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    --color-money-in: var(--money-in);
+    --color-money-in-foreground: var(--money-in-foreground);
+    --color-money-in-soft: var(--money-in-soft);
+    --color-money-in-soft-foreground: var(--money-in-soft-foreground);
+    --color-money-in-border: var(--money-in-border);
+    --color-money-out: var(--money-out);
+    --color-money-out-foreground: var(--money-out-foreground);
+    --color-money-out-soft: var(--money-out-soft);
+    --color-money-out-soft-foreground: var(--money-out-soft-foreground);
+    --color-money-out-border: var(--money-out-border);
+    --color-attention: var(--attention);
+    --color-attention-foreground: var(--attention-foreground);
+    --color-attention-soft: var(--attention-soft);
+    --color-attention-soft-foreground: var(--attention-soft-foreground);
+    --color-attention-border: var(--attention-border);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
     --color-primary-hover: var(--primary-hover);
     --color-border-strong: var(--border-strong);
     --shadow-sheet: var(--shadow-sheet);

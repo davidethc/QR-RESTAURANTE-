@@ -60,15 +60,18 @@ export function PaymentsBlock({
   bill,
   context,
   onBillChange,
+  allowVoid = true,
 }: {
   bill: Bill;
   context: BillPaymentContext | null;
   onBillChange: (bill: Bill) => void;
+  /** Anular pagos es solo de OWNER/ADMIN (la RPC también lo exige). */
+  allowVoid?: boolean;
 }) {
   const [voiding, setVoiding] = useState<BillPayment | null>(null);
   const state = paymentState(bill);
   const completed = bill.payments.filter((p) => p.status === "COMPLETED");
-  const canVoid = bill.status !== "VOID";
+  const canVoid = allowVoid && bill.status !== "VOID";
   const preferred = context?.preferredMethod
     ? `${PAYMENT_METHOD_LABEL[context.preferredMethod]}${context.paysWithAmount ? ` con ${formatPrice(context.paysWithAmount)}` : ""}`
     : null;

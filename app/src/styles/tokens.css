@@ -89,6 +89,34 @@
     --info-soft-foreground: oklch(0.546 0.245 262.881);
     --info-border: oklch(0.882 0.059 254.128);
 
+    /* ── Color: semántica de dinero (POS) ───────────────────────────
+       FIJOS, no salen de --primary: la marca puede ser azul o negra y
+       "entra dinero" tiene que seguir siendo verde. Cada uno trae un
+       relleno sólido, su texto encima, un fondo suave, el texto sobre
+       ese fondo y un borde. Nunca solos: siempre con icono y texto
+       (ver docs/design/caja-redesign.md, "Sistema de diseño…").
+         money-in ..... cobrar, entra dinero, pagado, éxito
+         money-out .... sale dinero, faltante, destructivo
+         attention .... pendiente, falta algo, revisar
+         info ......... dato neutro, ayuda */
+    --money-in: oklch(0.53 0.13 152);
+    --money-in-foreground: oklch(1 0 0);
+    --money-in-soft: oklch(0.962 0.03 155);
+    --money-in-soft-foreground: oklch(0.43 0.11 152);
+    --money-in-border: oklch(0.86 0.07 155);
+    --money-out: oklch(0.55 0.19 27);
+    --money-out-foreground: oklch(1 0 0);
+    --money-out-soft: oklch(0.962 0.022 25);
+    --money-out-soft-foreground: oklch(0.47 0.17 27);
+    --money-out-border: oklch(0.87 0.06 25);
+    --attention: oklch(0.72 0.15 70);
+    --attention-foreground: oklch(0.27 0.06 60);
+    --attention-soft: oklch(0.972 0.035 88);
+    --attention-soft-foreground: oklch(0.5 0.12 62);
+    --attention-border: oklch(0.89 0.08 85);
+    --info: oklch(0.52 0.15 260);
+    --info-foreground: oklch(1 0 0);
+
     /* ── Forma ──────────────────────────────────────────────────── */
     /* Base de todos los radios: los roles (control, botón, tarjeta,
        etiqueta) se derivan de este valor en globals.css. */
