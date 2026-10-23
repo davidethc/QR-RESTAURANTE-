@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { BillTotals } from "./bill-totals";
 import { KitchenNotice } from "./kitchen-notice";
+import { LineControls } from "./line-controls";
 import { TABLE_KIND } from "@/config/constants";
 import type { Bill, BillPaymentContext } from "@/types/billing";
 import { ChargeTicket } from "../charge-ticket";
@@ -57,7 +58,18 @@ export function StepAccount({
           <h3 id="account-products" className="text-body font-semibold text-foreground">
             Productos del pedido
           </h3>
-          <ChargeTicket bill={bill} remainingByItem={{}} selectedItems={{}} onToggleItem={() => {}} selectable={false} />
+          <ChargeTicket
+            bill={bill}
+            remainingByItem={{}}
+            selectedItems={{}}
+            onToggleItem={() => {}}
+            selectable={false}
+            lineActions={
+              canManage && open && !blockedReason
+                ? (item, order) => <LineControls bill={bill} order={order} item={item} onBillChange={onBillChange} />
+                : undefined
+            }
+          />
         </section>
 
         <BillTotals

@@ -1,13 +1,14 @@
 "use client";
 
-import { ChefHat, CircleCheck, Clock, PackageCheck } from "lucide-react";
+import Image from "next/image";
+import { ChefHat, CircleCheck, Clock, PackageCheck, UtensilsCrossed } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toneSoft, type PosTone } from "@/components/shared/pos-tone";
 import { cn, formatPrice } from "@/lib/utils";
 import { ORDER_STATUS, SPLIT_MODE } from "@/config/constants";
 import type { OrderStatus } from "@/config/constants";
-import type { Bill } from "@/types/billing";
+import type { Bill, BillItem, BillOrder } from "@/types/billing";
 
 const ORDER_BADGE: Partial<Record<OrderStatus, { label: string; tone: PosTone; icon: LucideIcon }>> = {
   [ORDER_STATUS.PENDING]: { label: "Por aceptar", tone: "attention", icon: Clock },
@@ -31,8 +32,11 @@ export function ChargeTicket({
   selectedItems,
   onToggleItem,
   selectable: selectableProp,
+  lineActions,
 }: {
   bill: Bill;
+  /** Controles por línea (cantidad, menú); solo en líneas vivas y sin modo selección. */
+  lineActions?: (item: BillItem, order: BillOrder) => React.ReactNode;
   /** Forzar si las filas se pueden marcar (por defecto: modo "por ítems"). */
   selectable?: boolean;
   remainingByItem: Record<string, number>;
@@ -67,34 +71,44 @@ export function ChargeTicket({
             <ul className="flex flex-col divide-y divide-border">
               {order.items.map((item) => {
                 const remaining = remainingByItem[item.id] ?? item.quantity;
-                const paid = remaining <= 0;
-                const showCheckbox = selectable && !paid;
+                const cancelled = item.cancelled === true;
+                const paid = !cancelled && remaining <= 0;
+                const showCheckbox = selectable && !paid && !cancelled;
+                const actions = !selectable && !cancelled && lineActions ? lineActions(item, order) : null;
                 const line = (
-                  <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3 text-body leading-snug">
-                    <span className={cn("min-w-0 text-foreground", paid && "text-muted-foreground line-through decoration-1")}>
-                      <span className="font-semibold tabular-nums">{item.quantity}×</span> {item.product_name}
-                      {item.variant_name ? <span className="text-muted-foreground"> · {item.variant_name}</span> : null}
-                      {remaining > 0 && remaining < item.quantity && (
-                        <span className="text-meta text-muted-foreground"> · quedan {remaining}</span>
-                      )}
+                  <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <ItemThumb src={item.image_url} name={item.product_name} dimmed={cancelled || paid} />
+                    <span className={cn("min-w-0 flex-1 text-body leading-snug", (cancelled || paid) && "text-muted-foreground")}>
+                      <span className={cn("block font-semibold text-foreground", (cancelled || paid) && "font-medium text-muted-foreground line-through decoration-1")}>
+                        {!actions && <span className="tabular-nums">{item.quantity}× </span>}
+                        {item.product_name}
+                        {item.variant_name ? <span className="font-normal text-muted-foreground"> · {item.variant_name}</span> : null}
+                      </span>
+                      <span className="block text-caption tabular-nums text-muted-foreground">
+                        {formatPrice(item.unit_price)} c/u
+                        {remaining > 0 && remaining < item.quantity && !cancelled && <> · quedan {remaining}</>}
+                      </span>
                       {(item.options ?? []).map((o, k) => (
                         <span key={k} className="block text-caption text-muted-foreground">
                           + {o.qty > 1 ? `${o.qty}× ` : ""}{o.value_name}
                           {o.price_modifier ? ` (${formatPrice(o.price_modifier * o.qty)})` : ""}
                         </span>
                       ))}
-                      {item.notes && (
-                        <span className="block text-caption text-muted-foreground">{item.notes}</span>
-                      )}
+                      {item.notes && <span className="block text-caption text-muted-foreground">{item.notes}</span>}
                     </span>
-                    <span className="flex shrink-0 items-baseline gap-2">
-                      {paid && (
-                        <span className="inline-flex items-center gap-1 text-caption font-semibold text-money-in-soft-foreground">
-                          <CircleCheck className="size-3.5" aria-hidden /> Pagado
-                        </span>
-                      )}
-                      <span className="tabular-nums text-foreground">{formatPrice(item.subtotal)}</span>
+                  </span>
+                );
+                const trailing = (
+                  <span className="flex shrink-0 flex-col items-end gap-0.5">
+                    <span className={cn("text-body font-semibold tabular-nums text-foreground", cancelled && "font-medium text-muted-foreground line-through")}>
+                      {formatPrice(item.subtotal)}
                     </span>
+                    {cancelled && <span className="text-caption font-semibold text-money-out-soft-foreground">Cancelado</span>}
+                    {paid && (
+                      <span className="inline-flex items-center gap-1 text-caption font-semibold text-money-in-soft-foreground">
+                        <CircleCheck className="size-3.5" aria-hidden /> Pagado
+                      </span>
+                    )}
                   </span>
                 );
                 return (
@@ -103,7 +117,7 @@ export function ChargeTicket({
                       <label
                         htmlFor={`bill-item-${item.id}`}
                         className={cn(
-                          "-mx-2 flex min-h-12 cursor-pointer items-center gap-3 rounded-control px-2 py-1.5 transition-colors active:bg-secondary",
+                          "-mx-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-control px-2 py-2 transition-colors duration-150 active:bg-secondary",
                           selectedItems[item.id] && "bg-money-in-soft ring-2 ring-money-in-border"
                         )}
                       >
@@ -114,9 +128,14 @@ export function ChargeTicket({
                           onCheckedChange={(checked) => onToggleItem(item.id, checked === true)}
                         />
                         {line}
+                        {trailing}
                       </label>
                     ) : (
-                      <div className="flex min-h-11 items-center py-1.5">{line}</div>
+                      <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 py-2">
+                        {line}
+                        {actions}
+                        {trailing}
+                      </div>
                     )}
                   </li>
                 );
@@ -126,5 +145,23 @@ export function ChargeTicket({
         );
       })}
     </ol>
+  );
+}
+
+/** Foto del producto o, si no hay, un ícono en el mismo lugar. */
+function ItemThumb({ src, name, dimmed }: { src?: string | null; name: string; dimmed?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-control border border-border bg-secondary text-muted-foreground",
+        dimmed && "opacity-60"
+      )}
+    >
+      {src ? (
+        <Image src={src} alt={name} fill sizes="48px" className="object-cover" />
+      ) : (
+        <UtensilsCrossed className="size-5" aria-hidden />
+      )}
+    </span>
   );
 }

@@ -30,6 +30,10 @@ export type BillItem = {
   unit_price: number;
   subtotal: number;
   notes: string | null;
+  /** Foto del producto (bill_json, Caja v2); puede faltar en respuestas anteriores. */
+  image_url?: string | null;
+  /** Línea cancelada con cancel_order_item (bill_json, Caja v2); puede faltar. */
+  cancelled?: boolean;
 };
 
 export type BillItemOption = {
