@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "../styles/tokens.css";
 @import "../styles/themes/admin.css";
+@import "../styles/themes/caja.css";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -32,9 +32,11 @@ export function CashCutButton({ onClick, disabled }: { onClick: () => void; disa
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={cn(posPressable, "flex min-h-12 items-center gap-2 rounded-button border-2 border-border bg-card px-4 text-body-sm font-semibold text-foreground hover:bg-muted")}
+      className={cn(posPressable, "flex min-h-12 items-center gap-2 rounded-button border border-border bg-card px-3.5 text-body-sm font-semibold text-foreground hover:bg-muted")}
     >
-      <LockKeyhole className="size-5" aria-hidden /> Corte de caja
+      <LockKeyhole className="size-5" aria-hidden /> <span>
+        Corte<span className="max-2xl:sr-only"> de caja</span>
+      </span>
     </button>
   );
 }
@@ -155,7 +157,9 @@ function WizardBody({ cashSessionId, registerName, onClose }: { cashSessionId: s
     <>
       <DialogHeader className="border-b border-border px-4 pt-4 pb-3 text-left md:px-6">
         <DialogTitle className="flex items-center gap-2 text-title-sm">
-          <LockKeyhole className="size-5" aria-hidden /> Corte de caja · {registerName}
+          <LockKeyhole className="size-5" aria-hidden /> <span>
+        Corte<span className="max-2xl:sr-only"> de caja</span>
+      </span> · {registerName}
         </DialogTitle>
         <DialogDescription className="flex items-center gap-1.5">
           <ShieldCheck className="size-4 shrink-0" aria-hidden /> Es a ciegas: cuenta lo que hay sin mirar el sistema. Al guardar verás cómo salió.

@@ -73,14 +73,17 @@ export function CashFlowButton({
       disabled={disabled}
       className={cn(
         posPressable,
-        "flex min-h-12 items-center gap-2 rounded-button border-2 px-4 text-body-sm font-semibold",
+        "flex min-h-12 items-center gap-2 rounded-button border px-3.5 text-body-sm font-semibold",
         direction === "IN"
           ? "border-money-in-border bg-money-in-soft text-money-in-soft-foreground hover:border-money-in"
           : "border-money-out-border bg-money-out-soft text-money-out-soft-foreground hover:border-money-out"
       )}
     >
       <Icon className="size-5" aria-hidden />
-      {direction === "IN" ? "Meter dinero" : "Sacar dinero"}
+      <span>
+        {direction === "IN" ? "Meter" : "Sacar"}
+        <span className="max-2xl:sr-only"> dinero</span>
+      </span>
     </button>
   );
 }

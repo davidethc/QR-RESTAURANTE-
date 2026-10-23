@@ -1,0 +1,72 @@
+/*
+  PALETA DE CAJA — se aplica con data-caja en el <main> de /cash. Solo
+  sobreescribe CONTROLES (igual que admin.css), así que ningún otro
+  módulo cambia: fuera de /cash el atributo no existe.
+
+  Dirección del dueño (2026-10-23): POS limpio sobre pizarra clara, sin
+  fondo crema. Fondo #F8FAFC, tarjetas blancas con borde #E2E8F0, texto
+  #111827 / #64748B, verde de cobro #166534, ámbar suave para cocina y
+  pendientes, rojo solo para lo destructivo.
+
+  body:has(...) cubre los portales (diálogos, hojas, avisos) que se
+  montan en <body>. Va después de admin.css: misma especificidad, gana
+  el orden.
+*/
+[data-caja],
+body:has([data-caja]) {
+    --background: #F8FAFC;
+    --foreground: #111827;
+    --card: #FFFFFF;
+    --card-foreground: #111827;
+    --popover: #FFFFFF;
+    --popover-foreground: #111827;
+    --secondary: #F1F5F9;
+    --secondary-foreground: #111827;
+    --muted: #F1F5F9;
+    --muted-foreground: #64748B;
+    --border: #E2E8F0;
+    --border-strong: #CBD5E1;
+    /* Borde de campos: 3,4:1 sobre blanco (WCAG 1.4.11). */
+    --input: #7C8BA1;
+
+    --money-in: #166534;
+    --money-in-foreground: #FFFFFF;
+    --money-in-soft: #F0FDF4;
+    --money-in-soft-foreground: #166534;
+    --money-in-border: #BBF7D0;
+    --money-out: #B91C1C;
+    --money-out-foreground: #FFFFFF;
+    --money-out-soft: #FEF2F2;
+    --money-out-soft-foreground: #B91C1C;
+    --money-out-border: #FECACA;
+    --attention: #F59E0B;
+    --attention-foreground: #451A03;
+    --attention-soft: #FFFBEB;
+    --attention-soft-foreground: #B45309;
+    --attention-border: #FDE68A;
+    --info: #1D4ED8;
+    --info-foreground: #FFFFFF;
+    --info-soft: #EFF6FF;
+    --info-soft-foreground: #1D4ED8;
+    --info-border: #BFDBFE;
+    --warning-soft: #FFFBEB;
+    --warning-soft-foreground: #B45309;
+    --warning-border: #FDE68A;
+    --success-soft: #F0FDF4;
+    --success-soft-foreground: #166534;
+    --success-border: #BBF7D0;
+
+    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05);
+    --shadow-md: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.14);
+    --shadow-lg: 0 12px 32px -16px rgb(15 23 42 / 0.22);
+}
+
+body:has([data-caja]) {
+    background-color: var(--background);
+}
+
+/* Selección de texto del POS en el verde de cobro, no el azul del sistema. */
+[data-caja] ::selection {
+    background-color: #BBF7D0;
+    color: #052E16;
+}

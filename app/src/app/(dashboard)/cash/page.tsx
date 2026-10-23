@@ -81,7 +81,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
     .filter((s): s is CashSessionSummary => s !== null);
 
   return (
-    <main>
+    <main data-caja className="bg-background">
       <h1 className="sr-only">Caja</h1>
       <div className="px-4 pt-2 md:px-6 empty:hidden">
         <OfflineBanner message="No se puede cobrar ni registrar pagos hasta que vuelva la red." />

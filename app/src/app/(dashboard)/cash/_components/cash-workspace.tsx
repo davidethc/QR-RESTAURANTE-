@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClipboardList, History, KeyRound, Receipt, Unlock } from "lucide-react";
+import { ClipboardList, History, KeyRound, Lock, Receipt, ReceiptText } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusMetric, StatusPill, StatusStrip } from "@/components/shared/status-strip";
 import { posPressable } from "@/components/shared/pos-tone";
@@ -152,10 +152,10 @@ export function CashWorkspace({
 
   return (
     <div className="lg:flex lg:h-[calc(100dvh-3.5rem)] lg:flex-col">
-      <StatusStrip
+      <CajaHeader
         status={
           <>
-            <StatusPill tone="money-in" icon={Unlock} title={`${activeName} · abierta`} detail={openedAt ? `Desde las ${openedAt}` : undefined} />
+            <StatusPill tone="money-in" icon={Lock} title={`${activeName} · abierta`} detail={openedAt ? `Desde las ${openedAt}` : undefined} />
             {summaries.length > 1 && (
               <div role="radiogroup" aria-label="Caja activa" className="flex shrink-0 gap-1">
                 {summaries.map((s) => (
@@ -208,29 +208,26 @@ export function CashWorkspace({
         }
       />
 
-      <div className="grid gap-0 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)]">
-        <section aria-labelledby="queue-title" className="flex min-h-0 flex-col gap-4 px-4 py-4 md:px-6 lg:overflow-y-auto lg:border-r lg:border-border">
+      <div className="grid gap-0 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(19rem,34%)_minmax(0,1fr)]">
+        <section aria-labelledby="queue-title" className="flex min-h-0 flex-col gap-4 px-4 py-4 md:px-5 lg:overflow-y-auto lg:border-r lg:border-border">
           {canTakeOrders && (
             <NewOrderFlow
               canCharge
               billingEnabled={billingEnabled}
               onChargeNow={(id, label) => select(id, label)}
+              className="min-h-14 rounded-button bg-money-in text-money-in-foreground hover:bg-money-in/90"
             />
           )}
-          <div className="flex items-baseline justify-between">
-            <h2 id="queue-title" className="text-lead font-semibold text-foreground">
-              Por cobrar
-            </h2>
-            <span className="text-meta tabular-nums text-muted-foreground">
-              {owed.length} {owed.length === 1 ? "cuenta" : "cuentas"}
-            </span>
-          </div>
+          <h2 id="queue-title" className="sr-only">
+            Cuentas abiertas
+          </h2>
           <BillQueue bills={queue} selectedId={selected?.id ?? null} onSelect={(b) => select(b.table_session_id, b.place_label)} empty={emptyQueue} />
           {canManage && closedToday.length > 0 && (
-            <details className="group rounded-card bg-card">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-body-sm font-semibold text-foreground">
-                <Receipt className="size-4" aria-hidden /> Cobradas hoy ({closedToday.length})
-                <span className="ml-auto text-muted-foreground group-open:hidden">Ver</span>
+            <details className="group rounded-card border border-border bg-card">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-card px-4 text-body-sm font-semibold text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60 motion-reduce:transition-none">
+                <Receipt className="size-4 text-muted-foreground" aria-hidden /> Cobradas hoy
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-caption tabular-nums text-muted-foreground">{closedToday.length}</span>
+                <span className="ml-auto text-meta font-medium text-muted-foreground group-open:hidden">Ver</span>
               </summary>
               <div className="px-4 pb-4">
                 <ClosedBillsToday bills={closedToday} timeZone={timeZone} />
@@ -239,7 +236,7 @@ export function CashWorkspace({
           )}
         </section>
 
-        <section aria-label="Cobro" className="hidden min-h-0 lg:flex lg:flex-col">
+        <section aria-label="Cobro" className="hidden min-h-0 bg-background lg:flex lg:flex-col">
           {selected ? (
             <CheckoutPanel
               key={selected.id}
@@ -278,38 +275,65 @@ function HistoryLink() {
   return (
     <Link
       href="/cash/cortes"
-      className="flex min-h-12 items-center gap-2 rounded-button px-3 text-body-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
+      className="flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-button px-3 text-body-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/60"
     >
-      <History className="size-4" aria-hidden /> Historial
+      <History className="size-5" aria-hidden /> <span className="max-2xl:sr-only">Historial</span>
     </Link>
   );
 }
 
-/** Panel derecho sin cuenta elegida: cómo se cobra, en tres pasos. */
+/** Panel derecho sin cuenta elegida: qué hacer, en tres pasos. */
 function CheckoutGuide() {
   const steps = [
-    { n: 1, title: "Elige la cuenta", text: "Toca una tarjeta de Por cobrar." },
-    { n: 2, title: "¿Cómo pagan?", text: "Todo junto, partes iguales o por productos." },
-    { n: 3, title: "Cobra", text: "Efectivo con vuelto, tarjeta o transferencia." },
+    { n: 1, title: "Elige la cuenta", text: "Toca una cuenta de la lista." },
+    { n: 2, title: "Revisa el pedido", text: "Verifica los productos y el total." },
+    { n: 3, title: "Cobra", text: "Elige cómo pagan y el método." },
   ];
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 px-8 text-center">
-      <span className="flex size-16 items-center justify-center rounded-full bg-money-in-soft text-money-in-soft-foreground">
-        <Receipt className="size-8" aria-hidden />
-      </span>
-      <div>
-        <h2 className="text-title-sm font-semibold text-foreground">Aquí se cobra</h2>
-        <p className="text-body text-muted-foreground">Elige una cuenta de la izquierda para ver su detalle y cobrarla.</p>
+    <div className="flex h-full flex-col items-center justify-center gap-8 px-8 py-10 text-center">
+      <div className="flex flex-col items-center gap-4">
+        <span className="flex size-20 items-center justify-center rounded-3xl border border-border bg-card text-muted-foreground shadow-sm">
+          <ReceiptText className="size-9" strokeWidth={1.75} aria-hidden />
+        </span>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-title-sm font-semibold text-foreground">Selecciona una cuenta</h2>
+          <p className="max-w-sm text-body-sm text-muted-foreground">Elige una cuenta de la lista para ver su detalle y cobrarla.</p>
+        </div>
       </div>
-      <ol className="grid w-full max-w-2xl gap-3 sm:grid-cols-3">
+      <ol className="grid w-full max-w-xl gap-3 sm:grid-cols-3">
         {steps.map((s) => (
-          <li key={s.n} className="flex flex-col items-start gap-1 rounded-card bg-card p-4 text-left shadow-sm">
-            <span className="flex size-7 items-center justify-center rounded-full bg-foreground text-caption font-bold text-background">{s.n}</span>
-            <span className="text-body font-semibold text-foreground">{s.title}</span>
-            <span className="text-meta text-muted-foreground">{s.text}</span>
+          <li key={s.n} className="flex flex-col items-start gap-1.5 rounded-card border border-border bg-card p-4 text-left">
+            <span className="flex size-7 items-center justify-center rounded-full bg-foreground text-caption font-bold tabular-nums text-background">{s.n}</span>
+            <span className="text-body-sm font-semibold text-foreground">{s.title}</span>
+            <span className="text-meta leading-snug text-muted-foreground">{s.text}</span>
           </li>
         ))}
       </ol>
     </div>
+  );
+}
+
+/**
+ * Cabecera de Caja: estado de la caja y sus cifras a la izquierda, acciones
+ * de dinero a la derecha. Envuelve en vez de recortar: en tablet las
+ * acciones bajan a su propia fila y ninguna cifra queda tapada.
+ */
+function CajaHeader({
+  status,
+  metrics,
+  actions,
+}: {
+  status: React.ReactNode;
+  metrics: React.ReactNode;
+  actions: React.ReactNode;
+}) {
+  return (
+    <section aria-label="Estado de la caja" className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border bg-card px-4 py-3 md:px-5">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3">
+        {status}
+        <div className="flex flex-wrap items-stretch gap-x-4 gap-y-2 border-l border-border pl-4">{metrics}</div>
+      </div>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{actions}</div>
+    </section>
   );
 }
