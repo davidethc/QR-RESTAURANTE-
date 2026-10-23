@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useLiveConnected, useLiveEvents } from "@/app/(dashboard)/_components/staff-live-provider";
-import { ConnectionStatus } from "@/components/shared/connection-status";
+import { useLiveEvents } from "@/app/(dashboard)/_components/staff-live-provider";
 
 /** Como mucho un `router.refresh()` cada 1,5 s, pase lo que pase en la sala. */
 const REFRESH_DEBOUNCE_MS = 1500;
@@ -25,14 +24,14 @@ const REFRESH_DEBOUNCE_MS = 1500;
  * Escucha al `StaffLiveProvider` (no abre canal propio) solo las tablas
  * que mueven esta pantalla, y fusiona las ráfagas: un pedido nuevo toca
  * orders + tables + tickets a la vez, y cada `router.refresh()` es un
- * render completo de la página en el servidor.
+ * render completo de la página en el servidor. No pinta nada: el "en vivo"
+ * ya está en la barra superior del panel.
  */
 export function TablesLive() {
   const router = useRouter();
-  const connected = useLiveConnected();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useLiveEvents(["orders", "waiter_calls", "tables"], () => {
+  useLiveEvents(["orders", "waiter_calls", "tables", "bills"], () => {
     // No se reinicia el temporizador en cada evento: así el refresco nunca
     // se pospone indefinidamente bajo un goteo continuo de eventos.
     if (timer.current) return;
@@ -49,5 +48,5 @@ export function TablesLive() {
     []
   );
 
-  return <ConnectionStatus connected={connected} />;
+  return null;
 }

@@ -54,7 +54,7 @@ export function CartaLinkDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" className="min-h-12 rounded-button px-4 text-body-sm font-semibold">
           <Link2 className="h-4 w-4" /> Link de carta
         </Button>
       </DialogTrigger>

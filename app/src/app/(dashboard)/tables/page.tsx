@@ -1,11 +1,11 @@
 import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/shared/page-header";
+import { OfflineBanner } from "@/components/shared/offline-banner";
 import { TablesLive } from "./_components/tables-live";
 import { CreateTablesDialog } from "./_components/create-tables-dialog";
 import { TablesPdfButton } from "./_components/tables-pdf-button";
-import { TablesPanel } from "./_components/tables-panel";
+import { TablesWorkspace } from "./_components/tables-workspace";
 import { CartaLinkDialog } from "./_components/carta-link-dialog";
 import {
   getMyRestaurant,
@@ -46,36 +46,33 @@ export default async function TablesPage() {
     session.role === "WAITER";
 
   return (
-    <main>
-      <PageHeader
-        title="Mesas"
-        description={`${tables.length} mesas`}
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            <TablesLive />
-            {canManage && (
-              <>
-                <CartaLinkDialog
-                  slug={session.restaurant.slug}
-                  hasWhatsapp={Boolean(toWhatsappNumber(settings?.phone ?? null))}
-                />
-                <TablesPdfButton
-                  restaurantName={session.restaurant.name}
-                  slug={session.restaurant.slug}
-                  tables={tables}
-                />
-                <CreateTablesDialog restaurantId={session.restaurant.id} />
-              </>
-            )}
-          </div>
-        }
-      />
-      <TablesPanel
+    <main data-caja className="bg-background">
+      <TablesLive />
+      <div className="px-4 pt-2 md:px-6 empty:hidden">
+        <OfflineBanner message="Sin conexión: los estados de las mesas pueden no estar al día." />
+      </div>
+      <TablesWorkspace
         zones={zones}
         role={session.role}
         canServeTable={canServeTable}
         billingEnabled={settings.billing_enabled}
         maxWaiterDiscountPct={settings.max_waiter_discount_pct}
+        manage={
+          canManage ? (
+            <>
+              <CartaLinkDialog
+                slug={session.restaurant.slug}
+                hasWhatsapp={Boolean(toWhatsappNumber(settings?.phone ?? null))}
+              />
+              <TablesPdfButton
+                restaurantName={session.restaurant.name}
+                slug={session.restaurant.slug}
+                tables={tables}
+              />
+              <CreateTablesDialog restaurantId={session.restaurant.id} />
+            </>
+          ) : null
+        }
       />
     </main>
   );
