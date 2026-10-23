@@ -1,18 +1,20 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { ChefHat, CircleCheck, Clock, PackageCheck } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toneSoft, type PosTone } from "@/components/shared/pos-tone";
 import { cn, formatPrice } from "@/lib/utils";
 import { ORDER_STATUS, SPLIT_MODE } from "@/config/constants";
 import type { OrderStatus } from "@/config/constants";
 import type { Bill } from "@/types/billing";
 
-const ORDER_BADGE: Partial<Record<OrderStatus, { label: string; variant: "secondary" | "outline" }>> = {
-  [ORDER_STATUS.PENDING]: { label: "Por aceptar", variant: "outline" },
-  [ORDER_STATUS.ACCEPTED]: { label: "En cocina", variant: "outline" },
-  [ORDER_STATUS.PREPARING]: { label: "En cocina", variant: "outline" },
-  [ORDER_STATUS.READY]: { label: "Listo para llevar", variant: "outline" },
-  [ORDER_STATUS.DELIVERED]: { label: "Entregado", variant: "secondary" },
+const ORDER_BADGE: Partial<Record<OrderStatus, { label: string; tone: PosTone; icon: LucideIcon }>> = {
+  [ORDER_STATUS.PENDING]: { label: "Por aceptar", tone: "attention", icon: Clock },
+  [ORDER_STATUS.ACCEPTED]: { label: "En cocina", tone: "attention", icon: ChefHat },
+  [ORDER_STATUS.PREPARING]: { label: "En cocina", tone: "attention", icon: ChefHat },
+  [ORDER_STATUS.READY]: { label: "Listo para llevar", tone: "info", icon: PackageCheck },
+  [ORDER_STATUS.DELIVERED]: { label: "Entregado", tone: "money-in", icon: CircleCheck },
 };
 
 /**
@@ -49,18 +51,20 @@ export function ChargeTicket({
   }
 
   return (
-    <ol className="flex flex-col gap-4" aria-label="Consumo de la cuenta">
+    <ol className="flex flex-col gap-4 rounded-card border border-border bg-card p-4" aria-label="Consumo de la cuenta">
       {orders.map((order) => {
         const badge = ORDER_BADGE[order.status];
         return (
           <li key={order.id} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2 border-b border-dashed border-border/80 pb-1.5">
-              <span className="text-caption font-semibold tracking-wide text-muted-foreground uppercase">
-                Pedido #{order.order_number}
-              </span>
-              {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <span className="text-body-sm font-semibold text-foreground">Pedido #{order.order_number}</span>
+              {badge && (
+                <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-caption font-semibold", toneSoft[badge.tone])}>
+                  <badge.icon className="size-3.5" aria-hidden /> {badge.label}
+                </span>
+              )}
             </div>
-            <ul className="flex flex-col">
+            <ul className="flex flex-col divide-y divide-border">
               {order.items.map((item) => {
                 const remaining = remainingByItem[item.id] ?? item.quantity;
                 const paid = remaining <= 0;
@@ -84,7 +88,11 @@ export function ChargeTicket({
                       )}
                     </span>
                     <span className="flex shrink-0 items-baseline gap-2">
-                      {paid && <span className="text-caption font-semibold text-money-in-soft-foreground">Pagado ✓</span>}
+                      {paid && (
+                        <span className="inline-flex items-center gap-1 text-caption font-semibold text-money-in-soft-foreground">
+                          <CircleCheck className="size-3.5" aria-hidden /> Pagado
+                        </span>
+                      )}
                       <span className="tabular-nums text-foreground">{formatPrice(item.subtotal)}</span>
                     </span>
                   </span>
@@ -108,7 +116,7 @@ export function ChargeTicket({
                         {line}
                       </label>
                     ) : (
-                      <div className="flex min-h-9 items-center py-1">{line}</div>
+                      <div className="flex min-h-11 items-center py-1.5">{line}</div>
                     )}
                   </li>
                 );

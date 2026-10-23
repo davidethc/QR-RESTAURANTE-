@@ -168,9 +168,9 @@ export function StepMethod({
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 md:px-6">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-          <div className="flex flex-col gap-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 @container md:px-6">
+        <div className="grid gap-5 @xl:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] @xl:items-start">
+          <div className="flex min-w-0 flex-col gap-5">
             <section className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-card p-4">
               <div>
                 <p className="text-meta text-muted-foreground">{personLabel ?? "A cobrar"}</p>
@@ -332,7 +332,7 @@ export function StepMethod({
             )}
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-3 @xl:sticky @xl:top-0">
             {isCash && editing === "received" && (
               <div
                 aria-live="polite"
@@ -376,6 +376,7 @@ export function StepMethod({
       </div>
 
       <StepFooter
+        primaryArrow
         onBack={onBack}
         hint={block}
         disabled={!!block}

@@ -209,7 +209,7 @@ export function CheckoutPanel({
     <div className="flex h-full min-h-0 flex-col bg-background">
       <CheckoutHeader bill={bill} placeName={placeName} progress={progress} onClose={onClose} />
 
-      {!blockedReason && bill.status !== "CLOSED" && (
+      {!blockedReason && bill.status === "OPEN" && (
         <div className="border-b border-border bg-card px-4 py-1 md:px-6">
           <StepIndicator
             steps={STEPS}
@@ -273,6 +273,7 @@ export function CheckoutPanel({
         {effectiveStep === "done" && (
           <StepDone
             bill={bill}
+            context={context}
             last={lastPayment}
             progress={progress}
             closePending={closePending}

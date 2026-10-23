@@ -48,6 +48,7 @@ export function StepSplit({
         <h3 className="mb-3 text-lead font-semibold text-foreground">¿Cómo van a pagar?</h3>
         <ChoiceCards<SplitMode>
           label="Cómo van a pagar"
+          size="md"
           value={mode}
           onChange={(v) => onChangeSplit(v)}
           options={[
@@ -121,21 +122,20 @@ export function StepSplit({
                 </h4>
                 <span className="text-body font-semibold tabular-nums text-foreground">{formatPrice(suggestedAmount)}</span>
               </div>
-              <div className="rounded-card bg-card p-4">
-                <ChargeTicket
-                  bill={bill}
-                  remainingByItem={remainingByItem}
-                  selectedItems={selectedItems}
-                  onToggleItem={onToggleItem}
-                  selectable
-                />
-              </div>
+              <ChargeTicket
+                bill={bill}
+                remainingByItem={remainingByItem}
+                selectedItems={selectedItems}
+                onToggleItem={onToggleItem}
+                selectable
+              />
             </section>
           )}
         </div>
       </div>
 
       <StepFooter
+        primaryArrow
         onBack={onBack}
         hint={nothingPicked ? "Marca al menos un producto." : null}
         disabled={pending || nothingPicked || suggestedAmount <= 0}

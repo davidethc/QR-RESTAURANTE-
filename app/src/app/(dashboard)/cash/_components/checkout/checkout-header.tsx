@@ -22,12 +22,18 @@ export function CheckoutHeader({
   onClose?: () => void;
 }) {
   const settled = bill.balance <= 0 && bill.total > 0;
+  const partial = !settled && bill.paid_total > 0;
   const paidPct = bill.total > 0 ? Math.min(100, Math.round((bill.paid_total / bill.total) * 100)) : 0;
 
   return (
     <header className="flex flex-col gap-3 border-b border-border bg-card px-4 pt-4 pb-3 md:px-6">
-      <div className="flex items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-control bg-secondary text-foreground">
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            "flex size-12 shrink-0 items-center justify-center rounded-control border",
+            settled ? "border-transparent bg-money-in text-money-in-foreground" : "border-border bg-secondary text-foreground"
+          )}
+        >
           <PlaceIcon kind={placeKind(bill)} className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -37,17 +43,33 @@ export function CheckoutHeader({
             {bill.status === "VOID" && " · Anulada"}
           </p>
         </div>
-        <div className="text-right" aria-live="polite" aria-atomic="true">
-          <p className="text-caption font-medium text-muted-foreground">{settled ? "Pagado" : "Falta cobrar"}</p>
-          <p
-            className={cn(
-              "flex items-center justify-end gap-1.5 font-display text-[1.875rem] font-semibold leading-none tabular-nums tracking-tight",
-              settled ? "text-money-in-soft-foreground" : "text-foreground"
-            )}
-          >
-            {settled ? <CircleCheck className="size-6" aria-hidden /> : null}
-            {formatPrice(settled ? bill.total : bill.balance)}
-          </p>
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          className={cn(
+            "flex shrink-0 items-center gap-2 rounded-card border px-3.5 py-2 text-right transition-[background-color,border-color] duration-200 motion-reduce:transition-none",
+            settled ? "border-money-in-border bg-money-in-soft" : "border-attention-border bg-attention-soft"
+          )}
+        >
+          {settled && <CircleCheck className="size-7 shrink-0 text-money-in-soft-foreground" aria-hidden />}
+          <div>
+            <p
+              className={cn(
+                "text-caption font-semibold",
+                settled ? "text-money-in-soft-foreground" : "text-attention-soft-foreground"
+              )}
+            >
+              {settled ? "Pagado" : partial ? "Pendiente" : "Falta cobrar"}
+            </p>
+            <p
+              className={cn(
+                "font-display text-[1.75rem] font-semibold leading-none tabular-nums tracking-tight",
+                settled ? "text-money-in-soft-foreground" : "text-foreground"
+              )}
+            >
+              {formatPrice(settled ? bill.total : bill.balance)}
+            </p>
+          </div>
         </div>
         {onClose && (
           <button
@@ -63,7 +85,7 @@ export function CheckoutHeader({
 
       {bill.total > 0 && bill.paid_total > 0 && (
         <div className="flex flex-col gap-1">
-          <div className="h-2 overflow-hidden rounded-full bg-secondary" aria-hidden>
+          <div className="h-2.5 overflow-hidden rounded-full bg-secondary" aria-hidden>
             <div
               className="h-full rounded-full bg-money-in transition-[width] duration-300 ease-out motion-reduce:transition-none"
               style={{ width: `${paidPct}%` }}

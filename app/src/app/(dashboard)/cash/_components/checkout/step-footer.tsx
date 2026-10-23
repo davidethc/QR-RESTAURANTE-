@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { posPressable, toneSolid, type PosTone } from "@/components/shared/pos-tone";
 import { useOnline } from "@/hooks/use-online";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export function StepFooter({
   pending,
   hint,
   needsNetwork = false,
+  primaryArrow = false,
   children,
 }: {
   onBack?: () => void;
@@ -33,12 +34,14 @@ export function StepFooter({
   /** Qué falta para poder seguir; se muestra encima del botón. */
   hint?: string | null;
   needsNetwork?: boolean;
+  /** Flecha al final del botón principal: "esto te lleva al siguiente paso". */
+  primaryArrow?: boolean;
   children?: React.ReactNode;
 }) {
   const online = useOnline();
   const offline = needsNetwork && !online;
   return (
-    <div className="flex flex-col gap-2 border-t border-border bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-6">
+    <div className="sticky bottom-0 z-10 flex flex-col gap-2 border-t border-border bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-6">
       {(hint || offline) && (
         <p role="status" className="text-meta font-medium text-attention-soft-foreground">
           {offline ? "Sin conexión: espera a que vuelva la red para cobrar." : hint}
@@ -67,12 +70,18 @@ export function StepFooter({
             disabled={disabled || pending || offline}
             className={cn(
               posPressable,
-              "flex min-h-14 flex-1 items-center justify-center gap-2 rounded-button px-5 text-lead font-semibold shadow-md",
+              "group/primary relative flex min-h-14 flex-[2] items-center justify-center gap-2 rounded-button px-5 text-lead font-semibold shadow-md",
               toneSolid[primaryTone]
             )}
           >
             {pending && <Loader2 className="size-5 animate-spin" aria-hidden />}
             {primaryLabel}
+            {primaryArrow && !pending && (
+              <ArrowRight
+                className="absolute right-5 size-5 transition-transform duration-150 ease-out group-hover/primary:translate-x-0.5 motion-reduce:transition-none max-sm:hidden"
+                aria-hidden
+              />
+            )}
           </button>
         )}
       </div>
