@@ -9,15 +9,10 @@ import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
 import { getClosedBillsToday } from "@/lib/queries/cash";
 import { listOpenBills } from "@/lib/actions/billing";
 import { getCashSessionSummary, getLastCashFloat } from "@/lib/actions/cash";
-import { getPublicMenu } from "@/lib/queries/menu";
-import { getTopProducts } from "@/lib/queries/staff";
+import { hasPermission, isManager } from "@/lib/permissions";
 import { OfflineBanner } from "@/components/shared/offline-banner";
 import { CashPageLive } from "./_components/cash-page-live";
-import { CashSessionArea } from "./_components/cash-session-area";
-import { ClosedBillsToday } from "./_components/closed-bills-today";
-import { CashTabs } from "./_components/cash-tabs";
-import { OpenBillsList } from "./_components/open-bills-list";
-import { QuickSaleSheet } from "./_components/quick-sale-sheet";
+import { CashWorkspace } from "./_components/cash-workspace";
 import type { CashSessionSummary } from "@/types/billing";
 import { Wallet } from "lucide-react";
 
@@ -29,7 +24,12 @@ export const instant = false;
 
 export const metadata: Metadata = { title: "Caja" };
 
-export default async function CashPage() {
+/**
+ * Caja: punto de venta. Lo que se carga aquí es solo lo necesario para
+ * cobrar (cajas, turno, cuentas abiertas, cobradas hoy). La carta del
+ * "Nuevo pedido" se pide al abrirlo (lib/actions/order-builder.ts).
+ */
+export default async function CashPage({ searchParams }: { searchParams: Promise<{ cuenta?: string }> }) {
   // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
@@ -38,8 +38,9 @@ export default async function CashPage() {
   requireRouteAccess(session, "/cash");
   const role = session.role;
   const restaurantId = session.restaurant.id;
+  const canManage = isManager(role);
 
-  const settings = await getRestaurantSettings(restaurantId);
+  const [settings, { cuenta }] = await Promise.all([getRestaurantSettings(restaurantId), searchParams]);
 
   if (!settings.billing_enabled) {
     return (
@@ -67,52 +68,38 @@ export default async function CashPage() {
     );
   }
 
-  const [registersResult, closedBillsToday] = await Promise.all([
+  const [registersResult, closedBillsToday, openBillsResult] = await Promise.all([
     getLastCashFloat(restaurantId),
-    getClosedBillsToday(restaurantId),
+    canManage ? getClosedBillsToday(restaurantId) : Promise.resolve([]),
+    listOpenBills(restaurantId),
   ]);
   const registers = registersResult.ok ? registersResult.data : [];
   const openSessionIds = registers.flatMap((r) => (r.open_session_id ? [r.open_session_id] : []));
-
-  const [summaryResults, openBillsResult, menu, topProducts] = await Promise.all([
-    Promise.all(openSessionIds.map((id) => getCashSessionSummary(id))),
-    listOpenBills(restaurantId),
-    getPublicMenu(session.restaurant.slug),
-    getTopProducts(restaurantId),
-  ]);
-
+  const summaryResults = await Promise.all(openSessionIds.map((id) => getCashSessionSummary(id)));
   const summaries = summaryResults
     .map((r) => (r.ok ? r.data : null))
     .filter((s): s is CashSessionSummary => s !== null);
-  const openBills = openBillsResult.ok ? openBillsResult.data : [];
 
   return (
-    <main>
-      <PageHeader
-        title="Caja"
-        description={summaries.length > 0 ? "Caja abierta" : "La caja está cerrada"}
-        action={<CashPageLive restaurantId={restaurantId} />}
-      />
-      <CashTabs />
-      <div className="flex flex-col gap-8 px-4 pb-12 md:px-8">
+    <main data-caja className="bg-background">
+      <h1 className="sr-only">Caja</h1>
+      <div className="px-4 pt-2 md:px-6 empty:hidden">
         <OfflineBanner message="No se puede cobrar ni registrar pagos hasta que vuelva la red." />
-        <CashSessionArea
-          summaries={summaries}
-          registers={registers}
-          timeZone={session.restaurant.timezone}
-        />
-
-        <QuickSaleSheet
-          categories={menu.categories}
-          topProducts={topProducts}
-          maxWaiterDiscountPct={settings.max_waiter_discount_pct}
-          hasOpenSession={summaries.length > 0}
-        />
-
-        <OpenBillsList bills={openBills} maxWaiterDiscountPct={settings.max_waiter_discount_pct} />
-
-        <ClosedBillsToday bills={closedBillsToday} timeZone={session.restaurant.timezone} />
       </div>
+      <CashWorkspace
+        summaries={summaries}
+        closedRegisters={registers
+          .filter((r) => !r.open_session_id)
+          .map((r) => ({ id: r.register_id, name: r.register_name, suggestedFloat: r.cash_float_left }))}
+        bills={openBillsResult.ok ? openBillsResult.data : []}
+        closedToday={closedBillsToday}
+        canManage={canManage}
+        canTakeOrders={canManage || hasPermission(session, "tables") || hasPermission(session, "pos")}
+        billingEnabled={settings.billing_enabled}
+        timeZone={session.restaurant.timezone}
+        initialSelected={cuenta ?? null}
+        live={<CashPageLive />}
+      />
     </main>
   );
 }

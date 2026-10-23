@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Undo2 } from "lucide-react";
+import { Banknote, CircleCheck, CircleEllipsis, CreditCard, Landmark, Loader2, Undo2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,8 +31,15 @@ export function paymentState(bill: Bill): PayState {
   return "Pago pendiente";
 }
 
+const METHOD_ICON: Record<PaymentMethod, LucideIcon> = {
+  CASH: Banknote,
+  CARD: CreditCard,
+  TRANSFER: Landmark,
+  OTHER: CircleEllipsis,
+};
+
 const STATE_CLASS: Record<PayState, string> = {
-  Pagado: "bg-secondary text-foreground",
+  Pagado: "bg-money-in-soft text-money-in-soft-foreground",
   "Pago parcial": "bg-warning-soft text-warning-soft-foreground",
   "Pago pendiente": "bg-warning-soft text-warning-soft-foreground",
   Anulado: "bg-destructive-soft text-destructive",
@@ -60,15 +68,18 @@ export function PaymentsBlock({
   bill,
   context,
   onBillChange,
+  allowVoid = true,
 }: {
   bill: Bill;
   context: BillPaymentContext | null;
   onBillChange: (bill: Bill) => void;
+  /** Anular pagos es solo de OWNER/ADMIN (la RPC también lo exige). */
+  allowVoid?: boolean;
 }) {
   const [voiding, setVoiding] = useState<BillPayment | null>(null);
   const state = paymentState(bill);
   const completed = bill.payments.filter((p) => p.status === "COMPLETED");
-  const canVoid = bill.status !== "VOID";
+  const canVoid = allowVoid && bill.status !== "VOID";
   const preferred = context?.preferredMethod
     ? `${PAYMENT_METHOD_LABEL[context.preferredMethod]}${context.paysWithAmount ? ` con ${formatPrice(context.paysWithAmount)}` : ""}`
     : null;
@@ -76,8 +87,8 @@ export function PaymentsBlock({
   return (
     <section aria-labelledby="adj-payments" className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 id="adj-payments" className="text-caption font-semibold tracking-wide text-muted-foreground uppercase">
-          Pagos
+        <h3 id="adj-payments" className="text-body font-semibold text-foreground">
+          Pagos realizados
         </h3>
         <Badge className={cn("rounded-full", STATE_CLASS[state])}>{state}</Badge>
       </div>
@@ -91,21 +102,25 @@ export function PaymentsBlock({
       {completed.length === 0 ? (
         <p className="text-meta text-muted-foreground">Todavía no se registró ningún pago.</p>
       ) : (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-card">
           {completed.map((p) => {
             const number = context?.paymentNumbers[p.id];
+            const Icon = METHOD_ICON[p.method] ?? CircleEllipsis;
             return (
-              <li
-                key={p.id}
-                className="flex min-h-11 items-center justify-between gap-2 rounded-control bg-secondary px-3 py-1.5 text-body-sm"
-              >
-                <span className="min-w-0 text-foreground" title={paymentHint(p)}>
+              <li key={p.id} className="flex min-h-14 items-center gap-3 px-3 py-2 text-body-sm">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-money-in-soft text-money-in-soft-foreground">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1 text-foreground" title={paymentHint(p)}>
                   {number !== undefined && <span className="font-semibold">Transacción #{number} · </span>}
                   {paymentLine(p)}
                   {p.tip_amount > 0 && (
                     <span className="text-muted-foreground"> · propina {formatPrice(p.tip_amount)}</span>
                   )}
                   {paymentHint(p) && <span className="block text-meta text-muted-foreground">{paymentHint(p)}</span>}
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-money-in-soft px-2 py-0.5 text-caption font-semibold text-money-in-soft-foreground max-sm:hidden">
+                  <CircleCheck className="size-3.5" aria-hidden /> Pagado
                 </span>
                 {canVoid && (
                   <Button

@@ -18,7 +18,7 @@ export default async function KitchenPage() {
   const initial = await getKitchenTickets(restaurantId, "pending");
 
   return (
-    <main className="flex min-h-full flex-col">
+    <main data-caja className="flex min-h-full flex-col bg-background">
       <KitchenBoard restaurantId={restaurantId} initial={initial} canManage={isManager(session)} />
     </main>
   );

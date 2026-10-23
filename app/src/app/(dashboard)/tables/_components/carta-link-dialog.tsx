@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { AlertTriangle, Download, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +35,7 @@ export function CartaLinkDialog({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    QRCode.toDataURL(url, { width: 512, margin: 2 }).then((png) => {
+    import("qrcode").then(({ default: QRCode }) => QRCode.toDataURL(url, { width: 512, margin: 2 })).then((png) => {
       if (!cancelled) setDataUrl(png);
     });
     return () => {
@@ -55,7 +54,7 @@ export function CartaLinkDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" className="min-h-12 rounded-button px-4 text-body-sm font-semibold">
           <Link2 className="h-4 w-4" /> Link de carta
         </Button>
       </DialogTrigger>

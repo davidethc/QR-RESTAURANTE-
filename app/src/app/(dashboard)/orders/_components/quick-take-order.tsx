@@ -16,14 +16,14 @@ import { cn } from "@/lib/utils";
 import type { TableStatusRow } from "@/types/staff";
 
 /**
- * Botón flotante para tomar un pedido sin pasar primero por Mesas.
+ * Botón para tomar un pedido en una mesa sin pasar primero por Mesas.
  *
  * Antes "Tomar pedido" solo aparecía en la tarjeta de una mesa (en Mesas)
  * o dentro de un aviso de "Llamar mesero" puntual — si el mesero ya
  * estaba en Comandas viendo la cocina o los pedidos en curso, tenía que
  * salir a Mesas primero. Este selector le deja elegir la mesa acá mismo.
  */
-export function QuickTakeOrder({ tables }: { tables: TableStatusRow[] }) {
+export function QuickTakeOrder({ tables, className }: { tables: TableStatusRow[]; className?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -43,13 +43,11 @@ export function QuickTakeOrder({ tables }: { tables: TableStatusRow[] }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button
+        variant="outline"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-4 z-20 h-14 gap-2 rounded-control px-5 text-body-sm font-semibold shadow-md"
-        style={{
-          marginBottom: "env(safe-area-inset-bottom, 0px)",
-        }}
+        className={cn("h-12 gap-2 rounded-button border-border bg-card px-4 text-body-sm font-semibold text-foreground hover:bg-muted", className)}
       >
-        <ClipboardList aria-hidden className="size-5" /> Tomar pedido
+        <ClipboardList aria-hidden className="size-5" /> Tomar en mesa
       </Button>
       <DialogContent>
         <DialogHeader>
@@ -69,7 +67,7 @@ export function QuickTakeOrder({ tables }: { tables: TableStatusRow[] }) {
                 type="button"
                 onClick={() => goToTable(table.id)}
                 className={cn(
-                  "flex min-h-11 flex-col items-start gap-1.5 rounded-control border border-border bg-card p-3 text-left transition-colors duration-150 active:scale-[0.97]",
+                  "flex min-h-12 flex-col items-start gap-1.5 rounded-card border border-border bg-card p-3 text-left transition-[transform,background-color] duration-150 hover:bg-muted active:scale-[0.97] motion-reduce:transition-none",
                   table.status !== "AVAILABLE" && "border-primary/30 bg-primary-soft"
                 )}
               >

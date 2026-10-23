@@ -2,7 +2,6 @@
 
 import { canHandleMoney } from "@/lib/permissions";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Bell, Receipt, ClipboardList, Wallet } from "lucide-react";
 import { CallStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useChargeSheet } from "@/app/(dashboard)/cash/_components/charge-sheet-host";
 import { handleCall } from "@/lib/actions/waiter-calls";
 import { formatPrice, cn } from "@/lib/utils";
+import { toneSoft, toneSolid } from "@/components/shared/pos-tone";
 import type { UserRole } from "@/config/constants";
 import type { StaffWaiterCall } from "@/types/staff";
 
@@ -55,18 +55,13 @@ export function CallCard({
   const chargedByAdmin = isBill && billingEnabled && !canHandleMoney(role);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.2 }}
+    <div
       className={cn(
-        "rounded-card border bg-card p-4",
+        "animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none rounded-card border bg-card p-3.5 shadow-sm",
         pending
           ? isBill
-            ? "border-wine/30"
-            : "border-primary/30"
+            ? "border-money-in-border ring-1 ring-money-in-border"
+            : "border-attention-border ring-1 ring-attention-border"
           : "border-border"
       )}
     >
@@ -75,16 +70,14 @@ export function CallCard({
           <span
             aria-hidden
             className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-control",
-              isBill
-                ? "bg-wine/12 text-wine"
-                : "bg-primary/12 text-primary"
+              "flex size-10 shrink-0 items-center justify-center rounded-control border",
+              isBill ? toneSoft["money-in"] : toneSoft.attention
             )}
           >
-            <Icon className="h-[22px] w-[22px]" strokeWidth={2.25} />
+            <Icon className="size-5" strokeWidth={2.25} />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-lead font-semibold leading-tight text-foreground">
+            <p className="truncate text-body font-semibold leading-tight text-foreground">
               {call.table_name ?? `Mesa ${call.table_number}`}
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-meta leading-tight text-muted-foreground">
@@ -146,7 +139,7 @@ export function CallCard({
                 <span className="text-tiny font-semibold uppercase tracking-wider text-muted-foreground">
                   Total
                 </span>
-                <span className="text-xl font-semibold tabular-nums text-wine">
+                <span className="text-xl font-semibold tabular-nums text-foreground">
                   {formatPrice(call.session_total)}
                 </span>
               </div>
@@ -163,7 +156,7 @@ export function CallCard({
       {canCharge ? (
         <div className="mt-3">
           <Button
-            className="h-11 w-full rounded-control text-body font-semibold"
+            className={cn("h-12 w-full rounded-button text-body font-semibold", toneSolid["money-in"])}
             onClick={() =>
               openCharge({
                 tableSessionId: tableSessionId!,
@@ -178,7 +171,7 @@ export function CallCard({
       ) : (
         <>
           {chargedByAdmin && call.status !== "ATTENDED" && (
-            <p className="mt-3 rounded-control bg-warning-soft px-3 py-2 text-meta font-medium text-warning-soft-foreground">
+            <p className={cn("mt-3 rounded-control border px-3 py-2 text-meta font-medium", toneSoft.info)}>
               La cuenta la cobra el administrador.
             </p>
           )}
@@ -188,7 +181,7 @@ export function CallCard({
                 onSuccess={onDone}
                 action={() => handleCall(call.id, "ACCEPTED")}
                 successMessage="En proceso"
-                className="h-11 flex-1 rounded-control text-body font-semibold"
+                className="h-12 flex-1 rounded-button text-body font-semibold"
               >
                 Atender
               </ActionButton>
@@ -196,7 +189,7 @@ export function CallCard({
                 trigger={
                   <Button
                     variant="outline"
-                    className="h-11 flex-1 rounded-control text-body font-semibold"
+                    className="h-12 rounded-button border-money-out-border bg-card px-4 text-body font-semibold text-money-out-soft-foreground hover:bg-money-out-soft hover:text-money-out-soft-foreground"
                   >
                     Rechazar
                   </Button>
@@ -215,7 +208,7 @@ export function CallCard({
                 onSuccess={onDone}
               action={() => handleCall(call.id, "ATTENDED")}
               successMessage="Solicitud atendida"
-              className="mt-3 h-11 w-full rounded-control text-body font-semibold"
+              className={cn("mt-3 h-12 w-full rounded-button text-body font-semibold", toneSolid["money-in"])}
             >
               Marcar atendida
             </ActionButton>
@@ -231,13 +224,13 @@ export function CallCard({
         <Button
           asChild
           variant="outline"
-          className="mt-2 h-11 w-full rounded-control text-body font-semibold"
+          className="mt-2 h-12 w-full rounded-button text-body font-semibold"
         >
           <Link href={`/tables/${call.table_id}/order`}>
             <ClipboardList aria-hidden className="h-4 w-4" /> Tomar pedido
           </Link>
         </Button>
       )}
-    </motion.div>
+    </div>
   );
 }

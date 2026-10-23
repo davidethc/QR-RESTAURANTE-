@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { formatPrice } from "@/lib/utils";
-import { splitEqually } from "@/lib/money";
 import { SPLIT_MODE } from "@/config/constants";
 import type { Bill } from "@/types/billing";
 
@@ -58,28 +56,5 @@ export function useChargeAmounts(bill: Bill | null, selectedItems: Record<string
     return bill.balance;
   }, [bill, itemsTotal]);
 
-  // Qué parte le toca cobrar ahora, para "Parte 2 de 3 · $3,33": cuenta
-  // cuántas partes completas ya cubre lo pagado.
-  const currentPartLabel = useMemo(() => {
-    if (!bill || bill.split_mode !== SPLIT_MODE.EQUAL) return null;
-    let shares: number[] = [];
-    try {
-      shares = splitEqually(bill.total, bill.split_parts);
-    } catch {
-      return null;
-    }
-    let paidCents = Math.round(bill.paid_total * 100);
-    let idx = 0;
-    for (const share of shares) {
-      const shareCents = Math.round(share * 100);
-      if (paidCents >= shareCents) {
-        paidCents -= shareCents;
-        idx++;
-      } else break;
-    }
-    const current = Math.min(idx + 1, bill.split_parts);
-    return `Parte ${current} de ${bill.split_parts} · ${formatPrice(bill.next_equal_share ?? shares[current - 1] ?? 0)}`;
-  }, [bill]);
-
-  return { remainingByItem, paymentItems, suggestedAmount, currentPartLabel };
+  return { remainingByItem, paymentItems, suggestedAmount };
 }

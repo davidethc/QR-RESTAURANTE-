@@ -136,7 +136,7 @@ export function ChargeProductPicker({
       <Button
         type="button"
         variant="outline"
-        className="h-11 w-full rounded-full text-body-sm font-semibold"
+        className="h-12 px-4 text-body-sm font-semibold"
         onClick={() => handleOpenChange(true)}
       >
         <Plus className="h-4 w-4" /> Agregar producto

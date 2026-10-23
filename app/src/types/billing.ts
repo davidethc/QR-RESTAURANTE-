@@ -30,6 +30,10 @@ export type BillItem = {
   unit_price: number;
   subtotal: number;
   notes: string | null;
+  /** Foto del producto (bill_json, Caja v2); puede faltar en respuestas anteriores. */
+  image_url?: string | null;
+  /** Línea cancelada con cancel_order_item (bill_json, Caja v2); puede faltar. */
+  cancelled?: boolean;
 };
 
 export type BillItemOption = {
@@ -311,15 +315,3 @@ export type CashMovementRow = {
   created_at: string;
 };
 
-/** Respuesta de create_counter_sale (C5). `replayed` = reintento con la misma clave. */
-export type CounterSale = {
-  order_id: string;
-  bill_id: string;
-  bill_number: number;
-  table_session_id: string;
-  counter_number: number;
-  customer_label: string | null;
-  place_label: string;
-  replayed: boolean;
-  bill: Bill;
-};

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { QrCode, Download, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +31,7 @@ export function TableQrDialog({
     if (!open) return;
     let cancelled = false;
     const scanUrl = buildScanUrl(qrToken);
-    QRCode.toDataURL(scanUrl, { width: 512, margin: 2 }).then((url) => {
+    import("qrcode").then(({ default: QRCode }) => QRCode.toDataURL(scanUrl, { width: 512, margin: 2 })).then((url) => {
       if (!cancelled) setDataUrl(url);
     });
     return () => {

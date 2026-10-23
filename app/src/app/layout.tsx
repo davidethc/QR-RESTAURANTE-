@@ -41,12 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {children}
-        {/* Sonner, no goey-toast: este layout lo carga TODA la app,
-            incluido el celular del comensal, y goey-toast arrastra
-            framer-motion (~60 KB comprimidos) para pintar un "Plato
-            agregado". Los avisos del personal que sí justifican ese
-            peso montan su propio <GooeyToaster> en el layout del
-            panel. Ver src/lib/notifications-staff.ts. */}
+        {/* Sonner para TODA la app (carta del comensal y panel). */}
         <Toaster
           position="top-center"
           closeButton

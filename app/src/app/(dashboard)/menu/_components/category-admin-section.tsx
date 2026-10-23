@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { GripVertical, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -55,8 +54,7 @@ export function CategoryAdminSection({
   const router = useRouter();
 
   return (
-    <motion.section
-      layout
+    <section
       className={cn(isDragging && "opacity-40")}
       onDragOver={category ? (e) => e.preventDefault() : undefined}
       onDrop={category ? onCategoryDrop : undefined}
@@ -150,7 +148,6 @@ export function CategoryAdminSection({
         <EmptyState title="Sin productos todavía" />
       ) : (
         <div className="divide-y divide-border">
-          <AnimatePresence initial={false}>
             {products.map((product, index) => (
               <ProductRow
                 key={product.id}
@@ -168,9 +165,8 @@ export function CategoryAdminSection({
                 isLast={index === products.length - 1}
               />
             ))}
-          </AnimatePresence>
         </div>
       )}
-    </motion.section>
+    </section>
   );
 }

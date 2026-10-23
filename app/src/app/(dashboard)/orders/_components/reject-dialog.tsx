@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { notify } from "@/lib/notifications";
 import { rejectOrder } from "@/lib/actions/orders";
+import { cn } from "@/lib/utils";
 
 const REASONS = [
   "Producto agotado",
@@ -29,9 +30,11 @@ const REASONS = [
 export function RejectDialog({
   orderId,
   onDone,
+  triggerClassName,
 }: {
   orderId: string;
   onDone?: () => void;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(REASONS[0]);
@@ -59,8 +62,12 @@ export function RejectDialog({
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          className="h-11 flex-1 rounded-control text-body font-semibold"
+          className={cn(
+            "h-12 rounded-button border-money-out-border bg-card px-4 text-body font-semibold text-money-out-soft-foreground hover:bg-money-out-soft hover:text-money-out-soft-foreground",
+            triggerClassName
+          )}
         >
+          <X data-icon="inline-start" aria-hidden />
           Rechazar
         </Button>
       </DialogTrigger>

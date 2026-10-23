@@ -1,21 +1,37 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useStaffRealtime } from "@/hooks/use-staff-realtime";
-import { ConnectionStatus } from "@/components/shared/connection-status";
+import { useLiveEvents } from "@/app/(dashboard)/_components/staff-live-provider";
+
+/** Como mucho un `router.refresh()` cada 1,5 s, pase lo que pase en caja. */
+const REFRESH_DEBOUNCE_MS = 1500;
 
 /**
  * Mantiene viva /cash: cuentas abiertas y turno de caja cambian sin que
  * el que está en esta pantalla haga nada (otro mesero cobrando, un
- * movimiento de caja). Igual que TablesLive: la página sigue siendo
- * Server Component, esto solo le dice cuándo volver a correr.
+ * movimiento de caja). Igual que TablesLive: escucha al StaffLiveProvider
+ * (sin canal propio) y fusiona las ráfagas en un solo refresco. No pinta
+ * nada: el "en vivo" ya está en la barra superior del panel.
  */
-export function CashPageLive({ restaurantId }: { restaurantId: string }) {
+export function CashPageLive() {
   const router = useRouter();
-  const { connected } = useStaffRealtime(restaurantId, () => router.refresh(), {
-    channelName: "staff-cash",
-    tables: ["orders", "bills", "cash_sessions"],
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useLiveEvents(["orders", "bills", "cash_sessions"], () => {
+    if (timer.current) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      router.refresh();
+    }, REFRESH_DEBOUNCE_MS);
   });
 
-  return <ConnectionStatus connected={connected} />;
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
+
+  return null;
 }
