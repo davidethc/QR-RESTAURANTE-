@@ -8,7 +8,10 @@ import { getReportsTimezoneSettings } from "@/lib/queries/reports";
 import { getReportsBundle } from "@/lib/actions/reports";
 import { rangeForPreset } from "@/lib/reports-dates";
 import { ReportsDashboard } from "./_components/reports-dashboard";
-import { Wallet } from "lucide-react";
+import Link from "next/link";
+import { Settings, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { canAccessRoute } from "@/lib/permissions";
 
 // Ver la nota en (dashboard)/layout.tsx: el panel entero es `instant = false`.
 export const instant = false;
@@ -30,14 +33,25 @@ export default async function ReportsPage() {
 
   if (!settings.billing_enabled) {
     return (
-      <main>
+      <main data-caja className="min-h-full bg-background">
         <PageHeader title="Reportes" />
         <div className="px-4 md:px-8">
-          <EmptyState
-            icon={Wallet}
-            title="El cobro no está activo"
-            description="Los reportes de venta, propinas y métodos de pago dependen del módulo de cobro. Actívalo para empezar a ver datos aquí."
-          />
+          <div className="rounded-card border border-border bg-card">
+            <EmptyState
+              icon={Wallet}
+              title="El cobro no está activo"
+              description="Los reportes de venta, propinas y métodos de pago dependen del módulo de cobro. Actívalo para empezar a ver datos aquí."
+              action={
+                canAccessRoute(session, "/settings") ? (
+                <Button asChild className="h-11">
+                  <Link href="/settings">
+                    <Settings /> Activar en Configuración
+                  </Link>
+                </Button>
+                ) : undefined
+              }
+            />
+          </div>
         </div>
       </main>
     );
@@ -54,21 +68,16 @@ export default async function ReportsPage() {
   });
 
   return (
-    <main className="pb-10">
-      <PageHeader
-        title="Reportes"
-        description="Venta, productos, meseros, pagos y cocina — todo por rango de fechas."
+    <main data-caja className="min-h-full bg-background">
+      <h1 className="sr-only">Reportes</h1>
+      <ReportsDashboard
+        restaurantId={restaurantId}
+        restaurantName={session.restaurant.name}
+        timezone={timezone}
+        businessDayCutoff={business_day_cutoff}
+        initialRange={initialRange}
+        initialBundle={initialBundle}
       />
-      <div className="px-4 pb-12 md:px-8">
-        <ReportsDashboard
-          restaurantId={restaurantId}
-          restaurantName={session.restaurant.name}
-          timezone={timezone}
-          businessDayCutoff={business_day_cutoff}
-          initialRange={initialRange}
-          initialBundle={initialBundle}
-        />
-      </div>
     </main>
   );
 }

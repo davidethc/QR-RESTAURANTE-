@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ReportCard } from "./report-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { SalesByProductRow } from "@/types/reports";
@@ -15,13 +16,12 @@ export function TopProductsTable({ rows }: { rows: SalesByProductRow[] }) {
   const top = rows.slice(0, 20);
 
   return (
-    <div className="rounded-card border border-border bg-card p-5">
-      <h3 className="mb-3 text-body font-semibold text-foreground">Top productos</h3>
+    <ReportCard id="report-products" title="Top productos" icon={UtensilsCrossed} flush>
       <div>
         {top.length === 0 ? (
           <EmptyState icon={UtensilsCrossed} title="Sin productos vendidos en este rango" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto [&_td]:py-3 [&_td:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th]:bg-secondary/60 [&_th:first-child]:pl-4 [&_th:last-child]:pr-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -51,11 +51,11 @@ export function TopProductsTable({ rows }: { rows: SalesByProductRow[] }) {
           </div>
         )}
         {rows.length > top.length && (
-          <p className="mt-2 text-caption text-muted-foreground">
+          <p className="border-t border-border px-4 py-2.5 text-caption text-muted-foreground">
             Mostrando los primeros {top.length} de {rows.length}. Exporta a Excel para ver todos.
           </p>
         )}
       </div>
-    </div>
+    </ReportCard>
   );
 }

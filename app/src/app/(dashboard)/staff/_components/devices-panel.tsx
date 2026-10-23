@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, Smartphone, Ban } from "lucide-react";
+import { Ban, CheckCircle2, Clock3, Loader2, MonitorSmartphone, Pencil, Smartphone } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
+import { toneSoft } from "@/components/shared/pos-tone";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -98,49 +101,64 @@ export function DevicesPanel({
 
   return (
     <section aria-labelledby="devices-title" className="rounded-card border border-border bg-card">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-4">
-        <div className="min-w-0 max-w-prose">
-          <h2 id="devices-title" className="text-lg font-semibold text-foreground">
+      <div className="flex flex-wrap items-start gap-3 border-b border-border px-4 py-3">
+        <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-control border border-info-border bg-info-soft text-info-soft-foreground">
+          <MonitorSmartphone className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 id="devices-title" className="text-body font-semibold leading-tight text-foreground">
             Dispositivos con acceso por PIN
           </h2>
-          <p className="mt-1 text-body-sm text-muted-foreground">
+          <p className="mt-0.5 text-meta leading-snug text-muted-foreground">
             En un dispositivo vinculado, cualquier miembro del equipo entra solo con su PIN. Sin
             vincular, el PIN no funciona.
           </p>
         </div>
-        {keyConfigured ? (
+        {keyConfigured && visible.length > 0 ? (
           <LinkDeviceDialog restaurantId={restaurantId} />
         ) : null}
       </div>
 
       {!keyConfigured && (
-        <p className="m-4 rounded-control border border-dashed border-border bg-muted p-3 text-meta text-muted-foreground">
-          Falta configurar <code className="font-mono text-foreground">SUPABASE_SECRET_KEY</code> en
+        <p className="m-4 rounded-control border border-attention-border bg-attention-soft p-3 text-meta text-attention-soft-foreground">
+          Falta configurar <code className="font-mono">SUPABASE_SECRET_KEY</code> en
           el servidor para vincular dispositivos.
         </p>
       )}
 
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-          <Smartphone className="size-8 text-muted-foreground" aria-hidden />
-          <p className="font-medium text-foreground">Aún no hay dispositivos vinculados</p>
-          <p className="max-w-sm text-body-sm text-muted-foreground">
-            Vincula la primera tablet o computadora del local para que el equipo entre en segundos.
-          </p>
-        </div>
+        <EmptyState
+          icon={Smartphone}
+          title="Aún no hay dispositivos vinculados"
+          description="Vincula la primera tablet o computadora del local para que el equipo entre en segundos."
+          action={keyConfigured ? <LinkDeviceDialog restaurantId={restaurantId} /> : undefined}
+        />
       ) : (
         <ul className="divide-y divide-border">
           {visible.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-foreground">{d.name ?? "Sin nombre"}</p>
-                <p className="text-meta text-muted-foreground" suppressHydrationWarning>
+            <li key={d.id} className="flex flex-col gap-3 px-4 py-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-control border border-border bg-secondary text-muted-foreground">
+                  <Smartphone className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-body-sm font-semibold text-foreground">{d.name ?? "Sin nombre"}</p>
+                  <p className="text-caption text-muted-foreground" suppressHydrationWarning>
+                    {d.status === "ACTIVE" && `Último uso: ${formatDate(d.last_used_at)}`}
+                    {d.status === "PENDING" && d.link_expires_at && `Vence ${formatDate(d.link_expires_at)}`}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-caption font-semibold",
+                    toneSoft[d.status === "ACTIVE" ? "money-in" : d.status === "PENDING" ? "attention" : "neutral"]
+                  )}
+                >
+                  {d.status === "ACTIVE" ? <CheckCircle2 className="size-3.5" aria-hidden /> : <Clock3 className="size-3.5" aria-hidden />}
                   {STATUS_LABEL[d.status]}
-                  {d.status === "ACTIVE" && ` · Último uso: ${formatDate(d.last_used_at)}`}
-                  {d.status === "PENDING" && d.link_expires_at && ` · Vence ${formatDate(d.link_expires_at)}`}
-                </p>
+                </span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 sm:pl-[3.25rem]">
                 {d.status === "ACTIVE" && (
                   <Button variant="outline" className="min-h-11" onClick={() => setRenaming(d)}>
                     <Pencil aria-hidden /> Renombrar
@@ -159,7 +177,7 @@ export function DevicesPanel({
                   action={() => revokeDevice({ deviceId: d.id })}
                   onSuccess={() => router.refresh()}
                   trigger={
-                    <Button variant="outline" className="min-h-11 text-destructive">
+                    <Button variant="outline" className="min-h-11 text-money-out-soft-foreground hover:text-money-out-soft-foreground">
                       <Ban aria-hidden /> {d.status === "ACTIVE" ? "Revocar" : "Cancelar"}
                     </Button>
                   }

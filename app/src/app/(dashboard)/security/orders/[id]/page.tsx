@@ -20,10 +20,10 @@ export default async function SecurityOrderPage({ params }: { params: Promise<{ 
   const order = await getSecurityOrder(id);
   if (!order) notFound();
   const states: Record<string, string> = { PENDING: "Nuevo", ACCEPTED: "Aceptado", PREPARING: "En preparación", READY: "Listo", DELIVERED: "Entregado", REJECTED: "Cancelado", CANCELLED: "Cancelado" };
-  return <main><PageHeader title={`Pedido #${order.order_number}`} description="Detalle del pedido relacionado con el historial." />
+  return <main data-caja className="min-h-full bg-background"><PageHeader title={`Pedido #${order.order_number}`} description="Detalle del pedido relacionado con el historial." />
     <div className="flex flex-col gap-5 px-4 pb-10 md:px-8">
       <Button asChild variant="outline" className="min-h-11 w-fit"><Link href="/security"><ArrowLeft aria-hidden /> Volver al historial</Link></Button>
-      <section className="rounded-card border border-border bg-card p-4">
+      <section className="max-w-2xl rounded-card border border-border bg-card p-4">
         <h2 className="text-body font-semibold text-foreground">{states[order.status] ?? "Pedido"}</h2>
         <p className="mt-2 text-meta text-muted-foreground">{new Intl.DateTimeFormat("es-EC", { timeZone: "America/Guayaquil", dateStyle: "long", timeStyle: "short" }).format(new Date(order.created_at))}</p>
         {order.rejection_reason && <p className="mt-3 break-words text-body-sm">Motivo: {order.rejection_reason}</p>}

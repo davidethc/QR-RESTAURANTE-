@@ -1,3 +1,4 @@
+import { ReportCard } from "./report-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import type { PrepStage, PrepTimesRow } from "@/types/reports";
 import { Timer } from "lucide-react";
@@ -18,18 +19,17 @@ export function PrepTimesCards({ rows }: { rows: PrepTimesRow[] }) {
   const hasData = rows.some((r) => r.orders_count > 0);
 
   return (
-    <div className="overflow-hidden rounded-card border border-border bg-card p-5">
-      <h3 className="mb-3 text-body font-semibold text-foreground">Tiempos de cocina</h3>
+    <ReportCard id="report-prep" title="Tiempos de cocina" icon={Timer} flush>
       {!hasData ? (
         <EmptyState icon={Timer} title="Sin pedidos con tiempos registrados" />
       ) : (
-        <div className="-m-5 mt-0 grid grid-cols-2 divide-x divide-y divide-border border-t border-border lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 p-4 lg:grid-cols-4">
           {rows.map((row) => (
-            <div key={row.stage} className="p-5">
+            <div key={row.stage} className="rounded-control border border-border bg-background p-4">
               <p className="text-caption font-medium text-muted-foreground">
                 {STAGE_LABEL[row.stage]}
               </p>
-              <p className="mt-1 text-title font-semibold text-foreground">
+              <p className="mt-1 text-title font-semibold tabular-nums text-foreground">
                 {minutes(row.p50_minutes)}
               </p>
               <p className="text-tiny text-muted-foreground">
@@ -43,6 +43,6 @@ export function PrepTimesCards({ rows }: { rows: PrepTimesRow[] }) {
           ))}
         </div>
       )}
-    </div>
+    </ReportCard>
   );
 }

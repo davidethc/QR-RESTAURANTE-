@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Switch } from "@/components/ui/switch";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { ChefHat, Loader2, QrCode, UserCheck } from "lucide-react";
+import { ChoiceCards } from "@/components/shared/choice-card";
 import { notify } from "@/lib/notifications";
 import { setQrOrdersRequireApproval } from "@/lib/actions/qr-settings";
 import type { RestaurantSettings } from "@/types/staff";
+import { SettingsCard } from "./settings-card";
 
 /** Pedidos que el cliente hace desde el QR de la mesa. Se guarda al cambiar. */
 export function QrSettingsForm({ restaurant }: { restaurant: RestaurantSettings }) {
@@ -30,31 +31,48 @@ export function QrSettingsForm({ restaurant }: { restaurant: RestaurantSettings 
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[240px_1fr] lg:gap-12">
-      <div>
-        <h2 className="text-body font-semibold text-foreground">Pedidos por QR</h2>
-        <p className="mt-1 text-body-sm text-muted-foreground">
-          Lo que piden tus clientes desde el código de la mesa.
-        </p>
-      </div>
-      <FieldGroup className="max-w-lg">
-        <Field orientation="horizontal">
-          <Switch
-            id="qr-require-approval"
-            checked={requireApproval}
-            disabled={isPending}
-            onCheckedChange={change}
-          />
-          <div>
-            <FieldLabel htmlFor="qr-require-approval">Pedidos QR requieren aprobación</FieldLabel>
-            <FieldDescription>
-              {requireApproval
-                ? "El mesero aprueba cada pedido antes de que llegue a cocina."
-                : "Los pedidos llegan directo a cocina, sin pasar por el mesero."}
-            </FieldDescription>
-          </div>
-        </Field>
-      </FieldGroup>
-    </section>
+    <SettingsCard
+      id="settings-qr"
+      title="Pedidos por QR"
+      help="Qué pasa con lo que piden tus clientes desde el código de la mesa. Se guarda al elegir."
+      icon={QrCode}
+      tone="attention"
+      aside={
+        isPending ? (
+          <span role="status" className="flex items-center gap-1.5 text-meta text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" aria-hidden /> Guardando…
+          </span>
+        ) : null
+      }
+    >
+      <ChoiceCards<"approval" | "direct">
+        label="Pedidos QR"
+        columns={2}
+        size="md"
+        value={requireApproval ? "approval" : "direct"}
+        onChange={(v) => {
+          if (isPending || (v === "approval") === requireApproval) return;
+          change(v === "approval");
+        }}
+        options={[
+          {
+            value: "approval",
+            title: "El mesero aprueba",
+            description: "Cada pedido espera en Pedidos antes de llegar a cocina.",
+            icon: UserCheck,
+            tone: "attention",
+            disabled: isPending,
+          },
+          {
+            value: "direct",
+            title: "Directo a cocina",
+            description: "Los pedidos llegan a cocina sin pasar por el mesero.",
+            icon: ChefHat,
+            tone: "money-in",
+            disabled: isPending,
+          },
+        ]}
+      />
+    </SettingsCard>
   );
 }

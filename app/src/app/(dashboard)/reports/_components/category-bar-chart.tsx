@@ -7,6 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { ReportCard } from "./report-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { SalesByCategoryRow } from "@/types/reports";
@@ -38,8 +39,7 @@ export function CategoryBarChart({ rows }: { rows: SalesByCategoryRow[] }) {
   }
 
   return (
-    <div className="rounded-card border border-border bg-card p-5">
-      <h3 className="mb-3 text-body font-semibold text-foreground">Ventas por categoría</h3>
+    <ReportCard id="report-categories" title="Ventas por categoría" icon={PieChart}>
       <div>
         {data.length === 0 ? (
           <EmptyState icon={PieChart} title="Sin ventas por categoría en este rango" />
@@ -68,6 +68,6 @@ export function CategoryBarChart({ rows }: { rows: SalesByCategoryRow[] }) {
           </ChartContainer>
         )}
       </div>
-    </div>
+    </ReportCard>
   );
 }

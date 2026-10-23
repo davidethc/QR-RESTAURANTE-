@@ -7,6 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { ReportCard } from "./report-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { PaymentsByMethodRow } from "@/types/reports";
@@ -35,8 +36,7 @@ export function PaymentMethodsChart({ rows }: { rows: PaymentsByMethodRow[] }) {
   }));
 
   return (
-    <div className="rounded-card border border-border bg-card p-5">
-      <h3 className="mb-3 text-body font-semibold text-foreground">Formas de pago</h3>
+    <ReportCard id="report-methods" title="Formas de pago" icon={CreditCard}>
       <div>
         {!hasData ? (
           <EmptyState icon={CreditCard} title="Sin pagos registrados en este rango" />
@@ -65,6 +65,6 @@ export function PaymentMethodsChart({ rows }: { rows: PaymentsByMethodRow[] }) {
           </ChartContainer>
         )}
       </div>
-    </div>
+    </ReportCard>
   );
 }
