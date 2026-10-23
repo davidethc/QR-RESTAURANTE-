@@ -124,6 +124,7 @@ export function TablesPdfButton({
   return (
     <Button
       variant="outline"
+      className="min-h-12 rounded-button px-4 text-body-sm font-semibold"
       onClick={handleDownload}
       disabled={isPending || tables.length === 0}
     >

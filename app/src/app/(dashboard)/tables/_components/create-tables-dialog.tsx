@@ -99,7 +99,7 @@ export function CreateTablesDialog({ restaurantId }: { restaurantId: string }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="min-h-12 rounded-button px-4 text-body-sm font-semibold">
           <Plus /> Mesas
         </Button>
       </SheetTrigger>
