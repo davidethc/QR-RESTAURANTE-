@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getOrderContact, type OrderContact } from "@/lib/actions/counter-order";
-import { Check, ChevronDown, Copy, MoreHorizontal, Plus, Wallet } from "lucide-react";
+import { Bike, Check, ChevronDown, ChevronRight, Copy, MoreHorizontal, ShoppingBag, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,9 +17,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EmptyState } from "@/components/shared/empty-state";
 import { notify } from "@/lib/notifications";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
+import { posPressable } from "@/components/shared/pos-tone";
 import {
   PROVIDER_LABEL,
   SERVICE_TYPE_LABEL,
@@ -46,21 +46,26 @@ function totalLabel(o: CounterOrderView) {
   return pending ? `Envío + ${formatPrice(o.total)}` : formatPrice(o.total);
 }
 
-/** Pedidos de mostrador (M06): lista, alta, detalle y edición. */
+/**
+ * Pedidos de mostrador (M06): lista, detalle y edición. El alta ya no vive
+ * aquí: "Nuevo pedido" abre el flujo de Caja desde la franja de arriba.
+ */
 export function CounterOrdersPanel({
   orders,
   categories,
   details,
   billingEnabled,
   canCharge,
+  emptyAction,
 }: {
   orders: CounterOrderView[];
   categories: PublicCategory[];
   details: Record<string, StaffProductDetail>;
   billingEnabled: boolean;
   canCharge: boolean;
+  emptyAction?: React.ReactNode;
 }) {
-  const [modal, setModal] = useState<{ editing: CounterOrderView | null } | null>(null);
+  const [modal, setModal] = useState<{ editing: CounterOrderView } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, OrderContact>>({});
   const baseDetail = orders.find((o) => o.id === detailId) ?? null;
@@ -80,42 +85,59 @@ export function CounterOrdersPanel({
   }, [detailId, contacts]);
 
   return (
-    <section aria-labelledby="counter-orders-title" className="px-4 pb-24 pt-6">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 id="counter-orders-title" className="text-title-sm font-semibold">
-          Pedidos de mostrador
+    <section aria-labelledby="counter-orders-title" className="rounded-card border border-border bg-card">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <span aria-hidden className="flex size-9 items-center justify-center rounded-full border border-border bg-secondary text-foreground">
+          <ShoppingBag className="size-4" />
+        </span>
+        <h2 id="counter-orders-title" className="text-body font-semibold text-foreground">
+          Para llevar y domicilio
         </h2>
-        <Button className="min-h-11" onClick={() => setModal({ editing: null })}>
-          <Plus className="size-4" /> Nuevo pedido
-        </Button>
+        <span className="rounded-full bg-secondary px-2 py-0.5 text-caption font-semibold tabular-nums text-muted-foreground">
+          {orders.length}
+        </span>
       </div>
 
       {orders.length === 0 ? (
-        <EmptyState title="Sin pedidos de mostrador" description="Crea el primero con + Nuevo pedido." />
+        <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
+          <p className="text-body-sm font-semibold text-foreground">Sin pedidos de mostrador hoy</p>
+          <p className="max-w-xs text-meta text-muted-foreground">Para llevar y domicilio aparecen aquí con su folio y total.</p>
+          {emptyAction && <div className="mt-2">{emptyAction}</div>}
+        </div>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {orders.map((o) => (
-            <li key={o.id}>
-              <button
-                type="button"
-                onClick={() => setDetailId(o.id)}
-                className="flex min-h-14 w-full items-center gap-3 rounded-card border border-border bg-card px-4 py-3 text-left active:bg-secondary"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-body font-semibold">
-                    #{o.folio} · {o.customerName ?? SERVICE_TYPE_LABEL[o.serviceType]}
+        <ul className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
+          {orders.map((o) => {
+            const Glyph = o.serviceType === "delivery" ? Bike : ShoppingBag;
+            return (
+              <li key={o.id}>
+                <button
+                  type="button"
+                  onClick={() => setDetailId(o.id)}
+                  className={cn(
+                    posPressable,
+                    "flex min-h-14 w-full items-center gap-3 rounded-card border border-border bg-card px-3 py-2.5 text-left hover:border-border-strong hover:shadow-sm"
+                  )}
+                >
+                  <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-control border border-border bg-secondary text-foreground">
+                    <Glyph className="size-5" />
                   </span>
-                  <span className="block text-meta text-muted-foreground">
-                    {SERVICE_TYPE_LABEL[o.serviceType]}
-                    {o.deliveryProvider && o.deliveryProvider !== "own" ? ` · ${PROVIDER_LABEL[o.deliveryProvider]}` : ""}
-                    {" · "}
-                    {new Date(o.createdAt).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-body font-semibold leading-tight">
+                      #{o.folio} · {o.customerName ?? SERVICE_TYPE_LABEL[o.serviceType]}
+                    </span>
+                    <span className="block truncate text-caption text-muted-foreground">
+                      {SERVICE_TYPE_LABEL[o.serviceType]}
+                      {o.deliveryProvider && o.deliveryProvider !== "own" ? ` · ${PROVIDER_LABEL[o.deliveryProvider]}` : ""}
+                      {" · "}
+                      {new Date(o.createdAt).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
                   </span>
-                </span>
-                <span className="shrink-0 text-body font-semibold tabular-nums">{totalLabel(o)}</span>
-              </button>
-            </li>
-          ))}
+                  <span className="shrink-0 text-body font-semibold tabular-nums">{totalLabel(o)}</span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -132,6 +154,7 @@ export function CounterOrdersPanel({
         />
       )}
 
+      {/* Solo para editar: el alta usa el flujo "Nuevo pedido" de Caja. */}
       <CounterOrderModal
         open={modal !== null}
         onOpenChange={(o) => !o && setModal(null)}
