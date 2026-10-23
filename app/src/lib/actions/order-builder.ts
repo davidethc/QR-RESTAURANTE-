@@ -9,7 +9,7 @@ import { hasPermission, isManager } from "@/lib/permissions";
 import type { ActionResult } from "@/types/actions";
 import type { PublicCategory, StaffProductDetail } from "@/types/menu";
 import type { TableStatus } from "@/config/constants";
-import type { TopProduct } from "@/types/staff";
+import type { MyRestaurant, TopProduct } from "@/types/staff";
 
 /**
  * Datos del constructor de pedidos de Caja ("Nuevo pedido"). Se piden al
@@ -18,8 +18,9 @@ import type { TopProduct } from "@/types/staff";
  * (get_public_menu, get_tables_status, catálogo del personal); los pedidos
  * se crean con las acciones de siempre (createCounterOrder, addTicket).
  *
- * Quién: los mismos que pueden tomar pedidos (OWNER/ADMIN/WAITER, lo exige
- * la RPC). El mesero no entra a /cash, pero la regla vive aquí igual.
+ * Quién: los mismos que pueden tomar pedidos (OWNER/ADMIN/WAITER y CASHIER
+ * con caja asignada, lo exige la RPC). El mesero no entra a /cash, pero la
+ * regla vive aquí igual.
  */
 
 export interface BuilderTable {
@@ -37,14 +38,14 @@ export interface OrderBuilderData {
   tables: BuilderTable[];
 }
 
-function canTakeOrders(role: string): boolean {
-  return isManager(role) || hasPermission(role, "tables");
+function canTakeOrders(session: MyRestaurant): boolean {
+  return isManager(session.role) || hasPermission(session, "tables") || hasPermission(session, "pos");
 }
 
 export async function getOrderBuilderData(): Promise<ActionResult<OrderBuilderData>> {
   try {
     const session = await getMyRestaurant();
-    if (!canTakeOrders(session.role)) return { ok: false, error: "No autorizado para tomar pedidos." };
+    if (!canTakeOrders(session)) return { ok: false, error: "No autorizado para tomar pedidos." };
     const [menu, topProducts, details, tables] = await Promise.all([
       getPublicMenu(session.restaurant.slug),
       getTopProducts(session.restaurant.id),
@@ -79,7 +80,7 @@ export async function getTableOrderTarget(tableId: string): Promise<ActionResult
   if (!parsed.success) return { ok: false, error: "Mesa inválida." };
   try {
     const session = await getMyRestaurant();
-    if (!canTakeOrders(session.role)) return { ok: false, error: "No autorizado para tomar pedidos." };
+    if (!canTakeOrders(session)) return { ok: false, error: "No autorizado para tomar pedidos." };
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("orders")

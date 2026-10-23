@@ -94,7 +94,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
         bills={openBillsResult.ok ? openBillsResult.data : []}
         closedToday={closedBillsToday}
         canManage={canManage}
-        canTakeOrders={canManage || hasPermission(role, "tables")}
+        canTakeOrders={canManage || hasPermission(session, "tables") || hasPermission(session, "pos")}
         billingEnabled={settings.billing_enabled}
         timeZone={session.restaurant.timezone}
         initialSelected={cuenta ?? null}
