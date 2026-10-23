@@ -34,8 +34,8 @@ export function DailyBars({
   const showEvery = days.length > 10 ? 5 : 1;
 
   return (
-    <figure className="flex flex-col gap-3 rounded-card border border-border bg-card p-5">
-      <figcaption className="text-body font-semibold text-foreground">Venta por día</figcaption>
+    <figure className="flex flex-col gap-3 p-4">
+      <figcaption className="sr-only">Venta por día</figcaption>
       <div className="flex h-40 items-end gap-[2px]" role="list">
         {days.map((d) => {
           const pct = max > 0 ? (d.total / max) * 100 : 0;
@@ -54,7 +54,7 @@ export function DailyBars({
                 </span>
               )}
               <div
-                className="w-full rounded-t-[4px] bg-primary transition-opacity group-hover:opacity-80"
+                className="w-full rounded-t-[4px] bg-money-in transition-opacity duration-150 group-hover:opacity-80 motion-reduce:transition-none"
                 style={{ height: `${Math.max(pct, d.total > 0 ? 2 : 0)}%` }}
               />
             </div>

@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Minus, Plus, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, Armchair, ArrowLeft, Circle, Info, LayoutGrid, Loader2, Minus, Plus, Save, Settings2, Square, Trash2 } from "lucide-react";
+import { posPressable, toneSolid } from "@/components/shared/pos-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +64,7 @@ function Stepper({
         <Button
           type="button"
           variant="outline"
-          className="size-11 rounded-xl"
+          className="size-11"
           aria-label={`Reducir ${label.toLowerCase()}`}
           disabled={value <= min}
           onClick={() => onChange(value - 1)}
@@ -76,7 +77,7 @@ function Stepper({
         <Button
           type="button"
           variant="outline"
-          className="size-11 rounded-xl"
+          className="size-11"
           aria-label={`Aumentar ${label.toLowerCase()}`}
           onClick={() => onChange(value + 1)}
         >
@@ -134,6 +135,7 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
   const [pending, start] = useTransition();
 
   const placed = tables.filter((t) => t.col !== null && t.row !== null);
+  const unplaced = tables.filter((t) => t.col === null || t.row === null);
   const selected = draft ? (tables.find((t) => t.id === draft.id) ?? null) : null;
   const effectiveDraft = selected ? draft : null;
 
@@ -214,17 +216,25 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
   const patch = (p: Partial<Draft>) => d && setDraft({ ...d, ...p });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      <header className="flex items-center gap-3 border-b px-3 py-2 md:px-6">
-        <Button asChild variant="ghost" className="min-h-11 rounded-xl">
+    <div data-caja className="fixed inset-0 z-50 flex flex-col bg-background">
+      <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-3 md:px-5">
+        <Button asChild variant="outline" className="min-h-11">
           <Link href="/settings">
             <ArrowLeft /> Salir
           </Link>
         </Button>
-        <h1 className="min-w-0 flex-1 truncate text-center font-display text-lg font-semibold">
-          {name || "Zona sin nombre"}
-        </h1>
-        <Button onClick={save} disabled={pending} className="clay clay-primary min-h-11 rounded-xl">
+        <span aria-hidden className="hidden size-11 shrink-0 items-center justify-center rounded-full bg-info text-white sm:flex">
+          <LayoutGrid className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-body font-semibold leading-tight text-foreground">
+            {name || "Zona sin nombre"}
+          </h1>
+          <p className="truncate text-meta leading-tight text-muted-foreground">
+            {tables.length} {tables.length === 1 ? "mesa" : "mesas"} · plano de {cols} × {rows}
+          </p>
+        </div>
+        <Button onClick={save} disabled={pending} className={cn(posPressable, toneSolid["money-in"], "min-h-11 px-5")}>
           {pending ? <Loader2 className="animate-spin" /> : <Save />} Guardar
         </Button>
       </header>
@@ -232,14 +242,19 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
       {error && (
         <p
           role="alert"
-          className="border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-body-sm text-destructive"
+          className="flex items-center gap-2 border-b border-money-out-border bg-money-out-soft px-4 py-2.5 text-body-sm text-money-out-soft-foreground"
         >
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
           {error}
         </p>
       )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
-        <aside className="flex w-full shrink-0 flex-col gap-5 border-b p-4 md:w-80 md:overflow-y-auto md:border-b-0 md:border-r">
+        <aside className="flex w-full shrink-0 flex-col gap-4 border-b border-border p-4 md:w-80 md:overflow-y-auto md:border-b-0 md:border-r">
+          <section aria-labelledby="zone-panel" className="flex flex-col gap-4 rounded-card border border-border bg-card p-4">
+          <h2 id="zone-panel" className="flex items-center gap-2 text-body font-semibold text-foreground">
+            <Settings2 className="size-4 text-muted-foreground" aria-hidden /> Zona
+          </h2>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="zone-name-edit">Nombre de zona</Label>
             <Input
@@ -252,10 +267,42 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
           </div>
           <GridSizeField label="Columnas" value={cols} onChange={setCols} />
           <GridSizeField label="Filas" value={rows} onChange={setRows} />
+          </section>
+
+          {unplaced.length > 0 && (
+            <section aria-labelledby="unplaced-panel" className="hidden flex-col gap-3 rounded-card border border-attention-border bg-card p-4 md:flex">
+              <div>
+                <h2 id="unplaced-panel" className="flex items-center gap-2 text-body font-semibold text-foreground">
+                  <AlertTriangle className="size-4 text-attention-soft-foreground" aria-hidden /> Mesas sin colocar
+                </h2>
+                <p className="text-meta text-muted-foreground">Elige una y ponle columna y fila para que aparezca en el plano.</p>
+              </div>
+              <ul className="flex flex-wrap gap-2">
+                {unplaced.map((t) => (
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      onClick={() => select(t)}
+                      aria-pressed={d?.id === t.id}
+                      className={cn(
+                        posPressable,
+                        "flex min-h-11 items-center rounded-control border-2 px-3 text-body-sm font-semibold tabular-nums",
+                        d?.id === t.id ? "border-foreground bg-foreground text-background" : "border-attention-border bg-attention-soft text-attention-soft-foreground"
+                      )}
+                    >
+                      Mesa {t.number}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {d ? (
-            <div className="flex flex-col gap-4 rounded-xl border bg-card p-3">
-              <h2 className="font-display font-semibold">Mesa seleccionada</h2>
+            <section aria-labelledby="table-panel" className="flex flex-col gap-4 rounded-card border-2 border-foreground bg-card p-4 shadow-sm">
+              <h2 id="table-panel" className="flex items-center gap-2 text-body font-semibold text-foreground">
+                <Armchair className="size-4 text-muted-foreground" aria-hidden /> Mesa {d.number || selected?.number}
+              </h2>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="table-number">Identificador de mesa</Label>
                 <Input
@@ -272,16 +319,20 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
                 <Label>Forma</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {(["square", "round"] as const).map((s) => (
-                    <Button
+                    <button
                       key={s}
                       type="button"
-                      variant={d.shape === s ? "default" : "outline"}
                       aria-pressed={d.shape === s}
-                      className="min-h-11 rounded-xl"
+                      className={cn(
+                        posPressable,
+                        "flex min-h-12 items-center justify-center gap-2 rounded-control border-2 text-body-sm font-semibold",
+                        d.shape === s ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground hover:border-border-strong"
+                      )}
                       onClick={() => patch({ shape: s })}
                     >
+                      {s === "square" ? <Square className="size-4" aria-hidden /> : <Circle className="size-4" aria-hidden />}
                       {s === "square" ? "Cuadrada" : "Redonda"}
-                    </Button>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -314,7 +365,8 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
                 </div>
               </div>
               {clash && (
-                <p role="alert" className="text-meta text-destructive">
+                <p role="alert" className="flex gap-2 rounded-control border border-money-out-border bg-money-out-soft p-2.5 text-meta text-money-out-soft-foreground">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
                   Esta mesa se solapa con otra o se sale de la cuadrícula. Ajusta la posición o el
                   tamaño antes de guardar.
                 </p>
@@ -333,14 +385,15 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
                 }}
                 onError={setError}
                 trigger={
-                  <Button variant="outline" className="min-h-11 rounded-xl text-destructive">
+                  <Button variant="outline" className="min-h-11 text-money-out-soft-foreground hover:text-money-out-soft-foreground">
                     <Trash2 /> Borrar mesa
                   </Button>
                 }
               />
-            </div>
+            </section>
           ) : (
-            <p className="text-body-sm text-muted-foreground">
+            <p className="flex gap-2 rounded-card border border-info-border bg-info-soft p-3 text-body-sm text-info-soft-foreground">
+              <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
               Toca una mesa para editarla o un “+” para crear una nueva.
             </p>
           )}
@@ -348,7 +401,7 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
 
         <main className="min-w-0 flex-1 p-4 md:overflow-auto">
           {/* Cuadrícula: solo cuando cabe (pantallas medianas en adelante). */}
-          <div className="hidden md:block">
+          <div className="hidden rounded-card border border-border bg-card p-3 md:block">
             <div
               className="grid gap-1.5"
               style={{
@@ -366,7 +419,7 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
                       aria-label={`Crear mesa en columna ${c + 1}, fila ${r + 1}`}
                       onClick={() => addAt(c, r)}
                       style={{ gridColumn: c + 1, gridRow: r + 1 }}
-                      className="flex min-h-14 items-center justify-center rounded-lg border border-dashed text-muted-foreground hover:bg-secondary"
+                      className="flex min-h-14 items-center justify-center rounded-control border border-dashed border-border bg-background text-muted-foreground/60 transition-colors duration-150 hover:border-border-strong hover:bg-secondary hover:text-foreground motion-reduce:transition-none"
                     >
                       <Plus className="size-5" />
                     </button>
@@ -387,9 +440,10 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
                       gridRow: `${t.row! + 1} / span ${t.heightCells}`,
                     }}
                     className={cn(
-                      "flex min-h-14 items-center justify-center border-2 bg-secondary font-semibold",
-                      t.shape === "round" ? "rounded-full" : "rounded-xl",
-                      isSel ? "border-primary" : "border-border"
+                      posPressable,
+                      "flex min-h-14 items-center justify-center border-2 text-body font-semibold tabular-nums",
+                      t.shape === "round" ? "rounded-full" : "rounded-control",
+                      isSel ? "border-foreground bg-foreground text-background shadow-md" : "border-border-strong bg-info-soft text-info-soft-foreground hover:shadow-sm"
                     )}
                   >
                     {isSel ? v.number || t.number : t.number}
@@ -402,13 +456,13 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
           {/* Alternativa para celular: lista de mesas con coordenadas. */}
           <div className="flex flex-col gap-2 md:hidden">
             <div className="flex items-center justify-between">
-              <h2 className="font-display font-semibold">Mesas ({tables.length})</h2>
-              <Button onClick={addFirstFree} disabled={pending} className="min-h-11 rounded-xl">
+              <h2 className="text-body font-semibold text-foreground">Mesas ({tables.length})</h2>
+              <Button onClick={addFirstFree} disabled={pending} className="min-h-11">
                 <Plus /> Nueva mesa
               </Button>
             </div>
             {tables.length === 0 && (
-              <p className="text-body-sm text-muted-foreground">Aún no hay mesas en esta zona.</p>
+              <p className="rounded-card border border-dashed border-border bg-card p-4 text-center text-body-sm text-muted-foreground">Aún no hay mesas en esta zona. Toca “Nueva mesa”.</p>
             )}
             <ul className="flex flex-col gap-2">
               {tables.map((t) => (
@@ -418,8 +472,9 @@ export function FloorEditor({ zone, tables }: { zone: ZoneRow; tables: ZoneTable
                     onClick={() => select(t)}
                     aria-pressed={d?.id === t.id}
                     className={cn(
-                      "flex min-h-11 w-full items-center justify-between rounded-xl border bg-card px-3 py-2 text-left",
-                      d?.id === t.id && "border-primary"
+                      posPressable,
+                      "flex min-h-12 w-full items-center justify-between gap-3 rounded-card border-2 bg-card px-3 py-2 text-left",
+                      d?.id === t.id ? "border-foreground" : "border-border"
                     )}
                   >
                     <span className="font-semibold">Mesa {t.number}</span>

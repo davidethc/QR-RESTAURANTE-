@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CalendarDays } from "lucide-react";
 import {
   segmentedItemClass,
   segmentedListClass,
@@ -55,13 +56,16 @@ export function SegmentedLinks({
 
 export function RangeTabs({ active }: { active: SalesRange }) {
   return (
-    <SegmentedLinks
+    <div className="flex items-center gap-2">
+      <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
+      <SegmentedLinks
       ariaLabel="Periodo"
       options={RANGES.map((r) => ({
         href: r.value === "hoy" ? "/sales" : `/sales?range=${r.value}`,
         label: r.label,
         active: r.value === active,
       }))}
-    />
+      />
+    </div>
   );
 }

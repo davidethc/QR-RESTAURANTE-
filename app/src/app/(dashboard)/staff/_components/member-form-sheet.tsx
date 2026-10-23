@@ -1,7 +1,25 @@
 "use client";
 
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
-import { Check, Copy, KeyRound, X } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  ChefHat,
+  ConciergeBell,
+  Copy,
+  Crown,
+  KeyRound,
+  Power,
+  ShieldCheck,
+  Store,
+  UserCog,
+  UserRound,
+  Wallet,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import { toneSoft } from "@/components/shared/pos-tone";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -92,6 +110,39 @@ const roles = [
   ],
 ] as const;
 
+const ROLE_ICONS: Record<(typeof roles)[number][0], LucideIcon> = {
+  SUPER_ADMIN: Crown,
+  ADMIN: ShieldCheck,
+  MEMBERS_ADMIN: UserCog,
+  BRANCH_MANAGER: Store,
+  MENU_MANAGER: BookOpen,
+  CASHIER: Wallet,
+  WAITER: ConciergeBell,
+  KITCHEN: ChefHat,
+};
+
+function SectionTitle({
+  id,
+  icon: Icon,
+  step,
+  children,
+}: {
+  id?: string;
+  icon: LucideIcon;
+  step?: number;
+  children: ReactNode;
+}) {
+  return (
+    <h3 id={id} className="mb-4 flex items-center gap-2.5 text-body font-semibold text-foreground">
+      <span aria-hidden className="flex size-8 items-center justify-center rounded-control border border-border bg-secondary text-muted-foreground">
+        <Icon className="size-4" />
+      </span>
+      {step ? <span className="sr-only">Paso {step}: </span> : null}
+      {children}
+    </h3>
+  );
+}
+
 export type MemberFormSheetProps = {
   restaurantId: string;
   registers: readonly CashRegisterOption[];
@@ -106,6 +157,7 @@ function Choice({
   description,
   checked,
   disabled,
+  icon: Icon,
   onChange,
 }: {
   id: string;
@@ -113,13 +165,32 @@ function Choice({
   description?: string;
   checked: boolean;
   disabled?: boolean;
+  icon?: LucideIcon;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <FieldLabel
       htmlFor={id}
-      className={`min-h-11 w-full items-start gap-3 rounded-control px-2 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${disabled ? "cursor-default bg-muted" : "cursor-pointer hover:bg-muted"}`}
+      className={cn(
+        "min-h-14 w-full items-start gap-3 rounded-control border-2 p-3 transition-[border-color,background-color,box-shadow] duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring motion-reduce:transition-none",
+        disabled
+          ? "cursor-default border-dashed border-border bg-muted"
+          : checked
+            ? "cursor-pointer border-foreground bg-card shadow-sm"
+            : "cursor-pointer border-border bg-card hover:border-border-strong",
+      )}
     >
+      {Icon && (
+        <span
+          aria-hidden
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-control border",
+            checked ? "border-foreground bg-foreground text-background" : "border-border bg-secondary text-muted-foreground",
+          )}
+        >
+          <Icon className="size-4" />
+        </span>
+      )}
       <Checkbox
         id={id}
         checked={checked}
@@ -127,7 +198,7 @@ function Choice({
         onCheckedChange={(value) => onChange(value === true)}
         aria-labelledby={`${id}-title`}
         aria-describedby={description ? `${id}-description` : undefined}
-        className="mt-0.5 size-5 after:-inset-3"
+        className={cn("mt-0.5 size-5 after:-inset-3", Icon && "order-last")}
       />
       <span className="min-w-0 flex-1">
         <span id={`${id}-title`} className="block text-body font-medium">
@@ -136,7 +207,7 @@ function Choice({
         {description && (
           <span
             id={`${id}-description`}
-            className="mt-1 block text-body-sm font-normal leading-relaxed text-muted-foreground"
+            className="mt-0.5 block text-meta font-normal leading-snug text-muted-foreground"
           >
             {description}
           </span>
@@ -245,6 +316,7 @@ export function MemberFormSheet(props: MemberFormSheetProps) {
       <SheetTrigger asChild>{props.trigger}</SheetTrigger>
       <SheetContent
         showCloseButton={false}
+        data-caja
         className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none lg:data-[side=right]:w-[min(64rem,100%)]"
       >
         {open && (
@@ -418,7 +490,7 @@ function MemberForm({
   }
   return (
     <>
-      <SheetHeader className="shrink-0 border-b p-5 pr-18 sm:p-6 sm:pr-20">
+      <SheetHeader className="shrink-0 border-b border-border bg-card p-5 pr-18 sm:p-6 sm:pr-20">
         <SheetTitle className="text-title font-semibold">
           {editing ? "Editar miembro" : "Agregar miembro"}
         </SheetTitle>
@@ -445,11 +517,11 @@ function MemberForm({
         className="flex min-h-0 flex-1 flex-col"
       >
         <div
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background"
           data-member-scroll
         >
           <div className="grid items-start gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-            <fieldset disabled={saving} className="min-w-0 space-y-7">
+            <fieldset disabled={saving} className="min-w-0 space-y-4">
               <Button
                 type="button"
                 variant="outline"
@@ -461,13 +533,10 @@ function MemberForm({
               >
                 Ver vista previa
               </Button>
-              <section aria-labelledby={`${id}-identity`}>
-                <h3
-                  id={`${id}-identity`}
-                  className="mb-4 text-title-sm font-semibold"
-                >
+              <section aria-labelledby={`${id}-identity`} className="rounded-card border border-border bg-card p-4 sm:p-5">
+                <SectionTitle id={`${id}-identity`} icon={UserRound} step={1}>
                   Datos del miembro
-                </h3>
+                </SectionTitle>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {(["firstName", "lastName"] as const).map((field) => (
                     <Field key={field} data-invalid={!!errors[field]}>
@@ -494,26 +563,28 @@ function MemberForm({
                 </div>
               </section>
               <section
-                className="space-y-4 border-t pt-6"
+                className="space-y-4 rounded-card border border-border bg-card p-4 sm:p-5"
                 aria-labelledby={`${id}-access`}
               >
-                <h3 id={`${id}-access`} className="text-title-sm font-semibold">
+                <SectionTitle id={`${id}-access`} icon={KeyRound} step={2}>
                   Acceso al local
-                </h3>
+                </SectionTitle>
                 <p className="text-body-sm text-muted-foreground">
                   El PIN se genera automáticamente y se muestra una sola vez al
                   guardar.
                 </p>
                 <Field>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-border bg-background p-3">
                     <Badge
                       variant="secondary"
-                      className={
+                      className={cn(
+                        "h-7 gap-1 border px-2.5",
                         editing && !generatePin && initialMember.hasPin !== false
-                          ? "bg-primary-soft text-primary"
-                          : "bg-warning-soft text-warning-soft-foreground"
-                      }
+                          ? toneSoft.info
+                          : toneSoft.attention,
+                      )}
                     >
+                      <KeyRound className="size-3.5" aria-hidden />
                       {!editing
                         ? "Se generará al guardar"
                         : generatePin
@@ -539,7 +610,8 @@ function MemberForm({
                           className="min-h-11"
                           aria-invalid={!!errors.pin}
                           aria-describedby={errorId("pin")}
-                          onClick={() => setConfirmPin(true)}
+                          onClick={() => setConfirmPin((value) => !value)}
+                          aria-expanded={confirmPin}
                         >
                           <KeyRound aria-hidden />
                           Generar nuevo PIN
@@ -548,18 +620,25 @@ function MemberForm({
                   </div>
                   {fieldError("pin")}
                 </Field>
-                <AlertDialog open={confirmPin} onOpenChange={setConfirmPin}>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Generar un PIN nuevo?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        El PIN anterior deja de servir en cuanto guardes.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="min-h-11">
+                {confirmPin && !generatePin && (
+                  <div
+                    role="group"
+                    aria-labelledby={`${id}-pin-confirm`}
+                    className="flex flex-col gap-3 rounded-control border border-attention-border bg-attention-soft p-3 text-attention-soft-foreground"
+                  >
+                    <div>
+                      <p id={`${id}-pin-confirm`} className="text-body-sm font-semibold">¿Generar un PIN nuevo?</p>
+                      <p className="text-meta">El PIN anterior deja de servir en cuanto guardes.</p>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11 bg-card"
+                        onClick={() => setConfirmPin(false)}
+                      >
                         Cancelar
-                      </AlertDialogCancel>
+                      </Button>
                       <Button
                         type="button"
                         className="min-h-11"
@@ -572,9 +651,9 @@ function MemberForm({
                       >
                         Generar nuevo PIN
                       </Button>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                    </div>
+                  </div>
+                )}
                 <p className="text-body-sm text-muted-foreground">
                   El acceso por correo está habilitado para todos los miembros.
                 </p>
@@ -659,14 +738,14 @@ function MemberForm({
                 tabIndex={-1}
                 aria-invalid={!!errors.roles}
                 aria-describedby={errorId("roles")}
-                className="border-t pt-6 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-card border border-border bg-card p-4 sm:p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <legend className="sr-only">Roles combinables</legend>
-                <h3 className="text-title-sm font-semibold">Roles</h3>
-                <p className="mb-3 mt-2 text-body-sm text-muted-foreground">
+                <SectionTitle icon={ShieldCheck} step={3}>Roles</SectionTitle>
+                <p className="mb-3 mt-1 text-body-sm text-muted-foreground">
                   Puedes combinar varios roles. Sus permisos se suman.
                 </p>
-                <div className="divide-y">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {roles.map(([role, title, description]) =>
                     role === "SUPER_ADMIN" ? (
                       <Choice
@@ -674,6 +753,7 @@ function MemberForm({
                         id={`${id}-${role}`}
                         title={title}
                         description={description}
+                        icon={ROLE_ICONS[role]}
                         checked={false}
                         disabled
                         onChange={() => {}}
@@ -684,6 +764,7 @@ function MemberForm({
                         id={`${id}-${role}`}
                         title={title}
                         description={description}
+                        icon={ROLE_ICONS[role]}
                         checked={member.roles.includes(role)}
                         disabled={!assignableRoles.includes(role)}
                         onChange={(checked) =>
@@ -712,17 +793,15 @@ function MemberForm({
                   tabIndex={-1}
                   aria-invalid={!!errors.cashRegisterIds}
                   aria-describedby={errorId("cashRegisterIds")}
-                  className="border-t pt-6 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="rounded-card border border-border bg-card p-4 sm:p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <legend className="sr-only">Cajas asignadas</legend>
-                  <h3 className="text-title-sm font-semibold">
-                    Cajas asignadas
-                  </h3>
+                  <SectionTitle icon={Wallet}>Cajas asignadas</SectionTitle>
                   <p className="my-3 text-body-sm text-muted-foreground">
                     Selecciona al menos una caja activa del local.
                   </p>
                   {!registers.length && (
-                    <p className="rounded-control bg-muted p-3 text-body-sm">
+                    <p className="rounded-control border border-attention-border bg-attention-soft p-3 text-body-sm text-attention-soft-foreground">
                       No hay cajas activas disponibles. Solicita una caja al
                       administrador o retira el rol Cajero.
                     </p>
@@ -732,6 +811,7 @@ function MemberForm({
                       key={register.id}
                       id={`${id}-register-${register.id}`}
                       title={register.name}
+                      icon={Wallet}
                       checked={member.cashRegisterIds.includes(register.id)}
                       onChange={(checked) =>
                         update({
@@ -747,10 +827,11 @@ function MemberForm({
                   {fieldError("cashRegisterIds")}
                 </fieldset>
               )}
-              <Field className="border-t pt-6" data-invalid={!!errors.active}>
+              <Field className="rounded-card border border-border bg-card p-4 sm:p-5" data-invalid={!!errors.active}>
                 <Choice
                   id={`${id}-active`}
                   title="Miembro activo"
+                  icon={Power}
                   description="Si está inactivo, no podrá ingresar a su cuenta."
                   checked={member.active}
                   onChange={(checked) => update({ active: checked })}
@@ -763,13 +844,13 @@ function MemberForm({
               id={`${id}-preview`}
               tabIndex={-1}
               aria-label="Vista previa del miembro"
-              className="min-w-0 scroll-mt-6 rounded-card border bg-background p-6 outline-none focus-visible:ring-2 focus-visible:ring-ring lg:sticky lg:top-6"
+              className="min-w-0 scroll-mt-6 rounded-card border border-border bg-card p-5 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring lg:sticky lg:top-0"
             >
               <p className="mb-6 text-meta text-muted-foreground">
                 Así quedará su acceso
               </p>
               <Avatar className="mb-4 size-14">
-                <AvatarFallback className="bg-primary-soft text-title text-primary">
+                <AvatarFallback className="border border-info-border bg-info-soft text-title text-info-soft-foreground">
                   {[member.firstName[0], member.lastName[0]]
                     .filter(Boolean)
                     .join("")
@@ -791,7 +872,7 @@ function MemberForm({
                     .map(([role, label]) => (
                       <Badge
                         key={role}
-                        className="h-auto whitespace-normal bg-primary-soft text-primary"
+                        className={cn("h-auto whitespace-normal border", toneSoft.info)}
                       >
                         {label}
                       </Badge>
@@ -799,7 +880,7 @@ function MemberForm({
                 ) : (
                   <Badge variant="secondary">Sin roles asignados</Badge>
                 )}
-                <Badge variant="secondary">
+                <Badge className={cn("border", toneSoft[member.active ? "money-in" : "neutral"])}>
                   {member.active ? "Activo" : "Inactivo"}
                 </Badge>
               </div>
@@ -836,7 +917,7 @@ function MemberForm({
             </aside>
           </div>
         </div>
-        <div className="shrink-0 space-y-3 border-t bg-card p-4 sm:px-6">
+        <div className="shrink-0 space-y-3 border-t border-border bg-card p-4 sm:px-6">
           {serverError && (
             <p
               ref={errorRef}

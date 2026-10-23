@@ -13,6 +13,7 @@ import {
   SegmentedControl,
   type SegmentedControlOption,
 } from "@/components/shared/segmented-control";
+import { ReportCard } from "./report-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { ReportGranularity, SalesByPeriodRow } from "@/types/reports";
@@ -64,21 +65,24 @@ export function SalesPeriodChart({
   }));
 
   return (
-    <div className="rounded-card border border-border bg-card p-5">
-      <div className="mb-3 flex flex-row items-center justify-between gap-3">
-        <h3 className="text-body font-semibold text-foreground">Ventas por periodo</h3>
+    <ReportCard
+      id="report-period"
+      title="Ventas por periodo"
+      icon={BarChart3}
+      aside={
         <SegmentedControl
-          aria-label="Granularidad"
+          aria-label="Agrupar por"
           size="sm"
           options={GRANULARITY_OPTIONS}
           value={granularity}
           onValueChange={onGranularityChange}
           disabled={disabled}
         />
-      </div>
+      }
+    >
       <div>
         {data.length === 0 ? (
-          <EmptyState icon={BarChart3} title="Sin ventas en este rango" />
+          <EmptyState icon={BarChart3} title="Sin ventas en este rango" description="Elige otro rango de fechas arriba." />
         ) : (
           <ChartContainer config={chartConfig} className="aspect-auto h-[280px] w-full">
             <BarChart data={data} barGap={2}>
@@ -106,6 +110,6 @@ export function SalesPeriodChart({
           </ChartContainer>
         )}
       </div>
-    </div>
+    </ReportCard>
   );
 }
