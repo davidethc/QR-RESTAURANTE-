@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCutDate } from "@/lib/cash-cut";
 import { cn, formatPrice } from "@/lib/utils";
 import { CashTabs } from "../_components/cash-tabs";
-import { CashMovementDialog } from "../_components/cash-movement-dialog";
+import { CashFlowActions } from "../_components/cash-flow-actions";
 import { REASON_LABEL } from "@/lib/cash-labels";
 
 export const instant = false;
@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Entradas y retiros" };
 const FILTERS = [
   { value: "all", label: "Todos" },
   { value: "IN", label: "Entradas" },
-  { value: "OUT", label: "Retiros" },
+  { value: "OUT", label: "Salidas" },
 ] as const;
 
 export default async function MovementsPage({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
@@ -48,10 +48,12 @@ export default async function MovementsPage({ searchParams }: { searchParams: Pr
     <main>
       <PageHeader
         title="Caja"
-        description="Entradas y retiros de efectivo"
+        description="Dinero que entró y salió de la caja"
         action={
           openSessions.length > 0 ? (
-            <CashMovementDialog sessions={openSessions} label="Nuevo movimiento" />
+            <div className="flex flex-wrap gap-2">
+              <CashFlowActions session={openSessions[0]} />
+            </div>
           ) : undefined
         }
       />

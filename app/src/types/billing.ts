@@ -311,15 +311,3 @@ export type CashMovementRow = {
   created_at: string;
 };
 
-/** Respuesta de create_counter_sale (C5). `replayed` = reintento con la misma clave. */
-export type CounterSale = {
-  order_id: string;
-  bill_id: string;
-  bill_number: number;
-  table_session_id: string;
-  counter_number: number;
-  customer_label: string | null;
-  place_label: string;
-  replayed: boolean;
-  bill: Bill;
-};
