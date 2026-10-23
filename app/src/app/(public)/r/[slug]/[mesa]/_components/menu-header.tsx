@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { UtensilsCrossed } from "lucide-react";
 import type { PublicRestaurant } from "@/types/menu";
 
 /**
@@ -27,37 +28,37 @@ export function MenuHeader({
   tableNumber: number | null;
 }) {
   return (
-    <header className="bg-primary-dark text-primary-dark-foreground flex items-center gap-3 px-4 py-3.5">
-      {restaurant.logo_url && (
-        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-1 ring-white/25">
-          <Image
-            src={restaurant.logo_url}
-            alt={restaurant.name}
-            fill
-            sizes="36px"
-            // Es lo primero que se ve arriba del todo y entra en la
-            // medición de LCP: sin `priority` el navegador lo trata
-            // como imagen diferida y compite con el resto de la carta.
-            priority
-            className="object-cover"
-          />
-        </div>
-      )}
+    <header className="bg-primary-dark text-primary-dark-foreground">
+      <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-3.5">
+        {restaurant.logo_url && (
+          <div className="relative size-10 shrink-0 overflow-hidden rounded-full ring-2 ring-white/25">
+            <Image
+              src={restaurant.logo_url}
+              alt={restaurant.name}
+              fill
+              sizes="40px"
+              // First thing on screen and part of LCP: without `priority`
+              // the browser treats it as a deferred image.
+              priority
+              className="object-cover"
+            />
+          </div>
+        )}
 
-      <h1 className="font-display min-w-0 flex-1 truncate text-[20px] font-bold leading-tight">
-        {restaurant.name}
-      </h1>
+        <h1 className="font-display min-w-0 flex-1 truncate text-title font-bold leading-tight">
+          {restaurant.name}
+        </h1>
 
-      {tableNumber !== null && (
-        <span className="flex shrink-0 items-baseline gap-1.5 rounded-lg bg-honey px-2.5 py-1 text-honey-foreground">
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em] opacity-90">
-            Mesa
+        {tableNumber !== null && (
+          <span className="flex shrink-0 items-center gap-1.5 rounded-xl bg-honey px-3 py-1.5 text-honey-foreground">
+            <UtensilsCrossed aria-hidden className="size-4" strokeWidth={2.5} />
+            <span className="text-caption font-bold uppercase tracking-wider">Mesa</span>
+            <span className="font-display text-title font-bold leading-none tabular-nums">
+              {tableNumber}
+            </span>
           </span>
-          <span className="font-display text-[20px] font-bold leading-none">
-            {tableNumber}
-          </span>
-        </span>
-      )}
+        )}
+      </div>
     </header>
   );
 }

@@ -13,24 +13,30 @@ export const metadata: Metadata = { title: "Iniciar sesión" };
 
 export default function LoginPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-[400px] rounded-card border border-border bg-card px-7 py-8 shadow-sm">
-        <div className="mb-7 flex flex-col items-center text-center">
-          <span className="mb-4 grid size-10 place-items-center rounded-control bg-primary text-body font-semibold text-primary-foreground">
+    <main
+      data-caja
+      className="flex flex-1 flex-col items-center justify-center bg-background px-4 py-10 sm:px-6"
+    >
+      <div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-border bg-card shadow-md">
+        <div className="flex items-center gap-3.5 border-b border-border px-6 py-5 sm:px-7">
+          <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-foreground text-title font-bold text-background">
             M
           </span>
-          <p className="text-meta font-medium text-muted-foreground">Monky</p>
-          <h1 className="mt-1 text-2xl font-semibold text-foreground">
-            Panel de Monky
-          </h1>
-          <p className="mt-1 text-body-sm text-muted-foreground">
-            Inicia sesión para gestionar pedidos y solicitudes.
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-title-lg font-bold leading-tight text-foreground">
+              Panel de Monky
+            </h1>
+            <p className="mt-0.5 text-body-sm text-muted-foreground">
+              Inicia sesión para gestionar pedidos y solicitudes.
+            </p>
+          </div>
         </div>
+        <div className="px-6 py-6 sm:px-7">
         <Suspense fallback={null}>
           <LoginNotice />
         </Suspense>
         <LoginForm />
+        </div>
       </div>
     </main>
   );

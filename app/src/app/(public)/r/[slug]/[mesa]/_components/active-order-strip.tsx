@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { OrderStatusBadge } from "@/components/shared/status-badge";
+import { ChevronDown, ChevronRight, ClipboardList } from "lucide-react";
+import { OrderStatusChip } from "./order-status-chip";
 import { useTableStatus } from "./table-status-provider";
 import { cn } from "@/lib/utils";
 import type { SessionOrderSummary } from "@/types/staff";
@@ -47,28 +47,35 @@ export function ActiveOrderStrip({
   )[0];
 
   return (
-    <div className="border-b border-border bg-card">
-      {/* Colapsado por defecto: con varios pedidos, ver el detalle de
-          todos es la excepción, no la norma. */}
+    <div>
+      {/* Collapsed by default: with several orders, seeing every one is
+          the exception, not the rule. */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex min-h-13 w-full items-center gap-3 px-4 py-3 text-left active:bg-muted"
+        className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-secondary/60 active:bg-secondary"
       >
-        <span className="flex-1 text-[15px] font-medium text-foreground">
-          {orders.length} pedidos en curso
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
+          <ClipboardList aria-hidden className="size-5" />
         </span>
-        <OrderStatusBadge status={mostAdvanced.status} />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-body-lg font-semibold text-foreground">
+            {orders.length} pedidos en curso
+          </span>
+          <span className="text-meta text-muted-foreground">Toca para ver cada uno</span>
+        </span>
+        <OrderStatusChip status={mostAdvanced.status} />
         <ChevronDown
+          aria-hidden
           className={cn(
-            "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+            "size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
             expanded && "rotate-180"
           )}
         />
       </button>
 
-      <div hidden={!expanded}>
+      <div hidden={!expanded} className="border-t border-border bg-secondary/40">
         {orders.map((order) => (
           <OrderRow key={order.id} order={order} href={hrefFor(order)} nested />
         ))}
@@ -87,34 +94,28 @@ function OrderRow({
   nested?: boolean;
 }) {
   return (
-    <>
     <Link
       href={href}
       className={cn(
-        "flex min-h-13 items-center gap-3 bg-card px-4 py-3 active:bg-muted",
-        nested ? "border-t border-border/60 pl-6" : "border-b border-border"
+        "flex min-h-16 items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-secondary/60 active:bg-secondary",
+        nested && "border-b border-border/70 last:border-b-0"
       )}
     >
-      <span className="flex min-w-0 flex-1 items-baseline gap-2">
-        <span className="text-[15px] font-medium text-foreground">
+      {!nested && (
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
+          <ClipboardList aria-hidden className="size-5" />
+        </span>
+      )}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-body-lg font-semibold text-foreground">
           Pedido #{order.order_number}
         </span>
-        <span className="shrink-0 text-[13px] text-muted-foreground">
-          {order.item_count} {order.item_count === 1 ? "plato" : "platos"}
+        <span className="text-meta text-muted-foreground">
+          {order.item_count} {order.item_count === 1 ? "plato" : "platos"} · Ver estado
         </span>
       </span>
-      <OrderStatusBadge status={order.status} />
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <OrderStatusChip status={order.status} />
+      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
     </Link>
-    {order.status === "PENDING" && (
-      <p
-        role="status"
-        className="flex items-center gap-2 bg-warning/10 px-4 py-2 text-[13px] font-medium text-foreground"
-      >
-        <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-warning" />
-        Esperando aprobación del mesero
-      </p>
-    )}
-    </>
   );
 }

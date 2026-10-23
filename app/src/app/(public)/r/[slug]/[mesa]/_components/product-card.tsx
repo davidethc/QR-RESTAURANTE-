@@ -1,32 +1,33 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import Image from "next/image";
-import { Plus } from "lucide-react";
-import { motion } from "framer-motion";
+import { Ban, Plus, ShoppingBag } from "lucide-react";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { formatPrice, cn } from "@/lib/utils";
 import type { PublicProduct } from "@/types/menu";
 
 /**
- * Tarjeta compacta para las filas horizontales de cada categoría.
+ * One dish of the menu, as a full-width row.
  *
- * No lleva descripción a propósito. Con ella, un plato con tres líneas
- * de texto estiraba toda la fila y los que no tienen quedaban con un
- * hueco; la fila se veía descuadrada. Nombre y precio bastan para
- * elegir, y la descripción está a un toque de distancia en la ficha.
- *
- * Sin foto NO se dibuja el hueco de la foto. Antes se rellenaba con un
- * degradado y el emoji de la categoría, y el resultado eran seis
- * bloques grises idénticos ocupando la mitad de cada tarjeta para no
- * decir nada — se leía como fotos que no cargaron. Sin ese hueco la
- * tarjeta es puro texto y se sostiene sola; cuando el restaurante suba
- * la foto, aparece encima y la tarjeta crece.
+ * - With a photo, the photo leads (88px square, the thing that sells).
+ *   Without one, no gray placeholder is drawn: an empty frame reads as a
+ *   broken image. The row stays pure text and still lines up.
+ * - Price sits under the name, in the restaurant's price color, so the
+ *   eye reads "what" then "how much" in one vertical pass.
+ * - Sold out is an explicit chip with an icon, and the row is disabled:
+ *   never just a faded card the customer has to interpret.
+ * - The "+" is the only filled control in the row: tapping anywhere opens
+ *   the dish, the "+" says that this is how you add it.
  */
-function ProductCardCompactBase({
+function ProductCardBase({
   product,
+  categoryName,
   onSelect,
   quantityInCart = 0,
 }: {
   product: PublicProduct;
+  /** Only in search results: outside its category, "Café con leche" or
+   *  "Pizza pequeña" needs context to say where it came from. */
+  categoryName?: string;
   onSelect?: (product: PublicProduct) => void;
   quantityInCart?: number;
 }) {
@@ -38,166 +39,83 @@ function ProductCardCompactBase({
       disabled={soldOut}
       onClick={() => onSelect?.(product)}
       className={cn(
-        "group flex w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-card text-left",
-        soldOut ? "opacity-55" : "cursor-pointer active:bg-muted"
+        "group flex w-full items-start gap-3.5 bg-card px-4 py-3.5 text-left transition-colors duration-150 ease-out focus-visible:relative focus-visible:z-[1] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none",
+        soldOut ? "cursor-not-allowed" : "cursor-pointer hover:bg-secondary/60 active:bg-secondary"
       )}
     >
       {product.image_url && (
-        <div className="relative h-[92px] w-full overflow-hidden bg-muted">
+        <span className="relative size-[88px] shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
           <Image
             src={product.image_url}
-            alt={product.name}
+            alt=""
             fill
-            sizes="158px"
-            className="object-cover"
+            sizes="88px"
+            className={cn("object-cover", soldOut && "grayscale")}
           />
-        </div>
+        </span>
       )}
 
-      <div className="relative flex flex-1 flex-col gap-1 p-5 shadow-sm">
-        {quantityInCart > 0 && (
-          <span className="absolute right-2.5 top-2.5 rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-tight text-primary-foreground">
-            {quantityInCart}
-          </span>
-        )}
-        <h3 className="font-display line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <h3
+          className={cn(
+            "font-display text-body-lg font-bold leading-snug",
+            soldOut ? "text-muted-foreground" : "text-foreground"
+          )}
+        >
           {product.name}
         </h3>
-        <div className="mt-auto flex items-center justify-between gap-1 pt-1.5">
-          <span className="font-display text-[15px] font-bold tabular-nums text-wine">
+
+        {product.description && (
+          <span className="line-clamp-2 text-meta leading-relaxed text-muted-foreground">
+            {product.description}
+          </span>
+        )}
+
+        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+          <span
+            className={cn(
+              "font-display mr-1 text-body-lg font-bold tabular-nums",
+              soldOut ? "text-muted-foreground line-through decoration-1" : "text-wine"
+            )}
+          >
             {formatPrice(product.price)}
           </span>
-          {soldOut ? (
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              Agotado
-            </span>
-          ) : (
-            <span
-              className="clay clay-primary flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground"
-              aria-hidden="true"
-            >
-              <Plus className="h-4 w-4" strokeWidth={2.75} />
+          {soldOut && (
+            <span className="inline-flex h-6 items-center gap-1 rounded-full border border-border bg-secondary px-2 text-caption font-semibold text-muted-foreground">
+              <Ban aria-hidden className="size-3.5" strokeWidth={2.5} />
+              Agotado hoy
             </span>
           )}
-        </div>
-      </div>
+          {quantityInCart > 0 && (
+            <span className="inline-flex h-6 items-center gap-1 rounded-full border border-money-in-border bg-money-in-soft px-2 text-caption font-semibold text-money-in-soft-foreground">
+              <ShoppingBag aria-hidden className="size-3.5" strokeWidth={2.5} />
+              {quantityInCart} en tu pedido
+            </span>
+          )}
+          {categoryName && (
+            <span className="inline-flex h-6 items-center gap-1 rounded-full border border-border bg-secondary px-2 text-caption font-medium text-muted-foreground">
+              <span aria-hidden>{getCategoryIcon(categoryName)}</span>
+              {categoryName}
+            </span>
+          )}
+        </span>
+      </span>
+
+      {!soldOut && (
+        <span
+          aria-hidden="true"
+          className="clay clay-primary mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform duration-150 ease-out group-active:scale-95 motion-reduce:transition-none"
+        >
+          <Plus className="size-5" strokeWidth={2.5} />
+        </span>
+      )}
     </button>
   );
 }
 
 /**
- * Un plato de la carta.
- *
- * Decisión de diseño sobre las fotos: cuando un plato no tiene imagen
- * NO se dibuja un recuadro gris con un ícono de cubiertos — eso se lee
- * como una foto rota y ensucia toda la carta. En su lugar la tarjeta
- * se compone como una carta impresa de verdad: el nombre manda, y el
- * precio se alinea a la derecha unido por una línea de puntos. Así la
- * carta se ve terminada hoy (sin fotos) y solo mejora cuando el
- * restaurante suba las suyas.
+ * Memoized on purpose: `cartQuantities` in MenuBrowser changes with every
+ * dish added, so without this adding ONE product repainted every card of
+ * every open category.
  */
-function ProductCardBase({
-  product,
-  categoryName,
-  onSelect,
-  quantityInCart = 0,
-}: {
-  product: PublicProduct;
-  /** Solo se pinta en resultados de búsqueda: fuera de su categoría,
-   *  "Café con leche" o "Pizza pequeña" necesitan contexto para saber
-   *  de dónde salieron. Dentro de una categoría sería ruido. */
-  categoryName?: string;
-  onSelect?: (product: PublicProduct) => void;
-  quantityInCart?: number;
-}) {
-  const soldOut = !product.available;
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <motion.button
-      type="button"
-      disabled={soldOut}
-      onClick={() => onSelect?.(product)}
-      onHoverStart={() => !soldOut && setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      className={cn(
-        "group relative flex items-center gap-3 rounded-2xl bg-card px-3.5 py-3 text-left transition-colors duration-200",
-        soldOut ? "opacity-55" : "cursor-pointer active:bg-muted",
-        isHovered && !soldOut ? "shadow-md" : "shadow-sm"
-      )}
-      animate={{ boxShadow: isHovered && !soldOut ? "0 2px 4px oklch(0.4 0.03 50 / 0.06), 0 12px 28px -8px oklch(0.4 0.03 50 / 0.14)" : "0 1px 2px oklch(0.25 0.03 142 / 0.06)" }}
-      transition={{ duration: 0.15 }}
-    >
-      {product.image_url && (
-        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted">
-          <Image
-            src={product.image_url}
-            alt={product.name}
-            fill
-            sizes="64px"
-            className="object-cover"
-          />
-        </div>
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex items-baseline gap-2">
-          <h3 className="font-display text-[15px] font-bold leading-snug text-foreground">
-            {product.name}
-          </h3>
-          {/* Línea de puntos de carta impresa: une nombre y precio sin
-              necesitar una foto que llene el espacio. */}
-          <span
-            aria-hidden
-            className="mb-1 min-w-4 flex-1 border-b border-dotted border-border"
-          />
-          <span className="font-display shrink-0 text-[15px] font-bold tabular-nums text-wine">
-            {formatPrice(product.price)}
-          </span>
-        </div>
-
-        {product.description && (
-          <p className="line-clamp-2 pr-2 text-[13px] leading-relaxed text-muted-foreground">
-            {product.description}
-          </p>
-        )}
-
-        <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
-          {categoryName && (
-            <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium leading-tight text-muted-foreground">
-              <span aria-hidden>{getCategoryIcon(categoryName)}</span>
-              {categoryName}
-            </span>
-          )}
-          {quantityInCart > 0 && (
-            <span className="rounded-full bg-primary/12 px-2 py-0.5 text-[11px] font-semibold leading-tight text-primary">
-              {quantityInCart} en tu pedido
-            </span>
-          )}
-          {soldOut && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold leading-tight text-muted-foreground">
-              Agotado hoy
-            </span>
-          )}
-        </div>
-      </div>
-
-      {!soldOut && (
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center clay clay-primary rounded-full bg-primary text-primary-foreground"
-          aria-hidden="true"
-        >
-          <Plus className="h-[18px] w-[18px]" strokeWidth={2.5} />
-        </div>
-      )}
-    </motion.button>
-  );
-}
-
-/**
- * Memoizadas a propósito: `cartQuantities` en MenuBrowser cambia con
- * cada plato que entra al carrito, así que sin esto agregar UN producto
- * repintaba todas las tarjetas de todas las categorías abiertas.
- */
-export const ProductCardCompact = memo(ProductCardCompactBase);
 export const ProductCard = memo(ProductCardBase);

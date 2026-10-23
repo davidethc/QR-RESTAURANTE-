@@ -1,15 +1,28 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Minus, Plus, Trash2, MessageCircle, ShoppingBag, X, QrCode, Receipt } from "lucide-react";
+import { useState, useMemo, useTransition } from "react";
+import {
+  ChefHat,
+  Info,
+  Loader2,
+  MessageCircle,
+  PencilLine,
+  Plus,
+  QrCode,
+  Receipt,
+  Send,
+  ShoppingBag,
+  Trash2,
+  UtensilsCrossed,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { QuantityStepper } from "@/components/shared/quantity-stepper";
 import { notify, isSessionExpiredMessage } from "@/lib/notifications";
 import { formatPrice } from "@/lib/utils";
 import { createOrder } from "@/lib/actions/orders";
@@ -97,181 +110,256 @@ export function CartSheet({
 
   const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
+  // Confirmations live INSIDE the panel (no dialog stacked over the sheet):
+  // the first tap shows a review step in the footer, the second one sends.
+  const [confirmingSend, setConfirmingSend] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const [sending, startSending] = useTransition();
+
+  // Any change to the cart (or closing it) cancels a pending confirmation,
+  // so "Enviar" never confirms a cart different from the one reviewed.
+  const [reviewedKey, setReviewedKey] = useState(JSON.stringify(orderLines));
+  const currentKey = JSON.stringify(orderLines);
+  if (currentKey !== reviewedKey) {
+    setReviewedKey(currentKey);
+    setConfirmingSend(false);
+  }
+
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      setConfirmingSend(false);
+      setConfirmingClear(false);
+    }
+    onOpenChange(next);
+  }
+
+  function sendOrder() {
+    startSending(async () => {
+      const result = await createOrder({
+        items: orderLines,
+        clientRequestId: requestKey.get(),
+      });
+      if (!result.ok) {
+        notify.error(result.error);
+        if (isSessionExpiredMessage(result.error)) setSessionExpired(true);
+        setConfirmingSend(false);
+        return;
+      }
+      requestKey.renew();
+      notify.orderPlaced();
+      onClearCart();
+      onOpenChange(false);
+      // Full navigation (not `router.push`) on purpose: the order just
+      // created was never prefetched, so Next's client transition tries to
+      // "resume" the generic PPR shell of /order/[id] against this real id
+      // and the server throws `InvariantError: postponed state should not
+      // be provided when fallback params are provided` (Next 16 + Cache
+      // Components + dynamic routes without generateStaticParams,
+      // vercel/next.js#98647). A full load skips that resume protocol.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- see comment above: the full-navigation escape is intentional.
+      window.location.assign(`/r/${slug}/${tableNumber}/order/${result.data}`);
+    });
+  }
+
+  const sendBlocked = inTable && (sessionExpired || orderingClosed);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="flex max-h-[90vh] flex-col gap-0 p-0">
-        {/* Header fijo */}
-        <div className="flex items-center justify-between border-b bg-background px-6 py-4">
-          <div>
-            <SheetTitle className="font-display text-[20px] font-bold">
-              {inTable ? `Mi pedido — Mesa ${tableNumber}` : "Mi pedido"}
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="flex data-[side=bottom]:h-[94dvh] max-h-[94dvh] flex-col gap-0 rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
+      >
+        <div className="flex items-start gap-3 border-b border-border bg-card px-5 pb-4 pt-5 pr-16">
+          <div className="min-w-0 flex-1">
+            <SheetTitle className="font-display text-title-lg font-bold leading-tight">
+              Mi pedido
             </SheetTitle>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {itemCount} {itemCount === 1 ? "item" : "items"}
-            </p>
+            <SheetDescription className="mt-1 flex flex-wrap items-center gap-2 text-body-sm text-muted-foreground">
+              {inTable ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-caption font-semibold text-foreground">
+                  <UtensilsCrossed aria-hidden className="size-3.5" />
+                  Mesa {tableNumber}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-caption font-semibold text-foreground">
+                  <MessageCircle aria-hidden className="size-3.5" />
+                  Por WhatsApp
+                </span>
+              )}
+              <span>
+                {itemCount} {itemCount === 1 ? "producto" : "productos"}
+              </span>
+            </SheetDescription>
           </div>
-          {items.length > 0 && (
-            <ConfirmDialog
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full"
-                  aria-label="Vaciar el pedido"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </Button>
-              }
-              title="¿Vaciar el pedido?"
-              description="Se quitarán todos los platos que agregaste."
-              confirmLabel="Vaciar"
-              destructive
-              action={async () => ({ ok: true as const, data: null })}
-              onSuccess={onClearCart}
-            />
-          )}
         </div>
 
-        {/* Content area - scrollable */}
         <div className="flex-1 overflow-y-auto">
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-4 px-6 py-12">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                <ShoppingBag className="h-8 w-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <p className="font-display text-lg font-bold text-foreground">
-                  Tu carrito está vacío
+            <div className="flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
+              <span className="flex size-16 items-center justify-center rounded-2xl border border-border bg-card">
+                <ShoppingBag aria-hidden className="size-8 text-primary" />
+              </span>
+              <div>
+                <p className="font-display text-title-sm font-bold text-foreground">
+                  Tu pedido está vacío
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Agrega platos para empezar
+                <p className="mt-1 text-body-sm text-muted-foreground">
+                  Elige platos de la carta y aparecerán aquí.
                 </p>
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                className="h-12 rounded-xl px-6 text-body"
+              >
+                Ver la carta
+              </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 px-6 py-4">
-              <AnimatePresence mode="popLayout">
-                {items.map((item, index) => (
-                  <motion.div
-                    key={`${item.product.id}-${index}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-card p-4 ring-1 ring-border/50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display truncate text-[15px] font-bold text-foreground">
-                        {item.product.name}
-                      </p>
-                      {(item.variantName || item.modifiers) && (
-                        <p className="mt-0.5 text-[12px] text-muted-foreground line-clamp-2">
-                          {[item.variantName, item.modifiers].filter(Boolean).join(" · ")}
+            <div className="flex flex-col gap-4 px-4 py-4">
+              <section aria-label="Productos del pedido" className="overflow-hidden rounded-2xl border border-border bg-card">
+                <ul className="flex flex-col divide-y divide-border">
+                  {items.map((item, index) => (
+                    <li
+                      key={`${item.product.id}-${index}`}
+                      className="flex flex-col gap-3 px-4 py-3.5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display text-body-lg font-bold leading-snug text-foreground">
+                            {item.product.name}
+                          </p>
+                          {(item.variantName || item.modifiers) && (
+                            <p className="mt-0.5 line-clamp-2 text-meta text-muted-foreground">
+                              {[item.variantName, item.modifiers].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                          {item.notes && (
+                            <p className="mt-1 flex items-start gap-1 text-meta text-muted-foreground">
+                              <PencilLine aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                              <span className="line-clamp-2">{item.notes}</span>
+                            </p>
+                          )}
+                        </div>
+                        <p className="font-display shrink-0 text-body-lg font-bold tabular-nums text-wine">
+                          {formatPrice(item.subtotal)}
                         </p>
-                      )}
-                      {item.notes && (
-                        <p className="mt-0.5 text-[12px] text-muted-foreground line-clamp-1">
-                          {item.notes}
-                        </p>
-                      )}
-                      <p className="font-display mt-2 text-[16px] font-bold text-wine">
-                        {formatPrice(item.subtotal)}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      {/* Quantity controls */}
-                      <div className="flex items-center gap-1.5 rounded-xl bg-muted/50 p-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 rounded-md p-0"
-                          onClick={() =>
-                            onUpdateQuantity(index, item.quantity - 1)
-                          }
-                          aria-label={`Disminuir cantidad de ${item.product.name}`}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="font-display w-6 text-center text-sm font-bold tabular-nums">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 rounded-md p-0"
-                          onClick={() =>
-                            onUpdateQuantity(index, item.quantity + 1)
-                          }
-                          aria-label={`Aumentar cantidad de ${item.product.name}`}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
                       </div>
 
-                      {/* Delete */}
+                      <div className="flex items-center justify-between gap-3">
+                        <QuantityStepper
+                          value={item.quantity}
+                          min={0}
+                          label={item.product.name}
+                          onChange={(next) => onUpdateQuantity(index, next)}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => onRemove(index)}
+                          aria-label={`Quitar ${item.product.name}`}
+                          className="h-11 gap-1.5 rounded-xl px-3 text-body-sm font-semibold text-money-out-soft-foreground hover:bg-money-out-soft hover:text-money-out-soft-foreground"
+                        >
+                          <Trash2 aria-hidden className="size-4" />
+                          Quitar
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              {suggestionsToShow.length > 0 && (
+                <section aria-labelledby="cart-more" className="rounded-2xl border border-border bg-card p-4">
+                  <h3 id="cart-more" className="font-display mb-3 text-body-lg font-bold text-foreground">
+                    ¿Agregas algo más?
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {suggestionsToShow.slice(0, 6).map((product) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => onAddSuggestion(product)}
+                        aria-label={`Agregar ${product.name}, ${formatPrice(product.price)}`}
+                        className="group flex min-h-[88px] flex-col justify-between gap-2 rounded-xl border border-border bg-background p-3 text-left transition-[transform,border-color] duration-150 ease-out hover:border-primary/40 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
+                      >
+                        <span className="font-display line-clamp-2 text-body-sm font-bold text-foreground">
+                          {product.name}
+                        </span>
+                        <span className="flex items-center justify-between gap-1">
+                          <span className="font-display text-body font-bold tabular-nums text-wine">
+                            {formatPrice(product.price)}
+                          </span>
+                          <span aria-hidden className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                            <Plus className="size-4" strokeWidth={3} />
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Clearing the cart: an inline confirmation in place, not a
+                  dialog over the sheet. */}
+              <div className="flex justify-center">
+                {confirmingClear ? (
+                  <div
+                    role="group"
+                    aria-label="Confirmar vaciar el pedido"
+                    className="flex w-full flex-col gap-3 rounded-2xl border border-money-out-border bg-money-out-soft p-4"
+                  >
+                    <p className="text-body-sm font-semibold text-money-out-soft-foreground">
+                      ¿Vaciar el pedido? Se quitarán todos los platos que agregaste.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 rounded-lg"
-                        onClick={() => onRemove(index)}
-                        aria-label={`Quitar ${item.product.name}`}
+                        variant="outline"
+                        onClick={() => setConfirmingClear(false)}
+                        className="h-12 rounded-xl bg-card text-body"
                       >
-                        <Trash2 className="h-5 w-5 text-destructive" />
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setConfirmingClear(false);
+                          onClearCart();
+                        }}
+                        className="h-12 rounded-xl bg-money-out text-body text-money-out-foreground hover:bg-money-out/90"
+                      >
+                        Vaciar
                       </Button>
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {/* Sugerencias */}
-          {items.length > 0 && suggestionsToShow.length > 0 && (
-            <div className="border-t px-6 py-4">
-              <p className="font-display mb-3 text-[14px] font-bold text-foreground">
-                ¿Agregas algo más?
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {suggestionsToShow.slice(0, 6).map((product) => (
-                  <motion.button
-                    key={product.id}
+                  </div>
+                ) : (
+                  <Button
                     type="button"
-                    onClick={() => onAddSuggestion(product)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="group flex flex-col gap-2 rounded-2xl bg-muted/60 p-3 text-left transition-all hover:bg-muted active:bg-muted"
+                    variant="ghost"
+                    onClick={() => setConfirmingClear(true)}
+                    className="h-11 gap-1.5 rounded-xl px-4 text-body-sm font-semibold text-muted-foreground"
                   >
-                    <span className="font-display line-clamp-2 text-[13px] font-bold text-foreground">
-                      {product.name}
-                    </span>
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="font-display text-[14px] font-bold text-wine">
-                        {formatPrice(product.price)}
-                      </span>
-                      <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground group-hover:scale-110 transition-transform">
-                        <Plus className="h-3.5 w-3.5" strokeWidth={3} />
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
+                    <Trash2 aria-hidden className="size-4" />
+                    Vaciar el pedido
+                  </Button>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer sticky - Total & Action */}
         {items.length > 0 && (
-          <div className="border-t bg-background px-6 py-4">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="font-display text-[16px] font-semibold text-muted-foreground">
-                Total
+          <div
+            className="border-t border-border bg-card px-4 pt-4"
+            style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+          >
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <span className="text-body font-semibold text-muted-foreground">
+                Total · {itemCount} {itemCount === 1 ? "producto" : "productos"}
               </span>
-              <span className="font-display text-[24px] font-bold text-wine">
+              <span className="font-display text-display font-bold tabular-nums text-foreground">
                 {formatPrice(total)}
               </span>
             </div>
@@ -279,9 +367,9 @@ export function CartSheet({
             {inTable && sessionExpired && (
               <div
                 role="alert"
-                className="mb-3 flex items-start gap-2.5 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[13px] text-destructive"
+                className="mb-3 flex items-start gap-2.5 rounded-xl border border-money-out-border bg-money-out-soft px-4 py-3 text-body-sm text-money-out-soft-foreground"
               >
-                <QrCode className="mt-0.5 h-4 w-4 shrink-0" />
+                <QrCode aria-hidden className="mt-0.5 size-4 shrink-0" />
                 <span>
                   Tu sesión de mesa venció. Escanea el QR de tu mesa otra vez para enviar el
                   pedido — tu carrito sigue aquí.
@@ -292,9 +380,9 @@ export function CartSheet({
             {inTable && orderingClosed && !sessionExpired && (
               <div
                 role="alert"
-                className="mb-3 flex items-start gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 text-[13px] text-foreground"
+                className="mb-3 flex items-start gap-2.5 rounded-xl border border-attention-border bg-attention-soft px-4 py-3 text-body-sm text-foreground"
               >
-                <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                <Receipt aria-hidden className="mt-0.5 size-4 shrink-0 text-attention-soft-foreground" />
                 <span>
                   Ya pediste la cuenta, así que no se pueden agregar más productos. Si quieres
                   algo más, avísale al mesero.
@@ -302,81 +390,76 @@ export function CartSheet({
               </div>
             )}
 
-            {inTable && (sessionExpired || orderingClosed) ? (
-              // Sin ConfirmDialog a propósito: con `asChild`, Radix pone el
-              // manejador de apertura en el `motion.div` envoltorio, no en
-              // el <button> — un <button disabled> anidado no lo hubiera
-              // bloqueado. Más simple y a prueba de eso: no renderizar el
-              // diálogo en absoluto mientras la sesión esté vencida.
-              <Button
-                size="lg"
-                disabled
-                className="h-12 w-full rounded-2xl text-[15px] font-semibold"
+            {inTable && confirmingSend && !sendBlocked && (
+              <div
+                role="group"
+                aria-label="Confirmar envío"
+                className="mb-3 flex items-start gap-2.5 rounded-xl border border-info-border bg-info-soft px-4 py-3 text-body-sm text-foreground"
               >
-                Enviar pedido
-              </Button>
-            ) : inTable ? (
-              <ConfirmDialog
-                trigger={
-                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                    <Button
-                      size="lg"
-                      className="clay clay-primary h-12 w-full rounded-2xl text-[15px] font-semibold"
-                    >
-                      Enviar pedido
-                    </Button>
-                  </motion.div>
-                }
-                title="¿Confirmar pedido?"
-                description={`Mesa ${tableNumber} · ${formatPrice(total)} · Revisa tu pedido antes de enviarlo.`}
-                confirmLabel="Enviar pedido"
-                action={() =>
-                  createOrder({ items: orderLines, clientRequestId: requestKey.get() })
-                }
-                onError={(message) => {
-                  if (isSessionExpiredMessage(message)) setSessionExpired(true);
-                }}
-                onSuccess={(orderId) => {
-                  requestKey.renew();
-                  notify.orderPlaced();
-                  onClearCart();
-                  onOpenChange(false);
-                  // Navegación completa (no `router.push`) a propósito: el
-                  // pedido recién creado nunca fue prefetcheado (su id no
-                  // existía hasta este instante), así que la transición
-                  // cliente-a-cliente de Next intenta "resumir" el shell
-                  // PPR genérico de /order/[id] (construido con params de
-                  // fallback) contra este id real, y el servidor revienta
-                  // con `InvariantError: postponed state should not be
-                  // provided when fallback params are provided` (bug de
-                  // Next 16 con Cache Components + rutas dinámicas sin
-                  // generateStaticParams, vercel/next.js#98647). Una
-                  // recarga completa no pasa por ese protocolo de resume:
-                  // pide el documento entero y listo, sin tocar el shell
-                  // cacheado en build. Solo se pierde la navegación
-                  // instantánea en ESTE salto puntual (carrito → estado
-                  // del pedido); el resto de la carta sigue usando
-                  // `<Link>` con Partial Prerendering normal.
-                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- ver comentario arriba: el escape a navegación completa es intencional.
-                  window.location.assign(
-                    `/r/${slug}/${tableNumber}/order/${orderId}`
-                  );
-                }}
-              />
+                <ChefHat aria-hidden className="mt-0.5 size-4 shrink-0 text-info-soft-foreground" />
+                <span>
+                  <span className="font-semibold">¿Confirmar pedido?</span> Va a la Mesa{" "}
+                  {tableNumber} por {formatPrice(total)}. Revísalo antes de enviarlo.
+                </span>
+              </div>
+            )}
+
+            {inTable ? (
+              sendBlocked ? (
+                <Button size="lg" disabled className="h-14 w-full rounded-2xl text-body-lg font-semibold">
+                  Enviar pedido
+                </Button>
+              ) : confirmingSend ? (
+                <div className="grid grid-cols-[1fr_2fr] gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    disabled={sending}
+                    onClick={() => setConfirmingSend(false)}
+                    className="h-14 rounded-2xl text-body font-semibold"
+                  >
+                    Seguir editando
+                  </Button>
+                  <Button
+                    type="button"
+                    size="lg"
+                    disabled={sending}
+                    onClick={sendOrder}
+                    className="clay clay-primary h-14 rounded-2xl text-body-lg font-semibold"
+                  >
+                    {sending ? (
+                      <Loader2 aria-hidden className="size-5 animate-spin" />
+                    ) : (
+                      <Send aria-hidden className="size-5" />
+                    )}
+                    {sending ? "Enviando…" : "Sí, enviar"}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => setConfirmingSend(true)}
+                  className="clay clay-primary h-14 w-full rounded-2xl text-body-lg font-semibold"
+                >
+                  <Send aria-hidden className="size-5" />
+                  Enviar pedido
+                </Button>
+              )
             ) : whatsappOrderUrl ? (
-              <motion.a
+              <a
                 href={whatsappOrderUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="clay clay-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground"
+                className="clay clay-primary flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-body-lg font-semibold text-primary-foreground"
               >
-                <MessageCircle className="h-5 w-5" strokeWidth={2} />
+                <MessageCircle aria-hidden className="size-5" strokeWidth={2} />
                 Pedir por WhatsApp
-              </motion.a>
+              </a>
             ) : (
-              <p className="rounded-2xl bg-secondary px-4 py-3 text-center text-[13px] text-muted-foreground">
+              <p className="flex items-center justify-center gap-2 rounded-xl border border-border bg-secondary px-4 py-3 text-center text-body-sm text-muted-foreground">
+                <Info aria-hidden className="size-4 shrink-0" />
                 Este restaurante todavía no cargó su número de WhatsApp.
               </p>
             )}

@@ -6,16 +6,14 @@ import { formatPrice } from "@/lib/utils";
 import type { MenuSuggestion } from "@/lib/suggestions";
 import type { PublicProduct } from "@/types/menu";
 
+const cardClass =
+  "group flex shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-[transform,border-color] duration-150 ease-out hover:border-primary/40 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none motion-reduce:active:scale-100";
+
 /**
- * Fila de combos/destacados justo debajo del buscador — el cliente los
- * ve antes de elegir una categoría. Nunca está vacía (ver
- * lib/suggestions.ts).
- *
- * Diseño: son tarjetas tipográficas, no miniaturas de foto. Antes cada
- * combo mostraba dos recuadros grises con un ícono de cubiertos (los
- * platos no tienen foto todavía) y parecían imágenes rotas. Ahora el
- * protagonista es lo único que de verdad importa para decidir: qué
- * lleva el combo y cuánto cuesta junto.
+ * Combos and featured dishes, right under the search, before the customer
+ * picks a category. Never empty (see lib/suggestions.ts). Typographic
+ * cards on purpose: what matters to decide is what the combo has and how
+ * much it costs together.
  */
 export function SuggestionsRow({
   suggestions,
@@ -26,14 +24,12 @@ export function SuggestionsRow({
   onSelectProduct: (product: PublicProduct) => void;
   onAddCombo: (dish: PublicProduct, drink: PublicProduct) => void;
 }) {
-  // Guardia contra el doble toque: en un celular es facilísimo que el
-  // dedo registre dos veces, y sin esto un combo entraba cuatro veces al
-  // carrito.
+  // Double-tap guard: on a phone the finger easily registers twice, and
+  // without this a combo entered the cart four times.
   const lastTap = useRef(0);
-  // useCallback y no una función suelta: declarada en el cuerpo del
-  // componente, React Compiler la analiza como código de render y marca
-  // el Date.now() como impuro. Dentro de useCallback el cuerpo es
-  // diferido — solo corre cuando el dedo toca.
+  // useCallback, not a loose function: React Compiler would analyse it as
+  // render code and flag Date.now() as impure. Inside useCallback the body
+  // only runs on tap.
   const onceGuard = useCallback((fn: () => void) => {
     const now = Date.now();
     if (now - lastTap.current < 400) return;
@@ -44,42 +40,49 @@ export function SuggestionsRow({
   if (suggestions.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-2.5 px-4">
-      <p className="flex w-fit items-center gap-1.5 rounded-md bg-honey px-2 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-honey-foreground">
-        <Sparkles className="h-3.5 w-3.5" strokeWidth={2.5} />
+    <section aria-labelledby="combos-title" className="flex flex-col gap-3">
+      <h2
+        id="combos-title"
+        className="flex items-center gap-2 px-4 font-display text-title-sm font-bold text-foreground"
+      >
+        <span className="flex size-7 items-center justify-center rounded-lg bg-honey text-honey-foreground">
+          <Sparkles aria-hidden className="size-4" strokeWidth={2.5} />
+        </span>
         Combos del día
-      </p>
+      </h2>
 
-      <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-2.5 overflow-x-auto px-4 pb-1">
+      <div className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-1">
         {suggestions.map((s, i) =>
           s.type === "combo" ? (
             <button
               key={`combo-${s.dish.id}-${s.drink.id}`}
               type="button"
               onClick={() => onceGuard(() => onAddCombo(s.dish, s.drink))}
-              className="group flex w-[190px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
+              aria-label={`Agregar combo ${s.dish.name} más ${s.drink.name}, ${formatPrice(s.comboPrice)}`}
+              className={`${cardClass} w-[200px]`}
             >
               <span className="flex flex-col gap-1">
-                <span className="font-display text-[15px] font-bold leading-snug text-foreground">
+                <span className="font-display text-body font-bold leading-snug text-foreground">
                   {s.dish.name}
                 </span>
-                <span className="flex items-center gap-1 text-[13px] leading-snug text-muted-foreground">
-                  <Plus className="h-3 w-3 shrink-0 text-primary" strokeWidth={3} />
+                <span className="flex items-center gap-1 text-meta leading-snug text-muted-foreground">
+                  <Plus aria-hidden className="size-3 shrink-0 text-primary" strokeWidth={3} />
                   {s.drink.name}
                 </span>
               </span>
 
-              <span className="flex items-end justify-between gap-2">
-                <span className="flex items-baseline gap-1.5 leading-none">
-                  <span className="font-display text-[20px] font-bold tabular-nums text-wine">
+              <span className="flex items-end justify-between gap-2 border-t border-border pt-2.5">
+                <span className="flex flex-col leading-none">
+                  <span className="text-caption font-medium text-muted-foreground">Los dos</span>
+                  <span className="font-display mt-1 text-title font-bold tabular-nums text-wine">
                     {formatPrice(s.comboPrice)}
                   </span>
-                  <span className="text-[11px] font-medium text-muted-foreground">
-                    los dos
-                  </span>
                 </span>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center clay clay-primary rounded-full bg-primary text-primary-foreground">
-                  <Plus className="h-4 w-4" strokeWidth={2.5} />
+                <span
+                  aria-hidden
+                  className="clay clay-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                >
+                  <Plus className="size-5" strokeWidth={2.5} />
                 </span>
               </span>
             </button>
@@ -88,17 +91,20 @@ export function SuggestionsRow({
               key={s.product.id ?? i}
               type="button"
               onClick={() => onceGuard(() => onSelectProduct(s.product))}
-              className="group flex w-[150px] shrink-0 snap-start flex-col justify-between gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-200 active:scale-[0.97]"
+              className={`${cardClass} w-[160px]`}
             >
-              <span className="font-display text-[15px] font-bold leading-snug text-foreground">
+              <span className="font-display text-body font-bold leading-snug text-foreground">
                 {s.product.name}
               </span>
-              <span className="flex items-end justify-between gap-2">
-                <span className="font-display text-[20px] font-bold tabular-nums text-wine">
+              <span className="flex items-end justify-between gap-2 border-t border-border pt-2.5">
+                <span className="font-display text-title font-bold tabular-nums text-wine">
                   {formatPrice(s.product.price)}
                 </span>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center clay clay-primary rounded-full bg-primary text-primary-foreground">
-                  <Plus className="h-4 w-4" strokeWidth={2.5} />
+                <span
+                  aria-hidden
+                  className="clay clay-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                >
+                  <Plus className="size-5" strokeWidth={2.5} />
                 </span>
               </span>
             </button>
