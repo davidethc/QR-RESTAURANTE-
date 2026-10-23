@@ -98,7 +98,7 @@ export default async function CashPage({ searchParams }: { searchParams: Promise
         billingEnabled={settings.billing_enabled}
         timeZone={session.restaurant.timezone}
         initialSelected={cuenta ?? null}
-        live={<CashPageLive restaurantId={restaurantId} />}
+        live={<CashPageLive />}
       />
     </main>
   );
