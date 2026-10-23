@@ -58,15 +58,18 @@ export function ChoiceCards<T extends string>({
 
   const activeIndex = Math.max(0, options.findIndex((o) => o.value === value));
 
+  // Las columnas siguen al ancho del contenedor, no de la pantalla: el mismo
+  // grupo vive en un panel angosto (cobro) y en pantalla completa (pedido).
   return (
+    <div className="@container">
     <div
       role="radiogroup"
       aria-label={label}
       className={cn(
         "grid gap-3",
-        columns === 2 && "grid-cols-1 sm:grid-cols-2",
-        columns === 3 && "grid-cols-1 sm:grid-cols-3",
-        columns === 4 && "grid-cols-2 lg:grid-cols-4",
+        columns === 2 && "grid-cols-1 @lg:grid-cols-2",
+        columns === 3 && "grid-cols-1 @2xl:grid-cols-3",
+        columns === 4 && "grid-cols-2 @3xl:grid-cols-4",
         className
       )}
     >
@@ -111,14 +114,16 @@ export function ChoiceCards<T extends string>({
               <o.icon className={size === "lg" ? "size-6" : "size-5"} aria-hidden />
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-body font-semibold leading-tight text-foreground">{o.title}</span>
+              <span className={cn("text-body font-semibold leading-tight text-foreground", size === "lg" && "pr-8")}>{o.title}</span>
               {o.description && <span className="text-meta leading-snug text-muted-foreground">{o.description}</span>}
               {o.meta && <span className="mt-1 text-body-sm font-semibold tabular-nums text-foreground">{o.meta}</span>}
             </span>
             <span
               aria-hidden
               className={cn(
-                "absolute right-3 top-3 flex size-6 items-center justify-center rounded-full border-2 transition-[background-color,border-color] duration-150",
+                "flex size-6 shrink-0 items-center justify-center rounded-full",
+                size === "lg" ? "absolute right-3 top-3" : "self-center",
+                "border-2 transition-[background-color,border-color] duration-150",
                 selected ? "border-foreground bg-foreground text-background" : "border-border bg-card text-transparent"
               )}
             >
@@ -127,6 +132,7 @@ export function ChoiceCards<T extends string>({
           </button>
         );
       })}
+    </div>
     </div>
   );
 }
