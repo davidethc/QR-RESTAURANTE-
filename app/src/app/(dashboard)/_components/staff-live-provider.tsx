@@ -62,6 +62,7 @@ import {
   type ReactNode,
 } from "react";
 import { useStaffRealtime, type StaffTable } from "@/hooks/use-staff-realtime";
+import { useSessionHeartbeat } from "@/hooks/use-session-heartbeat";
 import {
   readStaffCounters,
   readStaffOrders,
@@ -180,6 +181,9 @@ export function StaffLiveProvider({
   children: ReactNode;
 }) {
   const [store] = useState(createStore);
+  // Las lecturas en vivo no pasan por el proxy: el latido mantiene la
+  // revocación de dispositivos (M10) aunque la pantalla no navegue.
+  useSessionHeartbeat();
 
   const handlers = useRef(new Set<Handler>());
   const dirty = useRef(new Set<StaffTable>());
