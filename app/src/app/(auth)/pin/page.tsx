@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { Mail, MonitorSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEVICE_COOKIE } from "@/lib/devices/constants";
 import { DEVICE_REVOKED_MESSAGE, NO_SECRET_KEY_MESSAGE } from "@/lib/devices/messages";
@@ -12,12 +13,24 @@ export const metadata: Metadata = { title: "Ingresar con PIN" };
 
 function Notice({ title, body }: { title: string; body: string }) {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-[400px] rounded-card border border-border bg-card px-7 py-8 shadow-sm">
-        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-        <p className="mt-2 text-body-sm text-muted-foreground">{body}</p>
-        <Button asChild className="mt-6 min-h-11 w-full">
-          <Link href="/login">Iniciar sesión con correo</Link>
+    <main
+      data-caja
+      className="flex flex-1 flex-col items-center justify-center bg-background px-4 py-10 sm:px-6"
+    >
+      <div className="w-full max-w-[420px] rounded-2xl border border-border bg-card px-6 py-7 shadow-md sm:px-7">
+        <span className="mb-4 flex size-12 items-center justify-center rounded-xl border border-attention-border bg-attention-soft text-attention-soft-foreground">
+          <MonitorSmartphone aria-hidden className="size-6" />
+        </span>
+        <h1 className="text-title-lg font-bold leading-tight text-foreground">{title}</h1>
+        <p className="mt-2 text-body text-muted-foreground">{body}</p>
+        <Button
+          asChild
+          className="mt-6 h-12 w-full rounded-xl bg-foreground text-body-lg font-semibold text-background hover:bg-foreground/90"
+        >
+          <Link href="/login">
+            <Mail aria-hidden />
+            Iniciar sesión con correo
+          </Link>
         </Button>
       </div>
     </main>

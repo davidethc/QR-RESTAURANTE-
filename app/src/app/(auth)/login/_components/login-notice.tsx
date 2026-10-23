@@ -1,5 +1,6 @@
 "use client";
 
+import { Clock } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 /** Por qué el panel mandó aquí (ver `(dashboard)/layout.tsx`). */
@@ -17,8 +18,9 @@ export function LoginNotice() {
   return (
     <p
       role="status"
-      className="mb-6 rounded-card bg-warning-soft px-4 py-3 text-center text-meta text-warning-soft-foreground"
+      className="mb-5 flex items-start gap-2.5 rounded-xl border border-attention-border bg-attention-soft px-4 py-3 text-body-sm font-medium text-attention-soft-foreground"
     >
+      <Clock aria-hidden className="mt-0.5 size-4 shrink-0" />
       {notice}
     </p>
   );
