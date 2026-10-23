@@ -1,7 +1,7 @@
 import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { PageHeader } from "@/components/shared/page-header";
+import { OfflineBanner } from "@/components/shared/offline-banner";
 import {
   getMyRestaurant,
   getDashboardSummary,
@@ -14,6 +14,7 @@ import {
 import { OrdersBoard } from "./_components/orders-board";
 import { QuickTakeOrder } from "./_components/quick-take-order";
 import { CounterOrdersPanel } from "./_components/counter-orders-panel";
+import { NewOrderButton } from "./_components/new-order-button";
 import { getPublicMenu } from "@/lib/queries/menu";
 import { getStaffProductDetails } from "@/lib/queries/staff-catalog";
 import { getCounterOrders } from "@/lib/queries/counter-orders";
@@ -26,6 +27,10 @@ import { canHandleMoney } from "@/lib/permissions";
 export const instant = false;
 
 export const metadata: Metadata = { title: "Pedidos" };
+
+/** "Nuevo pedido" en tamaño de franja (el de Caja ocupa toda la columna). */
+const newOrderClass =
+  "min-h-12 w-auto rounded-button bg-money-in px-4 text-body font-semibold text-money-in-foreground hover:bg-money-in/90 [&>span]:size-7";
 
 export default async function OrdersPage({
   searchParams,
@@ -67,12 +72,20 @@ export default async function OrdersPage({
       ])
     : [[], { categories: [] }, {}];
 
+  const newOrder = canServeTable ? (
+    <NewOrderButton
+      canCharge={canHandleMoney(session.role)}
+      billingEnabled={settings.billing_enabled}
+      className={newOrderClass}
+    />
+  ) : null;
+
   return (
-    <main>
-      <PageHeader
-        title="Pedidos"
-        description={`${summary.orders_today} pedidos hoy · ${summary.occupied_tables}/${summary.total_tables} mesas ocupadas`}
-      />
+    <main data-caja className="min-h-full bg-background">
+      <h1 className="sr-only">Pedidos</h1>
+      <div className="px-4 pt-2 md:px-5 empty:hidden">
+        <OfflineBanner />
+      </div>
       <OrdersBoard
         restaurantId={restaurantId}
         initialOrders={orders}
@@ -82,9 +95,17 @@ export default async function OrdersPage({
             ? initialTableFilter
             : null
         }
-        initialView={
-          view === "calls" ? "calls" : view === "progress" ? "progress" : null
+        initialView={view === "calls" || view === "progress" || view === "ready" ? view : null}
+        summaryDetail={`${summary.orders_today} pedidos hoy · ${summary.occupied_tables}/${summary.total_tables} mesas ocupadas`}
+        actions={
+          newOrder && (
+            <>
+              <QuickTakeOrder tables={tables} />
+              {newOrder}
+            </>
+          )
         }
+        emptyAction={newOrder}
         role={session.role}
         billingEnabled={canServeTable && settings.billing_enabled}
         maxWaiterDiscountPct={canServeTable ? settings.max_waiter_discount_pct : 0}
@@ -92,15 +113,17 @@ export default async function OrdersPage({
         tableSessionMap={tableSessionMap}
       />
       {canServeTable && (
-        <CounterOrdersPanel
-          orders={counterOrders}
-          categories={menu.categories}
-          details={productDetails}
-          billingEnabled={settings.billing_enabled}
-          canCharge={canHandleMoney(session.role)}
-        />
+        <div className="px-4 pb-8 md:px-5">
+          <CounterOrdersPanel
+            orders={counterOrders}
+            categories={menu.categories}
+            details={productDetails}
+            billingEnabled={settings.billing_enabled}
+            canCharge={canHandleMoney(session.role)}
+            emptyAction={newOrder}
+          />
+        </div>
       )}
-      {canServeTable && <QuickTakeOrder tables={tables} />}
     </main>
   );
 }
