@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ConnectionStatus } from "@/components/shared/connection-status";
 import { OfflineBanner } from "@/components/shared/offline-banner";
-import { useStaffRealtime } from "@/hooks/use-staff-realtime";
+import { useLiveActions, useLiveConnected, useLiveEvents } from "@/app/(dashboard)/_components/staff-live-provider";
 import { useFullscreen } from "@/hooks/use-fullscreen";
-import { completeTicket, fetchKitchenTickets, setKdsSettings } from "@/lib/actions/kds";
+import { completeTicket, setKdsSettings } from "@/lib/actions/kds";
+import { readKitchenTickets } from "@/lib/queries/staff-client";
 import { notify } from "@/lib/notifications";
 import { countPendingTickets, pendingLabel, type KitchenTicketsPayload } from "@/lib/kds";
 import { KdsTicketCard } from "./kds-ticket-card";
@@ -34,17 +35,17 @@ export function KitchenBoard({
 
   const refetch = useCallback(async () => {
     try {
-      const r = await fetchKitchenTickets({ restaurantId, status: "pending" });
-      if (r.ok) setData(r.data);
+      setData(await readKitchenTickets({ restaurantId, status: "pending" }));
     } catch {
       // Silencioso: Realtime / red de seguridad reintentan.
     }
   }, [restaurantId]);
 
-  const { connected, refresh } = useStaffRealtime(restaurantId, refetch, {
-    // tickets: la comanda llega al instante; el sondeo de 20 s queda de respaldo.
-    tables: ["orders", "tickets"],
-  });
+  // Sin canal propio: el `StaffLiveProvider` del layout avisa cuando cambian
+  // comandas o pedidos (y tras reconectar o sondear sin socket).
+  useLiveEvents(["orders", "tickets"], refetch);
+  const connected = useLiveConnected();
+  const { afterMutation } = useLiveActions();
 
   if (!data.kds_enabled) {
     return (
@@ -86,7 +87,7 @@ export function KitchenBoard({
     setData((d) => ({ ...d, tickets: d.tickets.filter((t) => t.ticket_id !== id) }));
     const r = await completeTicket(id);
     if (!r.ok) setData(previous);
-    else void refresh();
+    else afterMutation();
     return r;
   }
 
@@ -103,7 +104,7 @@ export function KitchenBoard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {canManage && (
-              <KdsSettings restaurantId={restaurantId} thresholds={data.thresholds} onSaved={refresh} />
+              <KdsSettings restaurantId={restaurantId} thresholds={data.thresholds} onSaved={refetch} />
             )}
             <Button asChild variant="outline" className="min-h-11 px-4">
               <Link href="/kitchen/history">

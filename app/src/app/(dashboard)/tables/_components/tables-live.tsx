@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useStaffRealtime } from "@/hooks/use-staff-realtime";
+import { useLiveConnected, useLiveEvents } from "@/app/(dashboard)/_components/staff-live-provider";
 import { ConnectionStatus } from "@/components/shared/connection-status";
+
+/** Como mucho un `router.refresh()` cada 1,5 s, pase lo que pase en la sala. */
+const REFRESH_DEBOUNCE_MS = 1500;
 
 /**
  * Mantiene viva la rejilla de Mesas.
@@ -17,12 +21,33 @@ import { ConnectionStatus } from "@/components/shared/connection-status";
  * Tiene que ser un refetch completo y no basta con escuchar la tabla
  * `tables`, porque `active_total` no es una columna sino una suma que
  * calcula el propio RPC.
+ *
+ * Escucha al `StaffLiveProvider` (no abre canal propio) solo las tablas
+ * que mueven esta pantalla, y fusiona las ráfagas: un pedido nuevo toca
+ * orders + tables + tickets a la vez, y cada `router.refresh()` es un
+ * render completo de la página en el servidor.
  */
-export function TablesLive({ restaurantId }: { restaurantId: string }) {
+export function TablesLive() {
   const router = useRouter();
-  const { connected } = useStaffRealtime(restaurantId, () => router.refresh(), {
-    channelName: "staff-tables",
+  const connected = useLiveConnected();
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useLiveEvents(["orders", "waiter_calls", "tables"], () => {
+    // No se reinicia el temporizador en cada evento: así el refresco nunca
+    // se pospone indefinidamente bajo un goteo continuo de eventos.
+    if (timer.current) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      router.refresh();
+    }, REFRESH_DEBOUNCE_MS);
   });
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
 
   return <ConnectionStatus connected={connected} />;
 }

@@ -1,13 +1,24 @@
 import { DEVICE_COOKIE } from "@/lib/devices/constants";
 import { checkDevice } from "@/lib/devices/service";
-import { readMemberSession } from "@/lib/auth/member-session";
-import { getLandingPath, getRouteRedirect } from "@/lib/permissions";
+import { PANEL_PATH_HEADER } from "@/app/(dashboard)/_components/route-guard";
 import type { Database } from "@/types/database";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/**
+ * Pasa al layout la ruta pedida (path + query): el permiso por rol se decide
+ * allí, con el miembro que el layout ya lee (antes el proxy lo leía y el
+ * layout otra vez: dos viajes a la base por navegación). Se sobrescribe
+ * siempre, para que un cliente no pueda inyectar su propio valor.
+ */
+function forwardRequest(request: NextRequest) {
+  const headers = new Headers(request.headers);
+  headers.set(PANEL_PATH_HEADER, request.nextUrl.pathname + request.nextUrl.search);
+  return NextResponse.next({ request: { headers } });
+}
+
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  let response = forwardRequest(request);
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,7 +32,7 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          response = NextResponse.next({ request });
+          response = forwardRequest(request);
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -34,6 +45,8 @@ export async function proxy(request: NextRequest) {
   // provoca cierres de sesión aleatorios.
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
+  // Solo sesión y dispositivo viven aquí. El permiso por ruta lo aplica
+  // `(dashboard)/layout.tsx` + `requireRouteAccess` en cada página.
 
   const path = request.nextUrl.pathname;
   const isStaffArea = STAFF_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
@@ -63,19 +76,6 @@ export async function proxy(request: NextRequest) {
 
   if (!user && isStaffArea) {
     return redirectTo("/login");
-  }
-
-  if (user && isStaffArea) {
-    // Los errores de carga siguen el manejo recuperable del layout; no conceden permisos.
-    let member;
-    try {
-      member = await readMemberSession(supabase);
-    } catch {
-      return response;
-    }
-    const destination = path === "/today" && request.nextUrl.searchParams.has("entrada")
-      ? getLandingPath(member) : getRouteRedirect(member, path);
-    if (destination) return redirectTo(destination);
   }
 
   return response;

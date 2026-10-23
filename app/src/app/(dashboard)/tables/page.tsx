@@ -52,7 +52,7 @@ export default async function TablesPage() {
         description={`${tables.length} mesas`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <TablesLive restaurantId={session.restaurant.id} />
+            <TablesLive />
             {canManage && (
               <>
                 <CartaLinkDialog

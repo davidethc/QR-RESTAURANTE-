@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { PageHeader } from "@/components/shared/page-header";
+import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import { getMyRestaurant } from "@/lib/queries/staff";
 import { getAvailabilityItems } from "@/lib/queries/availability";
 import { AvailabilityList } from "./_components/availability-list";
@@ -14,6 +15,9 @@ export const metadata: Metadata = { title: "Disponibilidad" };
 export default async function AvailabilityPage() {
   await connection();
   const session = await getMyRestaurant();
+  // El proxy ya no aplica el permiso por rol (lo hace el layout, que no se
+  // re-renderiza al navegar del lado del cliente): esta página lo exige sola.
+  requireRouteAccess(session, "/availability");
   const items = await getAvailabilityItems(session.restaurant.id);
 
   return (

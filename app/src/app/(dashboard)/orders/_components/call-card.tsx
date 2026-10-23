@@ -2,7 +2,6 @@
 
 import { canHandleMoney } from "@/lib/permissions";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Bell, Receipt, ClipboardList, Wallet } from "lucide-react";
 import { CallStatusBadge } from "@/components/shared/status-badge";
 import { ElapsedTimer } from "@/components/shared/elapsed-timer";
@@ -55,14 +54,9 @@ export function CallCard({
   const chargedByAdmin = isBill && billingEnabled && !canHandleMoney(role);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.2 }}
+    <div
       className={cn(
-        "rounded-card border bg-card p-4",
+        "animate-in fade-in slide-in-from-bottom-2 duration-200 rounded-card border bg-card p-4",
         pending
           ? isBill
             ? "border-wine/30"
@@ -238,6 +232,6 @@ export function CallCard({
           </Link>
         </Button>
       )}
-    </motion.div>
+    </div>
   );
 }

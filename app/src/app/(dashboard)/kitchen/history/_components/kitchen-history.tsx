@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
-import { fetchKitchenTickets, returnTicketToPreparation } from "@/lib/actions/kds";
+import { returnTicketToPreparation } from "@/lib/actions/kds";
+import { readKitchenTickets } from "@/lib/queries/staff-client";
 import { notify } from "@/lib/notifications";
 import type { KitchenTicketsPayload } from "@/lib/kds";
 import { KdsTicketCard } from "../../_components/kds-ticket-card";
@@ -25,10 +26,12 @@ export function KitchenHistory({
 
   function load(next: number) {
     start(async () => {
-      const r = await fetchKitchenTickets({ restaurantId, status: "completed", limit: PAGE, offset: next });
-      if (!r.ok) return notify.error(r.error);
-      setData(r.data);
-      setOffset(next);
+      try {
+        setData(await readKitchenTickets({ restaurantId, status: "completed", limit: PAGE, offset: next }));
+        setOffset(next);
+      } catch {
+        notify.error("No se pudo cargar el historial. Intenta de nuevo.");
+      }
     });
   }
 

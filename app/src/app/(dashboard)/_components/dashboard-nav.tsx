@@ -41,7 +41,7 @@ import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import type { MyRestaurant } from "@/types/staff";
 import { ConnectionStatus } from "@/components/shared/connection-status";
-import { useStaffCounters } from "@/hooks/use-staff-counters";
+import { useLiveConnected, useLiveCounters } from "./staff-live-provider";
 import { formatBadge, navBadgeFor, type StaffCounters } from "@/lib/staff-counters";
 
 const ROLE_LABEL: Record<PermissionRole, string> = {
@@ -212,7 +212,8 @@ export function DashboardNav({ session }: { session: MyRestaurant }) {
   const [open, setOpen] = useState(false);
   const initials = (session.user.full_name ?? "?").slice(0, 1).toUpperCase();
   const current = ALL_LINKS.find((l) => pathname.startsWith(l.href));
-  const { counters, connected } = useStaffCounters(session.restaurant.id);
+  const counters = useLiveCounters();
+  const connected = useLiveConnected();
 
   return (
     <>
