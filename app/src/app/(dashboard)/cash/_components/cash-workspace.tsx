@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClipboardList, History, KeyRound, Lock, Receipt, ReceiptText } from "lucide-react";
+import { Banknote, ClipboardList, Clock, History, KeyRound, Lock, Receipt, ReceiptText, TrendingUp } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusMetric, StatusPill, StatusStrip } from "@/components/shared/status-strip";
 import { posPressable } from "@/components/shared/pos-tone";
@@ -181,12 +181,12 @@ export function CashWorkspace({
         metrics={
           <>
             {active.can_see_expected && cash ? (
-              <StatusMetric label="En el cajón" value={formatPrice(cash.expected)} tone="money-in" />
+              <StatusMetric label="En el cajón" value={formatPrice(cash.expected)} tone="money-in" icon={Banknote} />
             ) : (
-              <StatusMetric label="Cobrado en efectivo" value={formatPrice(cash?.payments_total ?? 0)} />
+              <StatusMetric label="Cobrado en efectivo" value={formatPrice(cash?.payments_total ?? 0)} tone="money-in" icon={Banknote} />
             )}
-            <StatusMetric label={`Por cobrar · ${owed.length}`} value={formatPrice(owedTotal)} tone={owed.length > 0 ? "attention" : "neutral"} />
-            {canManage && <StatusMetric label={`Ventas de hoy · ${closedToday.length}`} value={formatPrice(salesTotal)} />}
+            <StatusMetric label={`Por cobrar · ${owed.length}`} value={formatPrice(owedTotal)} tone={owed.length > 0 ? "attention" : "neutral"} icon={Clock} />
+            {canManage && <StatusMetric label={`Ventas de hoy · ${closedToday.length}`} value={formatPrice(salesTotal)} tone="info" icon={TrendingUp} />}
           </>
         }
         actions={

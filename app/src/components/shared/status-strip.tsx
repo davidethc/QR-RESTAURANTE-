@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toneBar, toneText, type PosTone } from "./pos-tone";
+import { toneBar, toneSoft, toneText, type PosTone } from "./pos-tone";
 
 /**
  * Franja de estado del módulo: arriba de todo, una sola línea que responde
@@ -29,7 +29,7 @@ export function StatusStrip({
     >
       <div className="flex min-w-0 items-center gap-4 overflow-x-auto [scrollbar-width:none] lg:flex-1">
         {status}
-        {metrics && <div className="flex shrink-0 items-stretch gap-4 border-l border-border pl-4">{metrics}</div>}
+        {metrics && <div className="flex shrink-0 items-stretch gap-2 md:gap-3">{metrics}</div>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </section>
@@ -61,20 +61,33 @@ export function StatusPill({
   );
 }
 
-/** Cifra con etiqueta corta. */
+/**
+ * Cifra con etiqueta corta, en su propia tarjeta: borde, franja de color e
+ * icono separan cada cifra de la vecina (antes se leían como un solo bloque).
+ */
 export function StatusMetric({
   label,
   value,
   tone = "neutral",
+  icon: Icon,
 }: {
   label: string;
   value: string;
   tone?: PosTone;
+  icon?: LucideIcon;
 }) {
   return (
-    <div className="flex shrink-0 flex-col justify-center">
-      <span className="text-caption leading-tight text-muted-foreground">{label}</span>
-      <span className={cn("text-lead font-semibold leading-tight tabular-nums", toneText[tone])}>{value}</span>
+    <div className="relative flex min-w-[9.5rem] shrink-0 items-center gap-3 overflow-hidden rounded-card border border-border bg-card py-2 pl-4 pr-4 shadow-sm">
+      <span aria-hidden className={cn("absolute inset-y-0 left-0 w-1", toneBar[tone])} />
+      {Icon && (
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full border", toneSoft[tone])}>
+          <Icon className="size-4" aria-hidden />
+        </span>
+      )}
+      <div className="flex min-w-0 flex-col">
+        <span className="text-caption leading-tight text-muted-foreground">{label}</span>
+        <span className={cn("text-lead font-semibold leading-tight tabular-nums", toneText[tone])}>{value}</span>
+      </div>
     </div>
   );
 }
