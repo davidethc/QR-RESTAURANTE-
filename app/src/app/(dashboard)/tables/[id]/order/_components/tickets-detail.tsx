@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Pencil, Printer, RotateCcw, XCircle, Loader2 } from "lucide-react";
+import { ChevronDown, Pencil, Printer, XCircle, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { cancelOrderItem, editOrderItem, reopenTable } from "@/lib/actions/orders";
+import { cancelOrderItem, editOrderItem } from "@/lib/actions/orders";
 import { notify } from "@/lib/notifications";
 import { cn, formatPrice } from "@/lib/utils";
 import {
@@ -38,23 +38,19 @@ function hour(iso: string) {
 export function TicketsDetail({
   tableLabel,
   tickets,
-  tableSessionId,
   details,
 }: {
-  /** Solo si la mesa tiene la cuenta pedida: habilita "Reabrir mesa". */
-  tableSessionId: string | null;
   tableLabel: string;
   tickets: TicketView[];
   details: Record<string, StaffProductDetail>;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  // Collapsed tickets; every ticket starts open, including ones sent later.
+  const [closed, setClosed] = useState<Set<string>>(() => new Set());
   const [editMode, setEditMode] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<TicketItemView | null>(null);
   const [editing, setEditing] = useState<{ ticket: TicketView; item: TicketItemView } | null>(null);
   const [printId, setPrintId] = useState<string | null>(null);
-  const [reopening, startReopen] = useTransition();
-  const [reopenError, setReopenError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!printId) return;
@@ -68,61 +64,27 @@ export function TicketsDetail({
   const printing = tickets.find((t) => t.id === printId);
 
   return (
-    <section className="px-4 pt-4" aria-label="Comandas del pedido">
-      {tableSessionId && (
-        <div className="mb-3 rounded-card border border-border bg-secondary p-3">
-          <p className="text-body-sm font-medium">
-            La mesa pidió la cuenta. Reábrela para agregar productos.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-2 min-h-11 rounded-control"
-            disabled={reopening}
-            onClick={() => {
-              setReopenError(null);
-              startReopen(async () => {
-                const r = await reopenTable(tableSessionId);
-                if (!r.ok) {
-                  setReopenError(r.error);
-                  notify.error(r.error);
-                  return;
-                }
-                notify.success("Mesa reabierta");
-                router.refresh();
-              });
-            }}
-          >
-            {reopening ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
-            Reabrir mesa
-          </Button>
-          {reopenError && (
-            <p role="alert" className="mt-1.5 text-body-sm font-medium text-destructive">
-              {reopenError}
-            </p>
-          )}
-        </div>
-      )}
-      <h2 className="mb-2 text-tiny font-bold uppercase tracking-[0.14em] text-muted-foreground">
-        Comandas
+    <section aria-label="Comandas del pedido">
+      <h2 className="mb-3 text-lead font-semibold text-foreground">
+        Comandas enviadas <span className="text-body-sm font-medium tabular-nums text-muted-foreground">· {tickets.length}</span>
       </h2>
       <ul className="space-y-2">
         {tickets.map((ticket) => {
-          const isOpen = open.has(ticket.id);
+          const isOpen = !closed.has(ticket.id);
           const editable = editMode === ticket.id;
           return (
-            <li key={ticket.id} className="rounded-card border border-border bg-card">
+            <li key={ticket.id} className="rounded-card border border-border bg-card shadow-sm">
               <button
                 type="button"
                 aria-expanded={isOpen}
                 onClick={() =>
-                  setOpen((prev) => {
+                  setClosed((prev) => {
                     const next = new Set(prev);
                     if (!next.delete(ticket.id)) next.add(ticket.id);
                     return next;
                   })
                 }
-                className="flex min-h-11 w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                className="flex min-h-12 w-full items-center justify-between gap-2 rounded-card px-4 py-3 text-left transition-colors duration-150 hover:bg-muted/50 motion-reduce:transition-none"
               >
                 <span className="text-body font-semibold">
                   Comanda #{ticket.number} · {hour(ticket.createdAt)} · Por{" "}

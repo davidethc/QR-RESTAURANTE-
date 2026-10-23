@@ -1,11 +1,7 @@
 import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/shared/page-header";
 import { StaffOrderBuilder } from "./_components/staff-order-builder";
 import {
   getMyRestaurant,
@@ -17,7 +13,6 @@ import {
   getActiveOrderForTable,
   getStaffProductDetails,
 } from "@/lib/queries/staff-catalog";
-import { TicketsDetail } from "./_components/tickets-detail";
 
 // Igual que el resto del panel: fuera del alcance de la migración a
 // navegación instantánea, que por ahora solo cubre la ruta del comensal.
@@ -34,13 +29,15 @@ export const metadata: Metadata = { title: "Tomar pedido" };
  */
 export default async function TakeOrderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ vista?: string }>;
 }) {
   // Ver la nota en (dashboard)/layout.tsx: sin esto, el Date.now() interno
   // de auth-js al cargar la sesión rompe el prerender de esta página.
   await connection();
-  const { id } = await params;
+  const [{ id }, { vista }] = await Promise.all([params, searchParams]);
   const session = await getMyRestaurant();
   requireRouteAccess(session, "/tables");
 
@@ -62,32 +59,17 @@ export default async function TakeOrderPage({
   const tableLabel = table.name ?? `Mesa ${table.number}`;
 
   return (
-    <main>
-      <PageHeader
-        title={tableLabel}
-        description="Toma el pedido y pasa directo a cocina"
-        action={
-          <Button asChild variant="ghost" size="sm" className="rounded-full">
-            <Link href="/tables">
-              <ArrowLeft className="size-4" /> Mesas
-            </Link>
-          </Button>
-        }
-      />
-      {order && (
-        <TicketsDetail
-          tableLabel={tableLabel}
-          tickets={order.tickets}
-          tableSessionId={order.billRequested ? order.tableSessionId : null}
-          details={details}
-        />
-      )}
+    <main data-caja className="bg-background">
       <StaffOrderBuilder
         categories={menu.categories}
         topProducts={topProducts}
         details={details}
         tableId={table.id}
         orderId={order?.id ?? null}
+        tableLabel={tableLabel}
+        tickets={order?.tickets ?? []}
+        reopenSessionId={order?.billRequested ? order.tableSessionId : null}
+        initialView={vista === "enviado" ? "sent" : "menu"}
       />
     </main>
   );
