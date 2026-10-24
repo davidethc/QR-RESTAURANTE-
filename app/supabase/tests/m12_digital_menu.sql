@@ -214,10 +214,16 @@ begin
   v_res := public.place_online_order('monky-qa', 'pickup', v_items, gen_random_uuid(),
     'Cliente Demo', '+593 99 000 0003', 'cash');
   perform set_config('role', 'postgres', true);
+  -- now() es fijo en toda la transacción: el vencimiento se simula moviendo
+  -- expires_at hacia atrás, no esperando.
   update public.orders set expires_at = now() - interval '1 minute' where id = (v_res ->> 'order_id')::uuid;
   insert into _m12 (test, ok) values
-    ('vencido por hora ya se muestra como expired', public.online_order_json((v_res ->> 'order_id')::uuid) ->> 'step' = 'expired'),
-    ('expire_online_orders vence al menos uno', public.expire_online_orders(v_r) >= 1),
+    ('vencido por hora ya se muestra como expired', public.online_order_json((v_res ->> 'order_id')::uuid) ->> 'step' = 'expired');
+  -- Sentencia aparte: lo que escribe expire_online_orders no es visible para
+  -- otras subconsultas de la MISMA sentencia (usan su snapshot inicial).
+  i := public.expire_online_orders(v_r);
+  insert into _m12 (test, ok) values
+    ('expire_online_orders vence al menos uno', i >= 1),
     ('vencido: CANCELLED, expired_at, revisado, sesión cerrada',
       (select o.status = 'CANCELLED' and o.cancelled and o.expired_at is not null and o.status_review = 'reviewed'
          and ts.status = 'CLOSED'
