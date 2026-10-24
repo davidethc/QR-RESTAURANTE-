@@ -7,10 +7,13 @@ import { posPressable } from "@/components/shared/pos-tone";
 import { cn } from "@/lib/utils";
 import { connection } from "next/server";
 import { getMyRestaurant, getAdminMenu } from "@/lib/queries/staff";
+import { listPromotions } from "@/lib/queries/promotions";
+import { localToday } from "@/lib/promotions";
 import { MenuAdminBoard } from "./_components/menu-admin-board";
 import { CatalogTabs } from "./_components/catalog-tabs";
 import { CategoryDialog } from "./_components/category-dialog";
 import { ProductEditor } from "./_components/product-editor";
+import { PromotionsBoard } from "./_components/promotions-board";
 
 const HEADER_BUTTON =
   "flex min-h-12 items-center gap-2 rounded-button border-2 border-border bg-card px-4 text-body-sm font-semibold text-foreground hover:border-border-strong";
@@ -29,7 +32,11 @@ export default async function MenuAdminPage() {
   await connection();
   const session = await getMyRestaurant();
   requireRouteAccess(session, "/menu");
-  const menu = await getAdminMenu(session.restaurant.id);
+  const [menu, promotions] = await Promise.all([
+    getAdminMenu(session.restaurant.id),
+    listPromotions(session.restaurant.id),
+  ]);
+  const today = localToday(session.restaurant.timezone ?? "America/Guayaquil");
 
   const soldOut = menu.products.filter((p) => !p.available).length;
 
@@ -37,6 +44,15 @@ export default async function MenuAdminPage() {
     <main data-caja className="min-h-full bg-background">
       <CatalogTabs
         restaurantId={session.restaurant.id}
+        promotions={
+          <PromotionsBoard
+            restaurantId={session.restaurant.id}
+            promotions={promotions}
+            categories={menu.categories}
+            products={menu.products}
+            today={today}
+          />
+        }
         metrics={
           <>
             <StatusMetric label="Productos" value={String(menu.products.length)} icon={UtensilsCrossed} />

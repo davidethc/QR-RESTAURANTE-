@@ -1,25 +1,29 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { BookOpen, LayoutGrid, SlidersHorizontal } from "lucide-react";
+import { BookOpen, LayoutGrid, SlidersHorizontal, Tag } from "lucide-react";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { ModifierBoard } from "./modifier-board";
 
-type Tab = "products" | "modifiers";
+type Tab = "products" | "modifiers" | "promotions";
 
 /**
  * Carta with Caja's identity: a white header band (title, metric tiles,
- * actions), then Productos / Personalizaciones as a segmented control.
+ * actions), then Productos / Personalizaciones / Promociones as a segmented
+ * control.
  */
 export function CatalogTabs({
   restaurantId,
   metrics,
   action,
+  promotions,
   children,
 }: {
   restaurantId: string;
   metrics: ReactNode;
   action: ReactNode;
+  /** Promociones tab (M13); its own "Nueva promoción" lives inside it. */
+  promotions: ReactNode;
   children: ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("products");
@@ -52,9 +56,10 @@ export function CatalogTabs({
           options={[
             { value: "products", label: "Productos", icon: LayoutGrid },
             { value: "modifiers", label: "Personalizaciones", icon: SlidersHorizontal },
+            { value: "promotions", label: "Promociones", icon: Tag },
           ]}
         />
-        {tab === "products" ? children : <ModifierBoard restaurantId={restaurantId} />}
+        {tab === "products" ? children : tab === "modifiers" ? <ModifierBoard restaurantId={restaurantId} /> : promotions}
       </div>
     </>
   );
