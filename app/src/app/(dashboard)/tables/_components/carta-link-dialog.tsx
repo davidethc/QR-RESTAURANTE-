@@ -58,7 +58,7 @@ export function CartaLinkDialog({
           <Link2 className="h-4 w-4" /> Link de carta
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Carta para compartir</DialogTitle>
           <DialogDescription>
@@ -67,7 +67,7 @@ export function CartaLinkDialog({
             no llega a cocina ni a ninguna mesa.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col items-center gap-3 py-2">
+        <div className="flex min-w-0 flex-col items-center gap-3 py-2">
           {dataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={dataUrl} alt="QR de la carta" className="h-48 w-48" />
