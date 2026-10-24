@@ -61,15 +61,15 @@ export function CategorySection({
       data-section-id={category.id}
       data-open={isOpen ? "true" : "false"}
       className={cn(
-        "rounded-2xl border bg-card",
-        isOpen ? "border-primary/30 shadow-sm" : "border-border"
+        "rounded-2xl",
+        !isOpen && "border border-border bg-card"
       )}
     >
       {isOpen ? (
         // Sticky header: `top` follows the measured bar height (see
         // useMenuNavigation), and it unsticks when the section ends.
         <div
-          className="sticky z-[5] flex items-center gap-1 rounded-t-2xl border-b border-border bg-card/95 pr-2 backdrop-blur-sm supports-[not(backdrop-filter:blur(1px))]:bg-card"
+          className="sticky z-[5] flex items-center gap-1 bg-background/95 pr-2 backdrop-blur-sm supports-[not(backdrop-filter:blur(1px))]:bg-background"
           style={{ top: "var(--menu-bar-h, 0px)" }}
         >
           <h2 className="min-w-0 flex-1">
