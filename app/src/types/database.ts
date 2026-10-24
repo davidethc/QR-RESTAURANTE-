@@ -348,6 +348,32 @@ export type Database = {
           },
         ]
       }
+      cash_counters: {
+        Row: {
+          last_cut: number
+          last_movement: number
+          restaurant_id: string
+        }
+        Insert: {
+          last_cut?: number
+          last_movement?: number
+          restaurant_id: string
+        }
+        Update: {
+          last_cut?: number
+          last_movement?: number
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_counters_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -358,11 +384,11 @@ export type Database = {
           expense_id: string | null
           id: string
           idempotency_key: string
+          number: number | null
           purchase_id: string | null
           reason: Database["public"]["Enums"]["cash_movement_reason"]
           restaurant_id: string
           type: Database["public"]["Enums"]["cash_movement_type"]
-          number: number | null
         }
         Insert: {
           amount: number
@@ -373,11 +399,11 @@ export type Database = {
           expense_id?: string | null
           id?: string
           idempotency_key: string
+          number?: number | null
           purchase_id?: string | null
           reason: Database["public"]["Enums"]["cash_movement_reason"]
           restaurant_id: string
           type: Database["public"]["Enums"]["cash_movement_type"]
-          number?: number | null
         }
         Update: {
           amount?: number
@@ -388,11 +414,11 @@ export type Database = {
           expense_id?: string | null
           id?: string
           idempotency_key?: string
+          number?: number | null
           purchase_id?: string | null
           reason?: Database["public"]["Enums"]["cash_movement_reason"]
           restaurant_id?: string
           type?: Database["public"]["Enums"]["cash_movement_type"]
-          number?: number | null
         }
         Relationships: [
           {
@@ -497,9 +523,12 @@ export type Database = {
       }
       cash_sessions: {
         Row: {
+          cash_float_left: number | null
+          cash_to_withdraw: number | null
           closed_at: string | null
           closed_by: string | null
           created_at: string
+          cut_number: number | null
           id: string
           notes: string | null
           opened_at: string
@@ -507,19 +536,19 @@ export type Database = {
           opening_float: number
           register_id: string
           restaurant_id: string
-          status: Database["public"]["Enums"]["cash_session_status"]
-          updated_at: string
-          cash_float_left: number | null
-          cash_to_withdraw: number | null
-          cut_number: number | null
           result: string | null
           skipped_order_folios: number[]
           skipped_pending_orders: boolean
+          status: Database["public"]["Enums"]["cash_session_status"]
+          updated_at: string
         }
         Insert: {
+          cash_float_left?: number | null
+          cash_to_withdraw?: number | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
+          cut_number?: number | null
           id?: string
           notes?: string | null
           opened_at?: string
@@ -527,19 +556,19 @@ export type Database = {
           opening_float?: number
           register_id: string
           restaurant_id: string
-          status?: Database["public"]["Enums"]["cash_session_status"]
-          updated_at?: string
-          cash_float_left?: number | null
-          cash_to_withdraw?: number | null
-          cut_number?: number | null
           result?: string | null
           skipped_order_folios?: number[]
           skipped_pending_orders?: boolean
+          status?: Database["public"]["Enums"]["cash_session_status"]
+          updated_at?: string
         }
         Update: {
+          cash_float_left?: number | null
+          cash_to_withdraw?: number | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
+          cut_number?: number | null
           id?: string
           notes?: string | null
           opened_at?: string
@@ -547,14 +576,11 @@ export type Database = {
           opening_float?: number
           register_id?: string
           restaurant_id?: string
-          status?: Database["public"]["Enums"]["cash_session_status"]
-          updated_at?: string
-          cash_float_left?: number | null
-          cash_to_withdraw?: number | null
-          cut_number?: number | null
           result?: string | null
           skipped_order_folios?: number[]
           skipped_pending_orders?: boolean
+          status?: Database["public"]["Enums"]["cash_session_status"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -624,6 +650,106 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_settings: {
+        Row: {
+          delivery_time_max: number
+          delivery_time_min: number
+          free_shipping_enabled: boolean
+          free_shipping_min_amount: number | null
+          min_purchase_amount: number | null
+          min_purchase_enabled: boolean
+          pickup_time: number
+          restaurant_id: string
+          shipping_cost_type: string
+          unconfirmed_ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          delivery_time_max?: number
+          delivery_time_min?: number
+          free_shipping_enabled?: boolean
+          free_shipping_min_amount?: number | null
+          min_purchase_amount?: number | null
+          min_purchase_enabled?: boolean
+          pickup_time?: number
+          restaurant_id: string
+          shipping_cost_type?: string
+          unconfirmed_ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          delivery_time_max?: number
+          delivery_time_min?: number
+          free_shipping_enabled?: boolean
+          free_shipping_min_amount?: number | null
+          min_purchase_amount?: number | null
+          min_purchase_enabled?: boolean
+          pickup_time?: number
+          restaurant_id?: string
+          shipping_cost_type?: string
+          unconfirmed_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devices: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          last_used_at: string | null
+          link_expires_at: string | null
+          link_token_hash: string | null
+          linked_at: string | null
+          name: string | null
+          restaurant_id: string
+          revoked_at: string | null
+          token_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_used_at?: string | null
+          link_expires_at?: string | null
+          link_token_hash?: string | null
+          linked_at?: string | null
+          name?: string | null
+          restaurant_id: string
+          revoked_at?: string | null
+          token_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_used_at?: string | null
+          link_expires_at?: string | null
+          link_token_hash?: string | null
+          linked_at?: string | null
+          name?: string | null
+          restaurant_id?: string
+          revoked_at?: string | null
+          token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -733,6 +859,42 @@ export type Database = {
           },
         ]
       }
+      online_order_tokens: {
+        Row: {
+          created_at: string
+          order_id: string
+          restaurant_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          order_id: string
+          restaurant_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          order_id?: string
+          restaurant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "online_order_tokens_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_order_tokens_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_counters: {
         Row: {
           last_folio: number
@@ -813,6 +975,8 @@ export type Database = {
           order_id: string
           product_id: string | null
           product_name: string
+          promo_discount: number
+          promotions: Json | null
           quantity: number
           subtotal: number
           ticket_id: string | null
@@ -830,6 +994,8 @@ export type Database = {
           order_id: string
           product_id?: string | null
           product_name: string
+          promo_discount?: number
+          promotions?: Json | null
           quantity: number
           subtotal: number
           ticket_id?: string | null
@@ -847,6 +1013,8 @@ export type Database = {
           order_id?: string
           product_id?: string | null
           product_name?: string
+          promo_discount?: number
+          promotions?: Json | null
           quantity?: number
           subtotal?: number
           ticket_id?: string | null
@@ -895,12 +1063,15 @@ export type Database = {
           cancelled: boolean
           cancelled_by: string | null
           client_request_id: string | null
+          confirmed_at: string | null
           created_at: string
           customer_name: string | null
           customer_phone: string | null
           delivered_at: string | null
           delivery_address: Json | null
           delivery_provider: string | null
+          expired_at: string | null
+          expires_at: string | null
           external_order_id: string | null
           folio: number
           general_comment: string | null
@@ -916,6 +1087,7 @@ export type Database = {
           service_type: string
           shipping_cost: number | null
           short_code: string
+          source: string | null
           status: Database["public"]["Enums"]["order_status"]
           status_review: string
           subtotal: number
@@ -923,7 +1095,6 @@ export type Database = {
           table_session_id: string | null
           total: number
           updated_at: string
-          source: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -932,12 +1103,15 @@ export type Database = {
           cancelled?: boolean
           cancelled_by?: string | null
           client_request_id?: string | null
+          confirmed_at?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
           delivered_at?: string | null
           delivery_address?: Json | null
           delivery_provider?: string | null
+          expired_at?: string | null
+          expires_at?: string | null
           external_order_id?: string | null
           folio: number
           general_comment?: string | null
@@ -953,6 +1127,7 @@ export type Database = {
           service_type?: string
           shipping_cost?: number | null
           short_code: string
+          source?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           status_review?: string
           subtotal?: number
@@ -960,7 +1135,6 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
-          source?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -969,12 +1143,15 @@ export type Database = {
           cancelled?: boolean
           cancelled_by?: string | null
           client_request_id?: string | null
+          confirmed_at?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
           delivered_at?: string | null
           delivery_address?: Json | null
           delivery_provider?: string | null
+          expired_at?: string | null
+          expires_at?: string | null
           external_order_id?: string | null
           folio?: number
           general_comment?: string | null
@@ -990,6 +1167,7 @@ export type Database = {
           service_type?: string
           shipping_cost?: number | null
           short_code?: string
+          source?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           status_review?: string
           subtotal?: number
@@ -997,7 +1175,6 @@ export type Database = {
           table_session_id?: string | null
           total?: number
           updated_at?: string
-          source?: string | null
         }
         Relationships: [
           {
@@ -1066,6 +1243,53 @@ export type Database = {
           },
           {
             foreignKeyName: "payment_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_method_settings: {
+        Row: {
+          bank_account: string | null
+          bank_card_number: string | null
+          bank_holder: string | null
+          bank_name: string | null
+          card_enabled: boolean
+          cash_enabled: boolean
+          channel: string
+          restaurant_id: string
+          transfer_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          bank_account?: string | null
+          bank_card_number?: string | null
+          bank_holder?: string | null
+          bank_name?: string | null
+          card_enabled?: boolean
+          cash_enabled?: boolean
+          channel: string
+          restaurant_id: string
+          transfer_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          bank_account?: string | null
+          bank_card_number?: string | null
+          bank_holder?: string | null
+          bank_name?: string | null
+          card_enabled?: boolean
+          cash_enabled?: boolean
+          channel?: string
+          restaurant_id?: string
+          transfer_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_settings_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
@@ -1219,6 +1443,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pin_login_attempts_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      printing_settings: {
+        Row: {
+          advanced_printing: boolean
+          connection: string | null
+          customer_ticket_font_size: string
+          customer_ticket_footer: string | null
+          customer_ticket_header: string | null
+          kitchen_ticket_font_size: string
+          os: string | null
+          restaurant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          advanced_printing?: boolean
+          connection?: string | null
+          customer_ticket_font_size?: string
+          customer_ticket_footer?: string | null
+          customer_ticket_header?: string | null
+          kitchen_ticket_font_size?: string
+          os?: string | null
+          restaurant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          advanced_printing?: boolean
+          connection?: string | null
+          customer_ticket_font_size?: string
+          customer_ticket_footer?: string | null
+          customer_ticket_header?: string | null
+          kitchen_ticket_font_size?: string
+          os?: string | null
+          restaurant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printing_settings_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: true
             referencedRelation: "restaurants"
@@ -1488,6 +1759,77 @@ export type Database = {
         }
         Relationships: []
       }
+      promotions: {
+        Row: {
+          applies_to: string
+          buy_qty: number | null
+          created_at: string
+          created_by: string | null
+          ends_on: string | null
+          id: string
+          name: string
+          receive_qty: number | null
+          restaurant_id: string
+          service_options: Json
+          starts_on: string | null
+          status: string
+          target_ids: string[]
+          type: string
+          updated_at: string
+          value: number | null
+          value_type: string | null
+          weekdays: number[] | null
+        }
+        Insert: {
+          applies_to: string
+          buy_qty?: number | null
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          id?: string
+          name: string
+          receive_qty?: number | null
+          restaurant_id: string
+          service_options?: Json
+          starts_on?: string | null
+          status?: string
+          target_ids: string[]
+          type: string
+          updated_at?: string
+          value?: number | null
+          value_type?: string | null
+          weekdays?: number[] | null
+        }
+        Update: {
+          applies_to?: string
+          buy_qty?: number | null
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string | null
+          id?: string
+          name?: string
+          receive_qty?: number | null
+          restaurant_id?: string
+          service_options?: Json
+          starts_on?: string | null
+          status?: string
+          target_ids?: string[]
+          type?: string
+          updated_at?: string
+          value?: number | null
+          value_type?: string | null
+          weekdays?: number[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurant_members: {
         Row: {
           cash_register_ids: string[]
@@ -1553,6 +1895,9 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           description: string | null
+          digital_menu_paused_from: string | null
+          digital_menu_paused_until: string | null
+          digital_menu_status: string
           id: string
           kds_alert_minutes: number
           kds_enabled: boolean
@@ -1563,12 +1908,14 @@ export type Database = {
           name: string
           opening_hours: Json | null
           phone: string | null
+          qr_call_cooldown_seconds: number
+          qr_orders_require_approval: boolean
           slug: string
           status: Database["public"]["Enums"]["restaurant_status"]
           timezone: string
           updated_at: string
-          qr_call_cooldown_seconds: number
-          qr_orders_require_approval: boolean
+          whatsapp_monthly_volume: string | null
+          whatsapp_number: string | null
         }
         Insert: {
           address?: string | null
@@ -1577,6 +1924,9 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          digital_menu_paused_from?: string | null
+          digital_menu_paused_until?: string | null
+          digital_menu_status?: string
           id?: string
           kds_alert_minutes?: number
           kds_enabled?: boolean
@@ -1587,12 +1937,14 @@ export type Database = {
           name: string
           opening_hours?: Json | null
           phone?: string | null
+          qr_call_cooldown_seconds?: number
+          qr_orders_require_approval?: boolean
           slug: string
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
-          qr_call_cooldown_seconds?: number
-          qr_orders_require_approval?: boolean
+          whatsapp_monthly_volume?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
           address?: string | null
@@ -1601,6 +1953,9 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
+          digital_menu_paused_from?: string | null
+          digital_menu_paused_until?: string | null
+          digital_menu_status?: string
           id?: string
           kds_alert_minutes?: number
           kds_enabled?: boolean
@@ -1611,12 +1966,14 @@ export type Database = {
           name?: string
           opening_hours?: Json | null
           phone?: string | null
+          qr_call_cooldown_seconds?: number
+          qr_orders_require_approval?: boolean
           slug?: string
           status?: Database["public"]["Enums"]["restaurant_status"]
           timezone?: string
           updated_at?: string
-          qr_call_cooldown_seconds?: number
-          qr_orders_require_approval?: boolean
+          whatsapp_monthly_volume?: string | null
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -1843,7 +2200,7 @@ export type Database = {
           kitchen_status?: string
           number: number
           order_id: string
-          restaurant_id?: string
+          restaurant_id: string
         }
         Update: {
           client_request_id?: string | null
@@ -1863,6 +2220,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -2049,123 +2413,23 @@ export type Database = {
       }
     }
     Functions: {
-      activate_device: {
-        Args: { p_name: string; p_token: string }
-        Returns: Json
-      }
-      approve_customer_order: {
-        Args: { p_order_id: string }
-        Returns: Json
-      }
-      can_handle_cash: {
-        Args: { p_register_id?: string; p_restaurant_id: string }
-        Returns: boolean
-      }
-      cash_cut: {
-        Args: {
-          p_cash_float_left?: number
-          p_cash_session_id: string
-          p_counts: Json
-          p_notes?: string
-          p_skip_pending_orders?: boolean
-        }
-        Returns: Json
-      }
-      create_device_link: {
-        Args: {
-          p_name?: string
-          p_restaurant_id: string
-          p_ttl_minutes?: number
-        }
-        Returns: Json
-      }
-      get_cash_cut_precheck: {
-        Args: { p_cash_session_id: string }
-        Returns: Json
-      }
-      get_customer_account: {
-        Args: { p_session_token: string }
-        Returns: Json
-      }
-      get_customer_session: {
-        Args: { p_session_token: string }
-        Returns: Json
-      }
-      get_device_link_info: {
-        Args: { p_token: string }
-        Returns: Json
-      }
-      get_last_cash_float: {
-        Args: { p_restaurant_id: string }
-        Returns: Json
-      }
-      get_staff_counters: {
-        Args: { p_restaurant_id: string }
-        Returns: Json
-      }
-      is_cash_admin: {
-        Args: { p_restaurant_id: string }
-        Returns: boolean
-      }
-      list_cash_cuts: {
-        Args: {
-          p_before_cut?: number
-          p_limit?: number
-          p_register_id?: string
-          p_restaurant_id: string
-        }
-        Returns: Json
-      }
-      list_cash_movements: {
-        Args: {
-          p_cash_session_id?: string
-          p_limit?: number
-          p_register_id?: string
-          p_restaurant_id: string
-        }
-        Returns: Json
-      }
-      list_devices: {
-        Args: { p_restaurant_id: string }
-        Returns: Json
-      }
-      mark_order_reviewed: {
-        Args: { p_order_id: string }
-        Returns: undefined
-      }
-      open_table_from_qr: {
-        Args: { p_customer_label: string; p_qr_token: string }
-        Returns: Json
-      }
-      pin_login: {
-        Args: { p_device_secret: string; p_pin: string }
-        Returns: Json
-      }
-      reject_customer_order: {
-        Args: { p_order_id: string; p_reason?: string }
-        Returns: Json
-      }
-      revoke_device: {
-        Args: { p_device_id: string }
-        Returns: undefined
-      }
-      set_qr_settings: {
-        Args: {
-          p_call_cooldown_seconds?: number
-          p_require_approval?: boolean
-          p_restaurant_id: string
-        }
-        Returns: Json
-      }
-      validate_device: {
-        Args: { p_device_secret: string }
-        Returns: Json
-      }
       accept_and_prepare_order: {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      accept_online_order: {
+        Args: { p_order_id: string; p_shipping_cost?: number }
+        Returns: Json
+      }
       accept_order: { Args: { p_order_id: string }; Returns: undefined }
+      activate_device: {
+        Args: { p_name: string; p_token: string }
+        Returns: Json
+      }
+      activate_digital_menu: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
       add_cash_movement: {
         Args: {
           p_amount: number
@@ -2214,15 +2478,22 @@ export type Database = {
         }
         Returns: Json
       }
+      approve_customer_order: { Args: { p_order_id: string }; Returns: Json }
       assert_can_manage_member: {
         Args: { p_member_id: string }
         Returns: string
       }
-      bill_json: { Args: { p_bill_id: string }; Returns: Json }
-      build_order_lines: {
-        Args: { p_items: Json; p_restaurant_id: string }
-        Returns: Json
+      assert_floor_staff: {
+        Args: { p_restaurant_id: string }
+        Returns: undefined
       }
+      bill_json: { Args: { p_bill_id: string }; Returns: Json }
+      build_order_lines:
+        | { Args: { p_items: Json; p_restaurant_id: string }; Returns: Json }
+        | {
+            Args: { p_channel: string; p_items: Json; p_restaurant_id: string }
+            Returns: Json
+          }
       business_date: {
         Args: { p_restaurant_id: string; p_ts?: string }
         Returns: string
@@ -2235,6 +2506,19 @@ export type Database = {
         }[]
       }
       business_today: { Args: { p_restaurant_id: string }; Returns: string }
+      can_handle_cash: {
+        Args: { p_register_id?: string; p_restaurant_id: string }
+        Returns: boolean
+      }
+      can_handle_online_orders: {
+        Args: { p_restaurant_id: string }
+        Returns: boolean
+      }
+      can_manage_digital_menu: {
+        Args: { p_restaurant_id: string }
+        Returns: boolean
+      }
+      can_manage_menu: { Args: { p_restaurant_id: string }; Returns: boolean }
       can_manage_staff_role: {
         Args: {
           p_restaurant_id: string
@@ -2258,6 +2542,23 @@ export type Database = {
         Args: { p_order_id: string; p_reason: string }
         Returns: undefined
       }
+      cash_cut: {
+        Args: {
+          p_cash_float_left?: number
+          p_cash_session_id: string
+          p_counts: Json
+          p_notes?: string
+          p_skip_pending_orders?: boolean
+        }
+        Returns: Json
+      }
+      cash_pending_unpaid_orders: {
+        Args: { p_restaurant_id: string }
+        Returns: {
+          folio: number
+          order_id: string
+        }[]
+      }
       cash_session_expected: {
         Args: { p_cash_session_id: string }
         Returns: {
@@ -2265,8 +2566,25 @@ export type Database = {
           method: Database["public"]["Enums"]["payment_method"]
         }[]
       }
+      cashier_default_session: {
+        Args: { p_restaurant_id: string }
+        Returns: string
+      }
       check_member_pin: {
         Args: { p_pin: string; p_restaurant_id: string }
+        Returns: {
+          member_id: string
+          roles: string[]
+          status: string
+        }[]
+      }
+      check_member_pin_core: {
+        Args: {
+          p_actor: string
+          p_device_id?: string
+          p_pin: string
+          p_restaurant_id: string
+        }
         Returns: {
           member_id: string
           roles: string[]
@@ -2278,11 +2596,16 @@ export type Database = {
         Args: { p_cash_session_id: string; p_counts: Json; p_notes?: string }
         Returns: Json
       }
+      close_online_order_session: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
       close_table_session: {
         Args: { p_force?: boolean; p_reason?: string; p_table_id: string }
         Returns: undefined
       }
       complete_ticket: { Args: { p_ticket_id: string }; Returns: Json }
+      confirm_online_order: { Args: { p_token: string }; Returns: Json }
       counter_sale_json: {
         Args: { p_replayed: boolean; p_session_id: string }
         Returns: Json
@@ -2325,6 +2648,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_device_link: {
+        Args: {
+          p_name?: string
+          p_restaurant_id: string
+          p_ttl_minutes?: number
+        }
+        Returns: Json
+      }
       create_staff_order: {
         Args: {
           p_client_request_id?: string
@@ -2362,8 +2693,25 @@ export type Database = {
         }
         Returns: string
       }
+      delete_promotion: { Args: { p_promotion_id: string }; Returns: undefined }
       delete_table: { Args: { p_table_id: string }; Returns: undefined }
       delete_zone: { Args: { p_zone_id: string }; Returns: undefined }
+      delivery_settings_json: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      digital_menu_effective_status: {
+        Args: { p_at?: string; p_restaurant_id: string }
+        Returns: string
+      }
+      digital_menu_open_state: {
+        Args: { p_at?: string; p_restaurant_id: string }
+        Returns: Json
+      }
+      digital_menu_state_json: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
       edit_order_item: {
         Args: {
           p_notes?: string
@@ -2373,6 +2721,10 @@ export type Database = {
         Returns: Json
       }
       expire_idle_empty_table_sessions: {
+        Args: { p_restaurant_id?: string }
+        Returns: number
+      }
+      expire_online_orders: {
         Args: { p_restaurant_id?: string }
         Returns: number
       }
@@ -2444,17 +2796,33 @@ export type Database = {
         Args: { p_restaurant_id: string }
         Returns: string
       }
+      get_active_promotions: {
+        Args: { p_channel?: string; p_restaurant_id: string }
+        Returns: Json
+      }
       get_admin_menu: { Args: { p_restaurant_id: string }; Returns: Json }
       get_bill: { Args: { p_bill_id: string }; Returns: Json }
+      get_cash_cut_precheck: {
+        Args: { p_cash_session_id: string }
+        Returns: Json
+      }
       get_cash_session_summary: {
         Args: { p_cash_session_id: string }
         Returns: Json
       }
+      get_customer_account: { Args: { p_session_token: string }; Returns: Json }
       get_customer_order: {
         Args: { p_order_id: string; p_session_token: string }
         Returns: Json
       }
+      get_customer_session: { Args: { p_session_token: string }; Returns: Json }
       get_dashboard_summary: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
+      get_device_link_info: { Args: { p_token: string }; Returns: Json }
+      get_digital_menu: { Args: { p_slug: string }; Returns: Json }
+      get_digital_menu_settings: {
         Args: { p_restaurant_id: string }
         Returns: Json
       }
@@ -2468,7 +2836,14 @@ export type Database = {
         }
         Returns: Json
       }
+      get_last_cash_float: { Args: { p_restaurant_id: string }; Returns: Json }
       get_my_restaurant: { Args: never; Returns: Json }
+      get_online_order: { Args: { p_token: string }; Returns: Json }
+      get_order_contact: { Args: { p_order_id: string }; Returns: Json }
+      get_printing_settings: {
+        Args: { p_restaurant_id: string }
+        Returns: Json
+      }
       get_public_menu: { Args: { p_slug: string }; Returns: Json }
       get_restaurant_staff: { Args: { p_restaurant_id: string }; Returns: Json }
       get_sales_report: {
@@ -2478,6 +2853,7 @@ export type Database = {
       get_session_bill: { Args: { p_session_token: string }; Returns: Json }
       get_session_calls: { Args: { p_session_token: string }; Returns: Json }
       get_session_orders: { Args: { p_session_token: string }; Returns: Json }
+      get_staff_counters: { Args: { p_restaurant_id: string }; Returns: Json }
       get_staff_members: { Args: { p_restaurant_id: string }; Returns: Json }
       get_staff_orders: {
         Args: {
@@ -2518,7 +2894,39 @@ export type Database = {
         Args: { p_lines: Json; p_order_id: string; p_ticket_id: string }
         Returns: undefined
       }
+      is_cash_admin: { Args: { p_restaurant_id: string }; Returns: boolean }
       kds_lock_ticket: { Args: { p_ticket_id: string }; Returns: Json }
+      line_promotions: {
+        Args: {
+          p_category_id: string
+          p_channel: string
+          p_local_date: string
+          p_product_id: string
+          p_quantity: number
+          p_restaurant_id: string
+          p_variant_price: number
+        }
+        Returns: Json
+      }
+      list_cash_cuts: {
+        Args: {
+          p_before_cut?: number
+          p_limit?: number
+          p_register_id?: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      list_cash_movements: {
+        Args: {
+          p_cash_session_id?: string
+          p_limit?: number
+          p_register_id?: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
+      list_devices: { Args: { p_restaurant_id: string }; Returns: Json }
       list_open_bills: { Args: { p_restaurant_id: string }; Returns: Json }
       lock_bill: {
         Args: { p_bill_id: string }
@@ -2617,6 +3025,7 @@ export type Database = {
       }
       mark_order_delivered: { Args: { p_order_id: string }; Returns: undefined }
       mark_order_ready: { Args: { p_order_id: string }; Returns: undefined }
+      mark_order_reviewed: { Args: { p_order_id: string }; Returns: undefined }
       move_table: {
         Args: {
           p_col: number
@@ -2629,12 +3038,38 @@ export type Database = {
         }
         Returns: undefined
       }
+      next_cash_number: {
+        Args: { p_kind: string; p_restaurant_id: string }
+        Returns: number
+      }
+      online_order_json: { Args: { p_order_id: string }; Returns: Json }
       open_bill: { Args: { p_table_session_id: string }; Returns: Json }
       open_cash_session: {
         Args: { p_opening_float?: number; p_register_id: string }
         Returns: Json
       }
       open_table: { Args: { p_table_id: string }; Returns: Json }
+      open_table_from_qr: {
+        Args: { p_customer_label: string; p_qr_token: string }
+        Returns: Json
+      }
+      pause_digital_menu: {
+        Args: {
+          p_from?: string
+          p_preset: string
+          p_restaurant_id: string
+          p_until?: string
+        }
+        Returns: Json
+      }
+      payment_methods_json: {
+        Args: { p_include_bank: boolean; p_restaurant_id: string }
+        Returns: Json
+      }
+      pin_login: {
+        Args: { p_device_secret: string; p_pin: string }
+        Returns: Json
+      }
       place_label: {
         Args: {
           p_counter_number: number
@@ -2644,9 +3079,56 @@ export type Database = {
         }
         Returns: string
       }
+      place_online_order: {
+        Args: {
+          p_client_request_id: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_delivery_address?: Json
+          p_general_comment?: string
+          p_items: Json
+          p_payment_method: string
+          p_pays_with_amount?: number
+          p_service_type: string
+          p_slug: string
+        }
+        Returns: Json
+      }
+      price_channel_valid: { Args: { p_channel: string }; Returns: boolean }
       product_effective_available: {
         Args: { p_product_id: string }
         Returns: boolean
+      }
+      promo_line_discount: {
+        Args: { p_promos: Json; p_quantity: number; p_variant_price: number }
+        Returns: number
+      }
+      promotion_channel_ok: {
+        Args: { p_channel: string; p_service_options: Json }
+        Returns: boolean
+      }
+      promotion_label: {
+        Args: {
+          p_buy: number
+          p_receive: number
+          p_type: string
+          p_value: number
+          p_value_type: string
+        }
+        Returns: string
+      }
+      promotion_runs_on: {
+        Args: {
+          p_ends_on: string
+          p_local_date: string
+          p_starts_on: string
+          p_weekdays: number[]
+        }
+        Returns: boolean
+      }
+      quote_online_order: {
+        Args: { p_items: Json; p_service_type: string; p_slug: string }
+        Returns: Json
       }
       recompute_bill: {
         Args: { p_bill_id: string }
@@ -2718,6 +3200,14 @@ export type Database = {
         Returns: Json
       }
       refresh_table_status: { Args: { p_table_id: string }; Returns: undefined }
+      reject_customer_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: Json
+      }
+      reject_online_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: Json
+      }
       reject_order: {
         Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
@@ -2865,9 +3355,28 @@ export type Database = {
           table_number: number
         }[]
       }
+      restaurant_local_date: {
+        Args: { p_at?: string; p_restaurant_id: string }
+        Returns: string
+      }
       restaurant_tz: { Args: { p_restaurant_id: string }; Returns: string }
+      resume_digital_menu: { Args: { p_restaurant_id: string }; Returns: Json }
       return_ticket_to_preparation: {
         Args: { p_ticket_id: string }
+        Returns: Json
+      }
+      review_online_order: { Args: { p_order_id: string }; Returns: Json }
+      revoke_device: { Args: { p_device_id: string }; Returns: undefined }
+      save_delivery_settings: {
+        Args: { p_data: Json; p_restaurant_id: string }
+        Returns: Json
+      }
+      save_payment_method_settings: {
+        Args: { p_channel: string; p_data: Json; p_restaurant_id: string }
+        Returns: Json
+      }
+      save_printing_settings: {
+        Args: { p_data: Json; p_restaurant_id: string }
         Returns: Json
       }
       save_product_variants: {
@@ -2888,11 +3397,29 @@ export type Database = {
         }
         Returns: string
       }
+      save_promotion: {
+        Args: { p_data: Json; p_promotion_id?: string; p_restaurant_id: string }
+        Returns: Json
+      }
+      session_bill_requested: {
+        Args: { p_session_id: string }
+        Returns: boolean
+      }
+      session_place_label: { Args: { p_session_id: string }; Returns: string }
+      session_price_channel: { Args: { p_session_id: string }; Returns: string }
       set_bill_split: {
         Args: {
           p_bill_id: string
           p_mode: Database["public"]["Enums"]["bill_split_mode"]
           p_parts?: number
+        }
+        Returns: Json
+      }
+      set_digital_menu_whatsapp: {
+        Args: {
+          p_monthly_volume?: string
+          p_restaurant_id: string
+          p_whatsapp_number: string
         }
         Returns: Json
       }
@@ -2906,6 +3433,14 @@ export type Database = {
           p_enabled?: boolean
           p_restaurant_id: string
           p_warn_minutes?: number
+        }
+        Returns: Json
+      }
+      set_qr_settings: {
+        Args: {
+          p_call_cooldown_seconds?: number
+          p_require_approval?: boolean
+          p_restaurant_id: string
         }
         Returns: Json
       }
@@ -2973,6 +3508,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_device: { Args: { p_device_secret: string }; Returns: Json }
       void_bill: {
         Args: { p_bill_id: string; p_reason: string }
         Returns: Json
