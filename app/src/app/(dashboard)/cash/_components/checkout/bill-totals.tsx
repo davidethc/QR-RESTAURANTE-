@@ -1,5 +1,6 @@
-import { X } from "lucide-react";
+import { Tag, X } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
+import { roundCents } from "@/lib/promotions";
 import type { Bill } from "@/types/billing";
 
 /**
@@ -35,7 +36,9 @@ export function DeliveredRow({ bill }: { bill: Bill }) {
 
 /**
  * Totales de la cuenta, tal como los devuelve la RPC: subtotal, descuentos,
- * total, lo ya pagado y el saldo. El saldo va resaltado: verde cuando ya no
+ * total, lo ya pagado y el saldo. Con promociones (M13) el subtotal ya es
+ * neto: se muestra "Productos" a precio de lista (subtotal +
+ * promo_discount_total) y la línea "Promociones" con lo descontado. El saldo va resaltado: verde cuando ya no
  * falta nada, ámbar mientras falte.
  */
 export function BillTotals({
@@ -49,9 +52,22 @@ export function BillTotals({
   removePending?: boolean;
 }) {
   const settled = bill.balance <= 0 && bill.total > 0;
+  const promoTotal = Number((bill as Bill & { promo_discount_total?: number }).promo_discount_total ?? 0);
   return (
     <dl className="flex flex-col gap-1.5 rounded-card border border-border bg-card p-4 text-body-sm">
-      <Row label="Subtotal" value={formatPrice(bill.subtotal)} />
+      {promoTotal > 0 ? (
+        <>
+          <Row label="Productos" value={formatPrice(roundCents(bill.subtotal + promoTotal))} />
+          <div className="flex min-h-6 items-center justify-between gap-2 text-attention-soft-foreground">
+            <dt className="flex min-w-0 items-center gap-1.5">
+              <Tag className="size-3.5 shrink-0" aria-hidden /> Promociones
+            </dt>
+            <dd className="shrink-0 tabular-nums">−{formatPrice(promoTotal)}</dd>
+          </div>
+        </>
+      ) : (
+        <Row label="Subtotal" value={formatPrice(bill.subtotal)} />
+      )}
       {bill.discounts.map((d) => (
         <div key={d.id} className="flex min-h-6 items-center justify-between gap-2 text-money-out-soft-foreground">
           <dt className="min-w-0 truncate">

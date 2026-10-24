@@ -84,3 +84,23 @@ describe("sesión y navegación", () => {
     expect(getRouteRedirect(null, "/today")).toBe("/login");
   });
 });
+
+describe("M12 / M16 settings sub-routes", () => {
+  it("menú digital follows can_manage_digital_menu (owner, admin, branch manager)", () => {
+    expect(canAccessRoute("OWNER", "/settings/menu-digital")).toBe(true);
+    expect(canAccessRoute({ roles: ["ADMIN"] }, "/settings/menu-digital")).toBe(true);
+    expect(canAccessRoute({ roles: ["BRANCH_MANAGER"] }, "/settings/menu-digital")).toBe(true);
+    for (const role of ["CASHIER", "WAITER", "KITCHEN", "MENU_MANAGER", "MEMBERS_ADMIN"]) {
+      expect(canAccessRoute({ roles: [role] }, "/settings/menu-digital")).toBe(false);
+    }
+  });
+  it("printing is open to every operating role while /settings stays restricted", () => {
+    // get_printing_settings / save_printing_settings accept any active member.
+    for (const role of ["CASHIER", "WAITER", "KITCHEN", "BRANCH_MANAGER", "MENU_MANAGER", "MEMBERS_ADMIN"]) {
+      expect(canAccessRoute({ roles: [role] }, "/settings/printing")).toBe(true);
+    }
+    expect(canAccessRoute({ roles: ["WAITER"] }, "/settings")).toBe(false);
+    expect(canAccessRoute({ roles: ["WAITER"] }, "/settings/printingx")).toBe(false);
+    expect(getRouteRedirect({ roles: ["KITCHEN"] }, "/settings/menu-digital")).toBe("/today");
+  });
+});

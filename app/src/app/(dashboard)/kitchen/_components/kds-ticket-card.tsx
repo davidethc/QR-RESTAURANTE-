@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleCheck, Clock, Flame, MessageSquareWarning, RotateCcw, Sparkles, TimerReset } from "lucide-react";
+import { Check, CircleCheck, Clock, Flame, MessageSquareWarning, Printer, RotateCcw, Sparkles, TimerReset } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useNow } from "@/components/shared/clock";
 import { ActionButton } from "@/components/shared/action-button";
@@ -185,14 +185,26 @@ export function KdsTicketCard({
         </div>
       )}
 
-      <div className="border-t border-border bg-background p-3">
+      <div className="flex gap-2 border-t border-border bg-background p-3">
+        <a
+          href={`/kitchen/print/${ticket.ticket_id}?print=1`}
+          target="_blank"
+          rel="noopener"
+          aria-label="Imprimir comanda (se abre en otra pestaña)"
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-control border border-border bg-card text-foreground hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+            pending ? "min-h-14 w-14" : "min-h-12 w-12"
+          )}
+        >
+          <Printer aria-hidden className="size-5" />
+        </a>
         <ActionButton
           action={() => action(ticket.ticket_id)}
           onSuccess={onDone}
           pendingText={pending ? "Marcando lista…" : "Devolviendo…"}
           variant={pending ? "default" : "outline"}
           className={cn(
-            "w-full text-body-lg font-semibold",
+            "min-w-0 flex-1 text-body-lg font-semibold",
             pending ? "min-h-14 bg-money-in text-money-in-foreground hover:bg-money-in/90" : "min-h-12"
           )}
         >

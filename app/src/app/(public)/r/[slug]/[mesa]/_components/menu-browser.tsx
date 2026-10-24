@@ -1,12 +1,17 @@
 "use client";
 
-import { useDeferredValue, useMemo, useRef, useState } from "react";
-import { Search, SearchX, ShoppingBag, MessageCircle, Info, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useDeferredValue, useMemo, useState } from "react";
+import { ShoppingBag, MessageCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProductCard } from "./product-card";
-import { CategorySection } from "./category-section";
 import { SuggestionsRow } from "./suggestions-row";
+import { useMenuNavigation } from "./use-menu-navigation";
+import {
+  BackToTopButton,
+  MenuNavRoot,
+  MenuSearchResults,
+  MenuSectionList,
+  MenuToolbar,
+} from "./menu-navigation-ui";
 import { ProductSheet } from "./product-sheet";
 import { CartSheet } from "./cart-sheet";
 import { ServiceButtons } from "./service-buttons";
@@ -16,8 +21,7 @@ import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
-import { getCategoryIcon } from "@/lib/category-icons";
-import { formatPrice, cn, normalizeText } from "@/lib/utils";
+import { formatPrice, normalizeText } from "@/lib/utils";
 import { needsChoice } from "@/lib/order-lines";
 import type { PublicCategory, PublicProduct, StaffProductDetail } from "@/types/menu";
 
@@ -42,32 +46,10 @@ export function MenuBrowser({
   // M09: la disponibilidad se actualiza sola mientras la carta está abierta.
   const categories = useLiveMenuCategories(slug, initialCategories);
   const [query, setQuery] = useState("");
-  // Todas las categorías arrancan cerradas — el cliente ve la lista
-  // completa de nombres de un vistazo y toca la que le interesa, en
-  // vez de recibir un scroll larguísimo con los 50 productos abiertos
-  // de una vez apenas escanea el QR.
-  const [openCategories, setOpenCategories] = useState<Set<string>>(
-    () => new Set()
-  );
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  // Un callback de ref ESTABLE por categoría. Con una flecha creada en
-  // el JSX, React ve una función distinta en cada render y desmonta y
-  // vuelve a asignar todos los refs cada vez.
-  //
-  // Se arma con useMemo a partir de `categories` en vez de leer un ref
-  // durante el render (que era lo que hacía el `getSectionRef` anterior,
-  // y lo que React Compiler marca como error): escribir en
-  // `sectionRefs.current` dentro del propio callback sí es válido,
-  // porque React lo invoca al montar, no al renderizar.
-  const sectionRefCallbacks = useMemo(() => {
-    const map: Record<string, (el: HTMLElement | null) => void> = {};
-    for (const category of categories) {
-      map[category.id] = (el) => {
-        sectionRefs.current[category.id] = el;
-      };
-    }
-    return map;
-  }, [categories]);
+  // Open sections, active chip, scroll-spy and every automatic scroll:
+  // shared with the digital menu (/pedir). See use-menu-navigation.ts.
+  const categoryIds = useMemo(() => categories.map((c) => c.id), [categories]);
+  const nav = useMenuNavigation(categoryIds);
 
   const [selectedProduct, setSelectedProduct] = useState<PublicProduct | null>(
     null
@@ -84,19 +66,6 @@ export function MenuBrowser({
     whatsappPhone,
     `Hola ${restaurantName}, vi su carta y quisiera hacer una consulta.`
   );
-
-  // Pill activa = la categoría que el cliente ABRIÓ, no la que le queda
-  // debajo del dedo al hacer scroll.
-  //
-  // Antes esto lo decidía un IntersectionObserver, y estaba mal por dos
-  // razones: durante el scroll suave que dispara el propio clic, el
-  // observer se iba quedando con la sección que estuviera arriba en ese
-  // instante, así que acababa pintando una pill distinta de la que se
-  // tocó; y al entrar marcaba la primera categoría cuando en realidad
-  // no había ninguna abierta. Marcar por scroll además es una promesa
-  // que la pantalla no puede cumplir: con las categorías cerradas, casi
-  // todas caen dentro del viewport a la vez.
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   const cartQuantities = useMemo(() => {
     const map: Record<string, number> = {};
@@ -146,106 +115,18 @@ export function MenuBrowser({
       .map((entry) => ({ ...entry.product, categoryName: entry.categoryName }));
   }, [searchIndex, deferredQuery]);
 
-  function toggleCategory(id: string) {
-    setOpenCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-    // Abrir marca; cerrar solo apaga si era la marcada. Sin distinguir
-    // los dos casos, cerrar una categoría cualquiera movía la marca a
-    // esa misma categoría recién cerrada.
-    const isOpening = !openCategories.has(id);
-    setActiveCategoryId((prev) =>
-      isOpening ? id : prev === id ? null : prev
-    );
-  }
-
-  function goToCategory(id: string) {
-    setOpenCategories((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-    setActiveCategoryId(id);
-    sectionRefs.current[id]?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-
   return (
     // Generous bottom padding: the fixed action bar is ~9rem tall with
     // "Ver pedido" visible. Without it the last dish is hidden under it.
-    <div className="flex flex-col gap-6 pb-44">
-      <div className="glass sticky top-0 z-10 border-b border-border">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-3">
-          <div className="relative">
-            <Search
-              aria-hidden
-              className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              enterKeyHint="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar un plato o bebida"
-              aria-label="Buscar en la carta"
-              className="h-12 rounded-xl border-border bg-card pl-11 pr-11 text-body-lg placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label="Borrar búsqueda"
-                className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
-              >
-                <X aria-hidden className="size-4" strokeWidth={2.5} />
-              </button>
-            )}
-          </div>
-
-          {results === null && (
-            <nav
-              aria-label="Categorías de la carta"
-              className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
-            >
-              {categories.map((category) => {
-                const isActive = activeCategoryId === category.id;
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => goToCategory(category.id)}
-                    aria-current={isActive ? "true" : undefined}
-                    className={cn(
-                      "flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-body-sm font-semibold transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none",
-                      isActive
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-foreground hover:border-primary/40 active:bg-secondary"
-                    )}
-                  >
-                    <span aria-hidden className="emoji-3d text-body-lg leading-none">
-                      {getCategoryIcon(category.name)}
-                    </span>
-                    {category.name}
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 text-caption font-semibold tabular-nums",
-                        isActive
-                          ? "bg-primary-foreground/20 text-primary-foreground"
-                          : "bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      {category.products.length}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-          )}
-        </div>
-      </div>
+    <MenuNavRoot nav={nav} className="flex flex-col gap-6 pb-44">
+      <MenuToolbar
+        nav={nav}
+        categories={categories}
+        query={query}
+        onQueryChange={setQuery}
+        placeholder="Buscar un plato o bebida"
+        searchLabel="Buscar en la carta"
+      />
 
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         {!inTable && (
@@ -287,63 +168,22 @@ export function MenuBrowser({
         )}
 
         {results === null ? (
-          <div className="flex flex-col gap-3 px-4">
-            <h2 className="font-display text-title-sm font-bold text-foreground">
-              La carta
-            </h2>
-            {categories.map((category) => (
-              <CategorySection
-                key={category.id}
-                category={category}
-                isOpen={openCategories.has(category.id)}
-                onToggle={() => toggleCategory(category.id)}
-                onSelectProduct={setSelectedProduct}
-                cartQuantities={cartQuantities}
-                sectionRef={sectionRefCallbacks[category.id]}
-              />
-            ))}
-          </div>
-        ) : results.length === 0 ? (
-          <div className="px-4">
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-10 text-center">
-              <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                <SearchX aria-hidden className="size-6" />
-              </span>
-              <p className="text-body font-semibold text-foreground">
-                No encontramos &ldquo;{query}&rdquo;
-              </p>
-              <p className="text-body-sm text-muted-foreground">
-                Prueba con otra palabra o mira la carta completa.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setQuery("")}
-                className="mt-1 h-11 rounded-xl px-5 text-body"
-              >
-                Ver toda la carta
-              </Button>
-            </div>
-          </div>
+          <MenuSectionList
+            nav={nav}
+            title="La carta"
+            categories={categories}
+            onSelectProduct={setSelectedProduct}
+            cartQuantities={cartQuantities}
+          />
         ) : (
-          <section className="flex flex-col gap-3 px-4">
-            {/* Search results have no visible category heading; without
-                this the restaurant h1 jumps straight to each dish's h3. */}
-            <h2 className="text-body-sm font-semibold text-muted-foreground">
-              {results.length} {results.length === 1 ? "resultado" : "resultados"}
-            </h2>
-            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-              {results.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  categoryName={product.categoryName}
-                  onSelect={setSelectedProduct}
-                  quantityInCart={cartQuantities[product.id] ?? 0}
-                />
-              ))}
-            </div>
-          </section>
+          <MenuSearchResults
+            query={query}
+            results={results}
+            onClear={() => setQuery("")}
+            onSelectProduct={setSelectedProduct}
+            cartQuantities={cartQuantities}
+            emptyAction="Ver toda la carta"
+          />
         )}
       </div>
 
@@ -392,7 +232,8 @@ export function MenuBrowser({
           boxShadow: "0 -10px 28px -16px rgb(15 23 42 / 0.28)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-3">
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-3">
+          <BackToTopButton nav={nav} />
           {cart.itemCount > 0 && (
             <Button
               size="lg"
@@ -433,6 +274,6 @@ export function MenuBrowser({
           )}
         </div>
       </div>
-    </div>
+    </MenuNavRoot>
   );
 }

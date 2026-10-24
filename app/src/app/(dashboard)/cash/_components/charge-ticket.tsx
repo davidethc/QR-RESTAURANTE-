@@ -8,7 +8,10 @@ import { toneSoft, type PosTone } from "@/components/shared/pos-tone";
 import { cn, formatPrice } from "@/lib/utils";
 import { ORDER_STATUS, SPLIT_MODE } from "@/config/constants";
 import type { OrderStatus } from "@/config/constants";
+import { linePromoView } from "@/lib/promotions";
 import type { Bill, BillItem, BillOrder } from "@/types/billing";
+import type { PromoLineFields } from "@/types/promotions";
+import { PromoChip, PromoPrice } from "./checkout/promo-line";
 
 const ORDER_BADGE: Partial<Record<OrderStatus, { label: string; tone: PosTone; icon: LucideIcon }>> = {
   [ORDER_STATUS.PENDING]: { label: "Por aceptar", tone: "attention", icon: Clock },
@@ -25,6 +28,8 @@ const ORDER_BADGE: Partial<Record<OrderStatus, { label: string; tone: PosTone; i
  * casi imposible de acertar con prisa en una tablet.
  *
  * Solo pinta: la selección y lo que queda por pagar los calcula la hoja.
+ * Una línea con promoción (M13) muestra su etiqueta, el precio de lista
+ * tachado y el subtotal neto (el que suma la cuenta).
  */
 export function ChargeTicket({
   bill,
@@ -75,6 +80,8 @@ export function ChargeTicket({
                 const paid = !cancelled && remaining <= 0;
                 const showCheckbox = selectable && !paid && !cancelled;
                 const actions = !selectable && !cancelled && lineActions ? lineActions(item, order) : null;
+                const promo = linePromoView(item as BillItem & PromoLineFields);
+                const showPromo = promo.hasPromo && !cancelled;
                 const line = (
                   <span className="flex min-w-0 flex-1 items-center gap-3">
                     <ItemThumb src={item.image_url} name={item.product_name} dimmed={cancelled || paid} />
@@ -95,14 +102,25 @@ export function ChargeTicket({
                         </span>
                       ))}
                       {item.notes && <span className="block text-caption text-muted-foreground">{item.notes}</span>}
+                      {showPromo && promo.labels.length > 0 && (
+                        <span className="mt-1 flex flex-wrap gap-1">
+                          {promo.labels.map((l) => (
+                            <PromoChip key={l} label={l} />
+                          ))}
+                        </span>
+                      )}
                     </span>
                   </span>
                 );
                 const trailing = (
                   <span className="flex shrink-0 flex-col items-end gap-0.5">
-                    <span className={cn("text-body font-semibold tabular-nums text-foreground", cancelled && "font-medium text-muted-foreground line-through")}>
-                      {formatPrice(item.subtotal)}
-                    </span>
+                    {showPromo ? (
+                      <PromoPrice list={promo.listSubtotal} net={item.subtotal} netClassName="text-body" className="flex-col items-end gap-0" />
+                    ) : (
+                      <span className={cn("text-body font-semibold tabular-nums text-foreground", cancelled && "font-medium text-muted-foreground line-through")}>
+                        {formatPrice(item.subtotal)}
+                      </span>
+                    )}
                     {cancelled && <span className="text-caption font-semibold text-money-out-soft-foreground">Cancelado</span>}
                     {paid && (
                       <span className="inline-flex items-center gap-1 text-caption font-semibold text-money-in-soft-foreground">
