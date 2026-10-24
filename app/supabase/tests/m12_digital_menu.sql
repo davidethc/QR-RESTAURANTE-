@@ -245,6 +245,89 @@ begin
     insert into _m12 (test, ok) values ('4.º pedido sin confirmar del mismo teléfono se bloquea', v_hint = 'rate_limit=phone');
   end;
 
+  -- Los confirmados también cuentan (colocar + confirmar en bucle no evade el límite).
+  for i in 1..3 loop
+    v_res := public.place_online_order('monky-qa', 'pickup', v_items, gen_random_uuid(),
+      'Cliente Demo', '+593 99 000 0010', 'cash');
+    perform public.confirm_online_order((v_res ->> 'tracking_token')::uuid);
+  end loop;
+  begin
+    perform public.place_online_order('monky-qa', 'pickup', v_items, gen_random_uuid(),
+      'Cliente Demo', '+593 99 000 0010', 'cash');
+    insert into _m12 (test, ok) values ('pedidos confirmados también cuentan para el límite por teléfono', false);
+  exception when others then
+    get stacked diagnostics v_hint = pg_exception_hint;
+    insert into _m12 (test, ok) values ('pedidos confirmados también cuentan para el límite por teléfono', v_hint = 'rate_limit=phone');
+  end;
+
+  -- El mismo número escrito con otros espacios/símbolos es el mismo teléfono.
+  perform public.place_online_order('monky-qa', 'pickup', v_items, gen_random_uuid(),
+    'Cliente Demo', '+593 99 000 0011', 'cash');
+  perform public.place_online_order('monky-qa', 'pickup', v_items, gen_random_uuid(),
+    'Cliente Demo', '+593990000011', 'cash');
+  v_res := public.place_online_order('monky-qa', 'pickup', v_items, gen_random_uuid(),
+    'Cliente Demo', '+593 (99) 000-0011', 'cash');
+  begin
+    perform public.place_online_order('monky-qa', 'pickup', v_items, gen_random_uuid(),
+      'Cliente Demo', '593 99 0000 011', 'cash');
+    insert into _m12 (test, ok) values ('teléfono con otros espacios cuenta como el mismo', false);
+  exception when others then
+    get stacked diagnostics v_hint = pg_exception_hint;
+    insert into _m12 (test, ok) values ('teléfono con otros espacios cuenta como el mismo', v_hint = 'rate_limit=phone');
+  end;
+
+  -- ---- Las RPC genéricas no mueven pedidos web ----
+  perform set_config('role', 'authenticated', true),
+          set_config('request.jwt.claims', json_build_object('sub', v_owner, 'role', 'authenticated')::text, true);
+  begin
+    perform public.accept_order((v_res ->> 'order_id')::uuid);
+    insert into _m12 (test, ok) values ('accept_order rechaza un pedido web', false);
+  exception when others then
+    get stacked diagnostics v_msg = message_text;
+    insert into _m12 (test, ok) values ('accept_order rechaza un pedido web', v_msg like '%pedido en línea%');
+  end;
+  begin
+    perform public.accept_and_prepare_order((v_res ->> 'order_id')::uuid);
+    insert into _m12 (test, ok) values ('accept_and_prepare_order rechaza un pedido web', false);
+  exception when others then
+    get stacked diagnostics v_msg = message_text;
+    insert into _m12 (test, ok) values ('accept_and_prepare_order rechaza un pedido web', v_msg like '%pedido en línea%');
+  end;
+  begin
+    perform public.approve_customer_order((v_res ->> 'order_id')::uuid);
+    insert into _m12 (test, ok) values ('approve_customer_order rechaza un pedido web', false);
+  exception when others then
+    get stacked diagnostics v_msg = message_text;
+    insert into _m12 (test, ok) values ('approve_customer_order rechaza un pedido web', v_msg like '%pedido en línea%');
+  end;
+  begin
+    perform public.reject_customer_order((v_res ->> 'order_id')::uuid, 'no');
+    insert into _m12 (test, ok) values ('reject_customer_order / reject_order rechazan un pedido web', false);
+  exception when others then
+    get stacked diagnostics v_msg = message_text;
+    insert into _m12 (test, ok) values ('reject_customer_order / reject_order rechazan un pedido web', v_msg like '%pedido en línea%');
+  end;
+  perform set_config('role', 'postgres', true);
+  insert into _m12 (test, ok) values ('el pedido web sigue PENDING tras los intentos genéricos',
+    (select status = 'PENDING' and accepted_at is null from public.orders where id = (v_res ->> 'order_id')::uuid));
+
+  -- ---- Envío gratis: se guarda 0, no "por cotizar" ----
+  perform set_config('role', 'authenticated', true);
+  perform public.save_delivery_settings(v_r, jsonb_build_object(
+    'free_shipping_enabled', true, 'free_shipping_min_amount', v_price));
+  perform set_config('role', 'anon', true),
+          set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  v_res2 := public.quote_online_order('monky-qa', 'delivery', v_items);
+  v_res := public.place_online_order('monky-qa', 'delivery', v_items, gen_random_uuid(),
+    'Cliente Demo', '+593 99 000 0012', 'cash', v_addr);
+  perform set_config('role', 'postgres', true);
+  insert into _m12 (test, ok) values
+    ('quote con envío gratis: gratis y no pendiente',
+      (v_res2 #>> '{shipping,free}')::boolean and not (v_res2 #>> '{shipping,pending}')::boolean),
+    ('envío gratis alcanzado guarda shipping_cost = 0',
+      (select shipping_cost = 0 from public.orders where id = (v_res ->> 'order_id')::uuid)
+      and not (v_res ->> 'shipping_pending')::boolean);
+
   -- ---- Producto oculto en el canal ----
   perform set_config('role', 'postgres', true);
   update public.products set service_options = jsonb_set(service_options, '{digital_menu,pickup}', 'false')

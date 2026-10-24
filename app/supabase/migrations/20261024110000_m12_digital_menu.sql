@@ -630,7 +630,7 @@ begin
     'shipping', jsonb_build_object(
       'applies', p_service_type = 'delivery',
       'type', v_ds ->> 'shipping_cost_type',
-      'pending', p_service_type = 'delivery',
+      'pending', p_service_type = 'delivery' and not (v_free_min is not null and v_subtotal >= v_free_min),
       'free', p_service_type = 'delivery' and v_free_min is not null and v_subtotal >= v_free_min),
     'free_shipping', case when p_service_type = 'delivery' and v_free_min is not null then jsonb_build_object(
       'min_amount', v_free_min, 'remaining', greatest(v_free_min - v_subtotal, 0),
@@ -679,6 +679,7 @@ declare
   v_number   integer;
   v_session  public.table_sessions%rowtype;
   v_recent   integer;
+  v_ship     numeric(10,2);
 begin
   if p_client_request_id is null then
     raise exception 'Falta la clave de idempotencia';
@@ -692,10 +693,7 @@ begin
     raise exception 'Restaurante no disponible';
   end if;
 
-  -- Candado del mostrador del restaurante: serializa idempotencia, número de
-  -- mostrador y límites de abuso.
-  v_table := public.lock_counter_table(v_r.id);
-
+  -- Reintento ya creado: se devuelve aunque el menú haya cambiado después.
   select * into v_existing from public.table_sessions
   where restaurant_id = v_r.id and client_request_id = p_client_request_id;
   if found then
@@ -707,6 +705,8 @@ begin
     return public.online_order_json(v_order.id) || jsonb_build_object('replayed', true);
   end if;
 
+  -- Validación y precios ANTES del candado: no se crea el mostrador de un
+  -- restaurante sin menú digital activo y los errores del cliente no hacen fila.
   v_state := public.digital_menu_state_json(v_r.id);
   if not (v_state ->> 'accepting_orders')::boolean then
     raise exception '%', case v_state ->> 'reason'
@@ -749,6 +749,10 @@ begin
   v_subtotal := (v_built ->> 'subtotal')::numeric;
 
   v_ds := public.delivery_settings_json(v_r.id);
+  if p_service_type = 'delivery' and (v_ds ->> 'free_shipping_enabled')::boolean
+     and v_subtotal >= (v_ds ->> 'free_shipping_min_amount')::numeric then
+    v_ship := 0;
+  end if;
   if p_service_type = 'delivery' and (v_ds ->> 'min_purchase_enabled')::boolean then
     v_min := (v_ds ->> 'min_purchase_amount')::numeric;
     if v_subtotal < v_min then
@@ -761,20 +765,39 @@ begin
     raise exception 'El monto con el que pagarás no cubre los productos' using hint = 'field=pays_with_amount';
   end if;
 
-  -- Límites de abuso, después de vencer lo viejo de este restaurante.
+  -- Candado del mostrador del restaurante: serializa idempotencia, número de
+  -- mostrador y límites de abuso.
+  v_table := public.lock_counter_table(v_r.id);
+
+  -- Otra petición con la misma clave pudo terminar mientras esperábamos.
+  select * into v_existing from public.table_sessions
+  where restaurant_id = v_r.id and client_request_id = p_client_request_id;
+  if found then
+    select * into v_order from public.orders
+    where table_session_id = v_existing.id order by created_at, order_number limit 1;
+    if v_order.id is null or v_order.source is distinct from 'web' then
+      raise exception 'No se pudo enviar el pedido. Vuelve a intentarlo.';
+    end if;
+    return public.online_order_json(v_order.id) || jsonb_build_object('replayed', true);
+  end if;
+
+  -- Límites de abuso, después de vencer lo viejo de este restaurante. Cuentan
+  -- TODOS los pedidos web de la ventana (confirmados o no) y el teléfono se
+  -- compara solo por dígitos.
   perform public.expire_online_orders(v_r.id);
 
   select count(*) into v_recent from public.orders
-  where restaurant_id = v_r.id and source = 'web' and status = 'PENDING' and confirmed_at is null
-    and customer_phone = v_n ->> 'customer_phone'
+  where restaurant_id = v_r.id and source = 'web'
+    and regexp_replace(coalesce(customer_phone, ''), '\D', '', 'g')
+        = regexp_replace(v_n ->> 'customer_phone', '\D', '', 'g')
     and created_at > now() - interval '15 minutes';
   if v_recent >= 3 then
-    raise exception 'Ya tienes pedidos esperando confirmación. Espera unos minutos o escríbenos por WhatsApp.'
+    raise exception 'Ya hiciste varios pedidos hace poco. Espera unos minutos o escríbenos por WhatsApp.'
       using hint = 'rate_limit=phone';
   end if;
 
   select count(*) into v_recent from public.orders
-  where restaurant_id = v_r.id and source = 'web' and status = 'PENDING' and confirmed_at is null
+  where restaurant_id = v_r.id and source = 'web'
     and created_at > now() - interval '10 minutes';
   if v_recent >= 30 then
     raise exception 'Estamos recibiendo muchos pedidos. Inténtalo de nuevo en unos minutos.'
@@ -808,7 +831,7 @@ begin
     v_r.id, v_table.id, v_session.id, 'PENDING', p_service_type, v_subtotal, v_subtotal,
     v_n ->> 'delivery_provider', v_n ->> 'customer_name', v_n ->> 'customer_phone',
     nullif(v_n -> 'delivery_address', 'null'::jsonb), v_comment,
-    null, v_n ->> 'preferred_payment_method', (v_n ->> 'pays_with_amount')::numeric,
+    v_ship, v_n ->> 'preferred_payment_method', (v_n ->> 'pays_with_amount')::numeric,
     'web', 'new', now() + make_interval(mins => (v_ds ->> 'unconfirmed_ttl_minutes')::integer)
   )
   returning * into v_order;
@@ -1397,6 +1420,177 @@ grant execute on function public.save_payment_method_settings(uuid, text, jsonb)
 grant execute on function public.review_online_order(uuid) to authenticated, service_role;
 grant execute on function public.accept_online_order(uuid, numeric) to authenticated, service_role;
 grant execute on function public.reject_online_order(uuid, text) to authenticated, service_role;
+
+-- ============ e2) pedidos web solo por el flujo en línea ===================
+-- accept_order, accept_and_prepare_order y reject_order (y, a través de ellos,
+-- approve_customer_order / reject_customer_order) no deben mover un pedido web:
+-- se saltarían el vencimiento, la confirmación y la apertura de la cuenta de
+-- accept_online_order / reject_online_order. Cuerpos copiados de producción
+-- (pg_get_functiondef) con una única guarda añadida tras "Pedido no encontrado".
+
+CREATE OR REPLACE FUNCTION public.accept_order(p_order_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_order public.orders%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  select * into v_order
+  from public.orders
+  where id = p_order_id
+  for update;
+
+  if not found then
+    raise exception 'Pedido no encontrado';
+  end if;
+
+  if v_order.source = 'web' then
+    raise exception 'Es un pedido en línea: acéptalo o recházalo desde Pedidos en línea';
+  end if;
+
+  if not (
+    public.user_has_restaurant_role(v_order.restaurant_id, 'OWNER')
+    or public.user_has_restaurant_role(v_order.restaurant_id, 'ADMIN')
+    or public.user_has_restaurant_role(v_order.restaurant_id, 'WAITER')
+  ) then
+    raise exception 'No autorizado para aceptar pedidos';
+  end if;
+
+  if v_order.status <> 'PENDING' then
+    raise exception 'El pedido ya fue procesado (estado actual: %)', v_order.status;
+  end if;
+
+  update public.orders
+  set status = 'ACCEPTED',
+      accepted_by = auth.uid(),
+      accepted_at = now()
+  where id = p_order_id;
+
+  insert into public.audit_logs (
+    restaurant_id, user_id, action, entity_type, entity_id
+  )
+  values (
+    v_order.restaurant_id, auth.uid(), 'ACCEPT_ORDER', 'ORDER', p_order_id
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.accept_and_prepare_order(p_order_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_order public.orders%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  select * into v_order
+  from public.orders
+  where id = p_order_id
+  for update;
+
+  if not found then
+    raise exception 'Pedido no encontrado';
+  end if;
+
+  if v_order.source = 'web' then
+    raise exception 'Es un pedido en línea: acéptalo o recházalo desde Pedidos en línea';
+  end if;
+
+  if not (
+    public.user_has_restaurant_role(v_order.restaurant_id, 'OWNER')
+    or public.user_has_restaurant_role(v_order.restaurant_id, 'ADMIN')
+    or public.user_has_restaurant_role(v_order.restaurant_id, 'WAITER')
+  ) then
+    raise exception 'No autorizado para aceptar pedidos';
+  end if;
+
+  if v_order.status <> 'PENDING' then
+    raise exception 'El pedido ya fue procesado (estado actual: %)', v_order.status;
+  end if;
+
+  update public.orders
+  set status = 'PREPARING',
+      accepted_by = auth.uid(),
+      accepted_at = now(),
+      preparing_at = now()
+  where id = p_order_id;
+
+  insert into public.audit_logs (
+    restaurant_id, user_id, action, entity_type, entity_id
+  )
+  values
+    (v_order.restaurant_id, auth.uid(), 'ACCEPT_ORDER', 'ORDER', p_order_id),
+    (v_order.restaurant_id, auth.uid(), 'START_PREPARING', 'ORDER', p_order_id);
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.reject_order(p_order_id uuid, p_reason text DEFAULT NULL::text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_order public.orders%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  select * into v_order
+  from public.orders
+  where id = p_order_id
+  for update;
+
+  if not found then
+    raise exception 'Pedido no encontrado';
+  end if;
+
+  if v_order.source = 'web' then
+    raise exception 'Es un pedido en línea: acéptalo o recházalo desde Pedidos en línea';
+  end if;
+
+  if not (
+    public.user_has_restaurant_role(v_order.restaurant_id, 'OWNER')
+    or public.user_has_restaurant_role(v_order.restaurant_id, 'ADMIN')
+    or public.user_has_restaurant_role(v_order.restaurant_id, 'WAITER')
+  ) then
+    raise exception 'No autorizado para rechazar pedidos';
+  end if;
+
+  if v_order.status <> 'PENDING' then
+    raise exception 'El pedido ya fue procesado (estado actual: %)', v_order.status;
+  end if;
+
+  update public.orders
+  set status = 'REJECTED',
+      rejection_reason = p_reason,
+      accepted_by = auth.uid()
+  where id = p_order_id;
+
+  insert into public.audit_logs (
+    restaurant_id, user_id, action, entity_type, entity_id, metadata
+  )
+  values (
+    v_order.restaurant_id, auth.uid(), 'REJECT_ORDER', 'ORDER', p_order_id,
+    jsonb_build_object('reason', p_reason)
+  );
+end;
+$function$
+;
 
 -- ======================= f) vencimiento programado ==========================
 -- Solo si pg_cron está instalado (no se instala aquí). Sin él, el vencimiento

@@ -89,7 +89,9 @@ same formulas (display only; the server price is the truth).
 Order json: `order_id, short_code, folio, service_type, tracking_token, step ('new'|'confirmed'|'preparing'|'ready'|'delivered'|'expired'|'rejected'|'cancelled'), created_at, confirmed_at, expires_at, customer_name, preferred_payment_method, pays_with_amount, general_comment, subtotal, promo_discount_total, shipping_cost, shipping_pending, total, restaurant{name,slug,logo_url,whatsapp_number}, items[{product_name,variant_name,quantity,unit_price,list_subtotal,promo_discount,subtotal,notes,promotions[labels],options[]}]`.
 No phone or address is ever returned publicly.
 
-`place_online_order` errors: `HINT state=paused|closed|inactive`, `field=preferred_payment_method|min_purchase|customer_name|customer_phone|delivery_address.*|pays_with_amount|general_comment`, `rate_limit=phone` (≥3 unconfirmed from the same phone in 15 min) / `rate_limit=restaurant` (≥30 unconfirmed in 10 min).
+`place_online_order` errors: `HINT state=paused|closed|inactive`, `field=preferred_payment_method|min_purchase|customer_name|customer_phone|delivery_address.*|pays_with_amount|general_comment`, `rate_limit=phone` (≥3 web orders from the same phone in 15 min, confirmed or not; phones compared on digits only) / `rate_limit=restaurant` (≥30 web orders in 10 min).
+Validation and pricing run before the counter lock (a restaurant without an active digital menu never gets a "Mostrador" table); the idempotent replay is checked before and again right after the lock.
+Free shipping reached → `shipping_cost = 0` is stored (`shipping_pending` false; `quote_online_order.shipping.pending` false).
 Delivery address keys (validated): `calle, numero, colonia` (required), `entre_calles, referencias, lat, lng`.
 
 ### Staff RPCs
@@ -106,6 +108,8 @@ Delivery address keys (validated): `calle, numero, colonia` (required), `entre_c
 | `accept_online_order` | `p_order_id, p_shipping_cost = null` → PREPARING (KDS), confirmed, opens bill | same |
 | `reject_online_order` | `p_order_id, p_reason = null` | same |
 | `can_manage_digital_menu` / `can_handle_online_orders` | `p_restaurant_id` | authenticated (UI gating) |
+
+Web orders (`source = 'web'`) can only be moved with `accept_online_order` / `reject_online_order`: M12 re-creates `accept_order`, `accept_and_prepare_order` and `reject_order` from their live bodies with one guard that raises *"Es un pedido en línea: acéptalo o recházalo desde Pedidos en línea"* (so `approve_customer_order` / `reject_customer_order`, which call them, also refuse). `cancel_order` / `cancel_order_with_reason` are not guarded.
 
 Later shipping changes on a delivery order: existing `update_counter_order(p_order_id, {"shipping_cost": n}, p_confirm_total_increase)`.
 Charging: existing M07 RPCs; prefill with `orders.preferred_payment_method` / `pays_with_amount`.
@@ -150,5 +154,6 @@ Production has no PITR. Verified 2026-10-23 against a `pg_get_functiondef` dump 
 copied into M13 (build_order_lines, insert_order_lines, create_customer_order, create_staff_order, add_ticket,
 create_counter_order, create_counter_sale, add_items_to_bill, edit_order_item, bill_json) are identical to the
 live ones before the one-line changes; each has a single live overload; no new function, table or column
-name already exists; every helper and column used exists. Re-check if production changes before applying. Run the tests inside a transaction with the migrations, e.g. build a scratch file
+name already exists; every helper and column used exists. M12 overrides of live functions (`accept_order`, `accept_and_prepare_order`, `reject_order`) differ from the live
+body only by the `source = 'web'` guard (whitespace-normalized diff, signatures/`SECURITY DEFINER`/`search_path` unchanged; `create or replace` keeps grants). Re-check if production changes before applying. Run the tests inside a transaction with the migrations, e.g. build a scratch file
 `begin; <m13> <m12> <m16> <test body without its own begin> rollback;` and check it ends with `rollback;`.
