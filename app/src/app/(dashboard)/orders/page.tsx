@@ -19,6 +19,8 @@ import { getPublicMenu } from "@/lib/queries/menu";
 import { getStaffProductDetails } from "@/lib/queries/staff-catalog";
 import { getCounterOrders } from "@/lib/queries/counter-orders";
 import { canHandleMoney } from "@/lib/permissions";
+import { canHandleOnlineOrders, getDigitalMenuStatus, getPendingOnlineOrders } from "@/lib/queries/digital-menu";
+import { OnlineOrdersPanel } from "./_components/online-orders-panel";
 
 // Fuera del alcance de esta optimización: solo la ruta del comensal
 // (/r/[slug]/[mesa]) se migró a navegación instantánea. `instant = false`
@@ -51,7 +53,7 @@ export default async function OrdersPage({
     session.role === "ADMIN" ||
     session.role === "WAITER";
 
-  const [summary, orders, calls, tables, settings, tableSessionMap] = await Promise.all([
+  const [summary, orders, calls, tables, settings, tableSessionMap, onlineOrders, canHandleOnline, menuStatus] = await Promise.all([
     getDashboardSummary(restaurantId),
     getStaffOrders(restaurantId, ["PENDING", "ACCEPTED", "PREPARING", "READY"]),
     getWaiterCalls(restaurantId, ["PENDING", "ACCEPTED"]),
@@ -62,15 +64,26 @@ export default async function OrdersPage({
     // al entregar, para cualquier rol.
     getRestaurantSettings(restaurantId),
     canServeTable ? getActiveTableSessionsMap(restaurantId) : Promise.resolve({}),
+    // M12: pedidos del menú digital por aceptar (sección "En línea").
+    getPendingOnlineOrders(restaurantId).catch((e: { message?: string; code?: string }) => {
+      console.error("[orders] online orders", e?.code, e?.message);
+      return [];
+    }),
+    canHandleOnlineOrders(restaurantId),
+    getDigitalMenuStatus(restaurantId),
   ]);
+  const onlineIds = new Set(onlineOrders.map((o) => o.id));
+  const showOnline = onlineOrders.length > 0 || (menuStatus !== null && menuStatus !== "inactive");
 
-  const [counterOrders, menu, productDetails] = canServeTable
+  const [allCounterOrders, menu, productDetails] = canServeTable
     ? await Promise.all([
         getCounterOrders(restaurantId),
         getPublicMenu(session.restaurant.slug),
         getStaffProductDetails(restaurantId),
       ])
     : [[], { categories: [] }, {}];
+  // Un pedido web a domicilio sin aceptar se atiende en "En línea", no aquí.
+  const counterOrders = allCounterOrders.filter((o) => !onlineIds.has(o.id));
 
   const newOrder = canServeTable ? (
     <NewOrderButton
@@ -111,6 +124,16 @@ export default async function OrdersPage({
         maxWaiterDiscountPct={canServeTable ? settings.max_waiter_discount_pct : 0}
         readyStep={settings.kitchen_ready_step}
         tableSessionMap={tableSessionMap}
+        onlineSection={
+          showOnline ? (
+            <OnlineOrdersPanel
+              restaurantId={restaurantId}
+              initialOrders={onlineOrders}
+              canHandle={canHandleOnline}
+              menuStatus={menuStatus}
+            />
+          ) : null
+        }
       />
       {canServeTable && (
         <div className="px-4 pb-8 md:px-5">

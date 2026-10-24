@@ -2,6 +2,8 @@ import { requireRouteAccess } from "@/lib/auth/require-route-access";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { LayoutGrid, QrCode, Settings, Wallet } from "lucide-react";
+import { getDigitalMenuStatus } from "@/lib/queries/digital-menu";
+import { SettingsLinkCards } from "./_components/settings-link-cards";
 import { StatusMetric, StatusPill } from "@/components/shared/status-strip";
 import { getMyRestaurant, getRestaurantSettings } from "@/lib/queries/staff";
 import { SettingsForm } from "./_components/settings-form";
@@ -24,9 +26,10 @@ export default async function SettingsPage() {
   await connection();
   const session = await getMyRestaurant();
   requireRouteAccess(session, "/settings");
-  const [restaurant, zones] = await Promise.all([
+  const [restaurant, zones, menuStatus] = await Promise.all([
     getRestaurantSettings(session.restaurant.id),
     getZones(session.restaurant.id),
+    getDigitalMenuStatus(session.restaurant.id),
   ]);
 
   const canQr = session.role === "OWNER" || session.role === "ADMIN";
@@ -61,6 +64,7 @@ export default async function SettingsPage() {
         </div>
       </section>
       <div className="grid items-start gap-4 px-4 pb-10 pt-4 md:px-5 xl:grid-cols-2">
+        <SettingsLinkCards menuStatus={menuStatus} className="xl:col-span-2" />
         <SettingsForm restaurant={restaurant} />
         <div className="flex flex-col gap-4">
           {canQr && <QrSettingsForm restaurant={restaurant} />}
