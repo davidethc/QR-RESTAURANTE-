@@ -51,7 +51,18 @@ export default async function DigitalMenuPage({ params }: { params: Promise<{ sl
 
   return (
     <main className="min-h-dvh bg-background">
-      <MenuHeader restaurant={menu.restaurant} tableNumber={null} />
+      <MenuHeader
+        restaurant={menu.restaurant}
+        tableNumber={null}
+        status={{
+          open: digital.state.accepting_orders,
+          label: digital.state.accepting_orders
+            ? "Recibiendo pedidos"
+            : digital.state.reason === "paused"
+              ? "En pausa"
+              : "Cerrado ahora",
+        }}
+      />
       <DigitalMenuApp
         slug={slug}
         digital={digital}

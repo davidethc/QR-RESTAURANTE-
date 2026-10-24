@@ -1,15 +1,24 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { Bike, Clock, MapPin, Search, SearchX, ShoppingBag, Store, Tag, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Bike, Clock, MapPin, ShoppingBag, Store, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CategorySection } from "@/app/(public)/r/[slug]/[mesa]/_components/category-section";
-import { ProductCard } from "@/app/(public)/r/[slug]/[mesa]/_components/product-card";
 import { ProductSheet } from "@/app/(public)/r/[slug]/[mesa]/_components/product-sheet";
+import { SuggestionsRow } from "@/app/(public)/r/[slug]/[mesa]/_components/suggestions-row";
+import { useMenuNavigation } from "@/app/(public)/r/[slug]/[mesa]/_components/use-menu-navigation";
+import {
+  BackToTopButton,
+  MenuNavRoot,
+  MenuSearchResults,
+  MenuSectionList,
+  MenuToolbar,
+} from "@/app/(public)/r/[slug]/[mesa]/_components/menu-navigation-ui";
 import { useLiveMenuCategories } from "@/hooks/use-live-menu";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
+import { productPromos } from "@/lib/menu-navigation";
+import { getMenuSuggestions } from "@/lib/suggestions";
+import { needsChoice } from "@/lib/order-lines";
 import { SERVICE_LABELS } from "@/lib/digital-menu";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
 import type { PublicCategory, PublicProduct, StaffProductDetail } from "@/types/menu";
@@ -77,17 +86,11 @@ export function DigitalMenuApp({
 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
-  const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set());
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const sectionRefCallbacks = useMemo(() => {
-    const map: Record<string, (el: HTMLElement | null) => void> = {};
-    for (const c of visibleCategories) {
-      map[c.id] = (el) => {
-        sectionRefs.current[c.id] = el;
-      };
-    }
-    return map;
-  }, [visibleCategories]);
+  // Same navigation as the QR menu: see use-menu-navigation.ts.
+  const categoryIds = useMemo(() => visibleCategories.map((c) => c.id), [visibleCategories]);
+  const nav = useMenuNavigation(categoryIds);
+  const promos = useMemo(() => productPromos(visibleCategories, promotions), [visibleCategories, promotions]);
+  const suggestions = useMemo(() => getMenuSuggestions(visibleCategories), [visibleCategories]);
 
   const [selected, setSelected] = useState<PublicProduct | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -116,25 +119,28 @@ export function DigitalMenuApp({
     setSelected(product);
   }
 
-  function toggleCategory(id: string) {
-    setOpenCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function goToCategory(id: string) {
-    setOpenCategories((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-    sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function addCombo(dish: PublicProduct, drink: PublicProduct) {
+    if (!accepting) {
+      notify.success("Por ahora solo puedes ver el menú");
+      return;
+    }
+    const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
+    if (pick) {
+      setSelected(pick);
+      return;
+    }
+    cart.addItems([
+      { product: dish, quantity: 1, notes: "" },
+      { product: drink, quantity: 1, notes: "" },
+    ]);
+    notify.itemAdded(`${dish.name} + ${drink.name}`);
   }
 
   const freeFrom = delivery?.free_shipping_enabled ? delivery.free_shipping_min_amount : null;
   const minPurchase = delivery?.min_purchase_enabled ? delivery.min_purchase_amount : null;
 
   return (
-    <div className="flex flex-col gap-5 pb-36">
+    <MenuNavRoot nav={nav} className="flex flex-col gap-5 pb-36">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 pt-4">
         {!accepting && <MenuStateNotice state={digital.state} timeZone={digital.restaurant.timezone} />}
 
@@ -223,90 +229,38 @@ export function DigitalMenuApp({
         )}
       </div>
 
-      <div className="glass sticky top-0 z-10 border-y border-border">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-3">
-          <div className="relative">
-            <Search aria-hidden className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
-            <Input
-              enterKeyHint="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar en el menú"
-              aria-label="Buscar en el menú"
-              className="h-12 rounded-xl border-border bg-card pl-11 pr-11 text-body-lg placeholder:text-muted-foreground"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                aria-label="Borrar búsqueda"
-                className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
-              >
-                <X aria-hidden className="size-4" />
-              </button>
-            )}
-          </div>
-          {results === null && (
-            <nav aria-label="Categorías" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-              {visibleCategories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => goToCategory(c.id)}
-                  className="flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 text-body-sm font-semibold text-foreground hover:border-primary/40"
-                >
-                  {c.name}
-                  <span className="rounded-full bg-secondary px-1.5 text-caption tabular-nums text-muted-foreground">
-                    {c.products.length}
-                  </span>
-                </button>
-              ))}
-            </nav>
-          )}
-        </div>
-      </div>
+      <MenuToolbar
+        nav={nav}
+        categories={visibleCategories}
+        query={query}
+        onQueryChange={setQuery}
+        placeholder="Buscar en el menú"
+        searchLabel="Buscar en el menú"
+      />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        {results === null && (
+          <SuggestionsRow suggestions={suggestions} onSelectProduct={selectProduct} onAddCombo={addCombo} />
+        )}
         {results === null ? (
-          <>
-            <h2 className="font-display text-title-sm font-bold text-foreground">El menú</h2>
-            {visibleCategories.map((c) => (
-              <CategorySection
-                key={c.id}
-                category={c}
-                isOpen={openCategories.has(c.id)}
-                onToggle={() => toggleCategory(c.id)}
-                onSelectProduct={selectProduct}
-                cartQuantities={cartQuantities}
-                sectionRef={sectionRefCallbacks[c.id]}
-              />
-            ))}
-          </>
-        ) : results.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-10 text-center">
-            <SearchX aria-hidden className="size-6 text-muted-foreground" />
-            <p className="text-body font-semibold text-foreground">No encontramos &ldquo;{query}&rdquo;</p>
-            <Button type="button" variant="outline" onClick={() => setQuery("")} className="h-11 rounded-xl px-5">
-              Ver todo el menú
-            </Button>
-          </div>
+          <MenuSectionList
+            nav={nav}
+            title="El menú"
+            categories={visibleCategories}
+            onSelectProduct={selectProduct}
+            cartQuantities={cartQuantities}
+            promos={promos}
+          />
         ) : (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-body-sm font-semibold text-muted-foreground">
-              {results.length} {results.length === 1 ? "resultado" : "resultados"}
-            </h2>
-            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-              {results.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  categoryName={p.categoryName}
-                  onSelect={selectProduct}
-                  quantityInCart={cartQuantities[p.id] ?? 0}
-                />
-              ))}
-            </div>
-          </section>
+          <MenuSearchResults
+            query={query}
+            results={results}
+            onClear={() => setQuery("")}
+            onSelectProduct={selectProduct}
+            cartQuantities={cartQuantities}
+            promos={promos}
+            emptyAction="Ver todo el menú"
+          />
         )}
       </div>
 
@@ -338,7 +292,8 @@ export function DigitalMenuApp({
           boxShadow: "0 -10px 28px -16px rgb(15 23 42 / 0.28)",
         }}
       >
-        <div className="mx-auto w-full max-w-3xl px-4 pt-3">
+        <div className="relative mx-auto w-full max-w-3xl px-4 pt-3">
+          <BackToTopButton nav={nav} />
           {cart.itemCount > 0 ? (
             <Button
               size="lg"
@@ -365,6 +320,6 @@ export function DigitalMenuApp({
           )}
         </div>
       </div>
-    </div>
+    </MenuNavRoot>
   );
 }
