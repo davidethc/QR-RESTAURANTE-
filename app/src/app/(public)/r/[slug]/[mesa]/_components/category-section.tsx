@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
+import { getCategoryIcon } from "@/lib/category-icons";
 import { ProductCardCompact } from "./product-card-compact";
 import type { ProductPromo } from "./product-card";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
@@ -47,6 +48,7 @@ export function CategorySection({
   const available = category.products.filter((p) => p.available);
   const fromPrice = available.length > 0 ? Math.min(...available.map((p) => p.price)) : null;
   const soldOutCount = count - available.length;
+  const icon = getCategoryIcon(category.name);
   const previewNames = category.products.slice(0, 3).map((p) => p.name);
   const remaining = count - previewNames.length;
   const panelId = `cat-panel-${category.id}`;
@@ -78,6 +80,9 @@ export function CategorySection({
               aria-controls={panelId}
               className={cn("flex min-h-16 w-full items-center gap-3 rounded-tl-2xl px-4 py-2.5 text-left", pressable)}
             >
+              <span aria-hidden className="emoji-tile flex size-10 shrink-0 items-center justify-center rounded-xl text-title leading-none">
+                <span className="emoji-3d">{icon}</span>
+              </span>
               <span className="flex min-w-0 flex-col">
                 <span className="font-display break-words text-title font-bold leading-tight text-foreground">{category.name}</span>
                 <span className="truncate text-meta leading-snug text-muted-foreground">
@@ -111,6 +116,9 @@ export function CategorySection({
             aria-controls={panelId}
             className={cn("flex min-h-[84px] w-full items-center gap-3.5 rounded-2xl px-4 py-3 text-left hover:bg-secondary/40 active:bg-secondary/70", pressable)}
           >
+            <span aria-hidden className="emoji-tile flex size-12 shrink-0 items-center justify-center rounded-xl text-title-lg leading-none">
+              <span className="emoji-3d">{icon}</span>
+            </span>
 
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="font-display break-words text-title font-bold leading-tight text-foreground">{category.name}</span>
