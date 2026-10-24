@@ -209,7 +209,10 @@ function AddOneDialog({
         <DialogHeader>
           <DialogTitle>Agregar 1 × {item.product_name}</DialogTitle>
           <DialogDescription>
-            Suma {formatPrice(item.unit_price)} a la cuenta como un pedido nuevo.
+            Suma {formatPrice(item.unit_price)} a la cuenta como un pedido nuevo
+            {Number((item as BillItem & { promo_discount?: number }).promo_discount ?? 0) > 0
+              ? " (precio de lista; la promoción vigente se aplica al guardarlo)."
+              : "."}
           </DialogDescription>
         </DialogHeader>
         <label className="flex min-h-12 items-center justify-between gap-3 rounded-control border border-border px-3">

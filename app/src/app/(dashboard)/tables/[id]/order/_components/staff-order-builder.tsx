@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Search,
   Split,
+  Tag,
   Trash2,
   UtensilsCrossed,
   X,
@@ -36,6 +37,7 @@ import { addTicket, reopenTable } from "@/lib/actions/orders";
 import { notify } from "@/lib/notifications";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
 import { fromPrice, modifiersPrice } from "@/lib/order-lines";
+import { productPromoBadge, roundCents } from "@/lib/promotions";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { useStaffCart } from "@/hooks/use-staff-cart";
 import { useIdempotencyKey } from "@/hooks/use-idempotency-key";
@@ -43,6 +45,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import type { TicketView } from "@/lib/queries/staff-catalog";
 import { ProductSheet, type SheetProduct } from "./product-sheet";
 import { TicketsDetail } from "./tickets-detail";
+import { useActivePromotions, useCartPromoEstimate, useLinePromos } from "./use-order-promos";
+import { PromoChip, PromoPrice } from "../../../../cash/_components/checkout/promo-line";
 import type {
   PublicCategory,
   PublicProduct,
@@ -61,6 +65,8 @@ type View = "menu" | "sent";
  * product has no choices), the new ticket always visible on the right (a
  * drawer on phone) and one big "Enviar a cocina". What was already sent
  * lives in its own tab ("Ya enviado"): edit, cancel with reason, print.
+ * Promotions (M13): tiles and cart lines show today's promos for the
+ * pos.tables channel as an estimate; the server prices the ticket.
  */
 export function StaffOrderBuilder({
   categories,
@@ -88,6 +94,7 @@ export function StaffOrderBuilder({
 }) {
   const router = useRouter();
   const cart = useStaffCart();
+  const promos = useActivePromotions("pos.tables");
   const isWide = useMediaQuery("(min-width: 1024px)");
   const [view, setView] = useState<View>(tickets.length > 0 ? initialView : "menu");
   const [query, setQuery] = useState("");
@@ -141,10 +148,22 @@ export function StaffOrderBuilder({
   }, [available, query]);
   const visible = results ?? rail.find((c) => c.id === activeCategory)?.products ?? [];
 
-  const sentTotal = tickets.reduce(
-    (sum, t) => sum + t.items.filter((i) => !i.cancelled).reduce((s, i) => s + i.unitPrice * i.quantity, 0),
-    0
+  const categoryOf = useMemo(
+    () => new Map(categories.flatMap((c) => c.products.map((p) => [p.id, c.id] as const))),
+    [categories]
   );
+  const sentLines = tickets.flatMap((t) => t.items);
+  const linePromos = useLinePromos(
+    sentLines.map((i) => i.id),
+    sentLines.map((i) => `${i.quantity}:${i.variantId ?? ""}:${i.cancelled ? 1 : 0}`).join(",")
+  );
+  // Net subtotal from the server once read; list price until then.
+  const sentTotal = roundCents(
+    sentLines.filter((i) => !i.cancelled).reduce((s, i) => s + (linePromos.get(i.id)?.subtotal ?? i.unitPrice * i.quantity), 0)
+  );
+
+  const { byLine: estimates, discount: promoOff } = useCartPromoEstimate(cart.items, details, categoryOf, promos);
+  const cartTotal = roundCents(cart.total - promoOff);
 
   function addProduct(p: PublicProduct) {
     const detail = details[p.id];
@@ -265,8 +284,19 @@ export function StaffOrderBuilder({
                     {item.modifiers && <span className="block text-meta text-muted-foreground">{item.modifiers}</span>}
                     {item.notes && <span className="block text-meta text-attention-soft-foreground">“{item.notes}”</span>}
                   </span>
-                  <span className="shrink-0 text-body-sm font-semibold tabular-nums">{formatPrice(item.price * item.quantity)}</span>
+                  {(estimates.get(item.id)?.discount ?? 0) > 0 ? (
+                    <PromoPrice list={item.price * item.quantity} net={estimates.get(item.id)!.subtotal} className="shrink-0 flex-col items-end gap-0 text-body-sm" />
+                  ) : (
+                    <span className="shrink-0 text-body-sm font-semibold tabular-nums">{formatPrice(item.price * item.quantity)}</span>
+                  )}
                 </div>
+                {(estimates.get(item.id)?.labels.length ?? 0) > 0 && (
+                  <span className="flex flex-wrap gap-1">
+                    {estimates.get(item.id)!.labels.map((l) => (
+                      <PromoChip key={l} label={l} />
+                    ))}
+                  </span>
+                )}
                 <div className="flex items-center gap-1">
                   <QuantityStepper compact min={0} label={item.name} value={item.quantity} onChange={(q) => cart.setQuantity(item.id, q)} />
                   <button
@@ -325,10 +355,21 @@ export function StaffOrderBuilder({
             {saveError}
           </p>
         )}
+        {promoOff > 0 && (
+          <p className="flex items-center justify-between gap-2 text-body-sm text-attention-soft-foreground">
+            <span className="flex items-center gap-1.5">
+              <Tag className="size-3.5" aria-hidden /> Promociones
+            </span>
+            <span className="tabular-nums">−{formatPrice(promoOff)}</span>
+          </p>
+        )}
         <p className="flex items-baseline justify-between">
-          <span className="text-body font-semibold text-foreground">Total de la comanda</span>
-          <span className="text-title font-semibold tabular-nums text-foreground">{formatPrice(cart.total)}</span>
+          <span className="text-body font-semibold text-foreground">
+            {promoOff > 0 ? "Total estimado" : "Total de la comanda"}
+          </span>
+          <span className="text-title font-semibold tabular-nums text-foreground">{formatPrice(cartTotal)}</span>
         </p>
+        {promoOff > 0 && <p className="text-caption text-muted-foreground">El total final lo calcula el sistema al enviar.</p>}
         <button
           type="button"
           disabled={saving}
@@ -469,6 +510,7 @@ export function StaffOrderBuilder({
                     const inCart = cart.quantityOf(p.id);
                     const { price, hasChoice } = fromPrice(p.price, details[p.id]?.variants);
                     const hasExtras = (details[p.id]?.groups.length ?? 0) > 0;
+                    const badge = productPromoBadge(p.id, categoryOf.get(p.id), price, promos);
                     return (
                       <li key={p.id}>
                         <button
@@ -483,11 +525,22 @@ export function StaffOrderBuilder({
                           )}
                         >
                           <span className="line-clamp-3 text-body font-semibold leading-snug text-foreground">{p.name}</span>
-                          <span className="flex items-end justify-between gap-2">
-                            <span className="text-body-sm font-semibold tabular-nums text-muted-foreground">
-                              {hasChoice ? "Desde " : ""}
-                              {formatPrice(price)}
+                          {badge && (
+                            <span className="flex flex-wrap gap-1">
+                              {badge.labels.map((l) => (
+                                <PromoChip key={l} label={l} />
+                              ))}
                             </span>
+                          )}
+                          <span className="flex items-end justify-between gap-2">
+                            {badge?.netPrice != null ? (
+                              <PromoPrice list={price} net={badge.netPrice} className="justify-start text-body-sm" />
+                            ) : (
+                              <span className="text-body-sm font-semibold tabular-nums text-muted-foreground">
+                                {hasChoice ? "Desde " : ""}
+                                {formatPrice(price)}
+                              </span>
+                            )}
                             {(hasChoice || hasExtras) && <span className="text-caption text-muted-foreground">Elegir</span>}
                           </span>
                           {inCart > 0 && (
@@ -505,7 +558,7 @@ export function StaffOrderBuilder({
           </>
         ) : (
           <section aria-label="Ya enviado" className="min-h-0 overflow-y-auto overscroll-contain p-3 pb-28 md:p-4 lg:pb-4">
-            <TicketsDetail tableLabel={tableLabel} tickets={tickets} details={details} />
+            <TicketsDetail tableLabel={tableLabel} tickets={tickets} details={details} linePromos={linePromos} />
           </section>
         )}
 
@@ -524,7 +577,7 @@ export function StaffOrderBuilder({
           <span>
             Ver comanda · {cart.count} {cart.count === 1 ? "producto" : "productos"}
           </span>
-          <span className="tabular-nums">{formatPrice(cart.total)}</span>
+          <span className="tabular-nums">{formatPrice(cartTotal)}</span>
         </button>
       </div>
 

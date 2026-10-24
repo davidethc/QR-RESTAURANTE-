@@ -23,6 +23,7 @@ import { cn, formatPrice, normalizeText } from "@/lib/utils";
 import type { Bill } from "@/types/billing";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 import type { TopProduct } from "@/types/staff";
+import { useActivePromotions } from "../../tables/[id]/order/_components/use-order-promos";
 
 /**
  * "+ Agregar producto" dentro de la hoja de cobro: el cliente pide algo más
@@ -35,6 +36,8 @@ import type { TopProduct } from "@/types/staff";
  * La clave de idempotencia se reutiliza en reintentos de la MISMA tanda y
  * cambia en cuanto cambia el carrito (o "Mandar a cocina"): con la clave
  * vieja, la base devolvería la tanda anterior en vez de agregar la nueva.
+ * Con promociones vigentes (M13) el monto se rotula como precio de lista:
+ * add_items_to_bill las aplica con el canal de la cuenta.
  */
 export function ChargeProductPicker({
   billId,
@@ -44,6 +47,7 @@ export function ChargeProductPicker({
   onAdded: (bill: Bill) => void;
 }) {
   const cart = useStaffCart();
+  const hasPromos = useActivePromotions(null).length > 0;
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState<{ categories: PublicCategory[]; topProducts: TopProduct[] } | null>(null);
   const [menuError, setMenuError] = useState<string | null>(null);
@@ -280,6 +284,11 @@ export function ChargeProductPicker({
                 ))}
               </ul>
 
+              {hasPromos && (
+                <p className="mb-2 text-caption text-muted-foreground">
+                  Precio de lista: si hay una promoción vigente, se descuenta al agregar.
+                </p>
+              )}
               <label className="mb-3 flex min-h-11 items-center gap-3 rounded-control bg-secondary px-3 text-body-sm">
                 <ChefHat aria-hidden className="size-4 text-muted-foreground" />
                 <span className="flex-1">Mandar a cocina</span>

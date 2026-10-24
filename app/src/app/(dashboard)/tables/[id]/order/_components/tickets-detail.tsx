@@ -23,6 +23,9 @@ import {
 import { ProductSheet } from "./product-sheet";
 import type { TicketItemView, TicketView } from "@/lib/queries/staff-catalog";
 import type { StaffProductDetail } from "@/types/menu";
+import type { LinePromo } from "@/lib/actions/promotions";
+import { promotionLabel } from "@/lib/promotions";
+import { PromoChip, PromoPrice } from "../../../../cash/_components/checkout/promo-line";
 
 function hour(iso: string) {
   return new Date(iso).toLocaleTimeString("es-EC", {
@@ -39,10 +42,13 @@ export function TicketsDetail({
   tableLabel,
   tickets,
   details,
+  linePromos,
 }: {
   tableLabel: string;
   tickets: TicketView[];
   details: Record<string, StaffProductDetail>;
+  /** Net subtotal and promo snapshot per line (M13); empty until read. */
+  linePromos?: Map<string, LinePromo>;
 }) {
   const router = useRouter();
   // Collapsed tickets; every ticket starts open, including ones sent later.
@@ -96,7 +102,10 @@ export function TicketsDetail({
               {isOpen && (
                 <div className="border-t border-border px-4 py-3">
                   <ul className="space-y-2">
-                    {ticket.items.map((item) => (
+                    {ticket.items.map((item) => {
+                      const promo = linePromos?.get(item.id);
+                      const hasPromo = !!promo && promo.promo_discount > 0 && !item.cancelled;
+                      return (
                       <li key={item.id} className="flex items-start gap-2">
                         <span className={cn("min-w-0 flex-1", item.cancelled && "line-through opacity-60")}>
                           <span className="block text-body-sm font-medium">
@@ -110,10 +119,21 @@ export function TicketsDetail({
                           {item.notes && (
                             <span className="block text-meta text-muted-foreground">{item.notes}</span>
                           )}
+                          {hasPromo && (promo.promotions?.length ?? 0) > 0 && (
+                            <span className="mt-1 flex flex-wrap gap-1">
+                              {promo.promotions!.map((r) => (
+                                <PromoChip key={r.id || r.type} label={promotionLabel(r)} />
+                              ))}
+                            </span>
+                          )}
                         </span>
-                        <span className="tabular-nums text-body-sm text-wine">
-                          {formatPrice(item.unitPrice * item.quantity)}
-                        </span>
+                        {hasPromo ? (
+                          <PromoPrice list={item.unitPrice * item.quantity} net={promo.subtotal} className="flex-col items-end gap-0 text-body-sm" />
+                        ) : (
+                          <span className="tabular-nums text-body-sm text-wine">
+                            {formatPrice(promo?.subtotal ?? item.unitPrice * item.quantity)}
+                          </span>
+                        )}
                         {editable && !item.cancelled && (
                           <span className="flex gap-1">
                             <Button
@@ -140,7 +160,8 @@ export function TicketsDetail({
                           </span>
                         )}
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
