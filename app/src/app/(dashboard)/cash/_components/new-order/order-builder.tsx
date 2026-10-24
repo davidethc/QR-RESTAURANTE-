@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bike, ChefHat, Loader2, Pencil, Search, ShoppingBag, Trash2, UtensilsCrossed, Wallet, X } from "lucide-react";
+import { ArrowLeft, Bike, ChefHat, Loader2, Pencil, Search, ShoppingBag, Tag, Trash2, UtensilsCrossed, Wallet, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +29,10 @@ import { fromPrice, modifiersPrice } from "@/lib/order-lines";
 import { notify } from "@/lib/notifications";
 import { cn, formatPrice, normalizeText } from "@/lib/utils";
 import { ProductSheet, type SheetProduct } from "../../../tables/[id]/order/_components/product-sheet";
+import { useActivePromotions, useCartPromoEstimate } from "../../../tables/[id]/order/_components/use-order-promos";
+import { productPromoBadge, promotionsForChannel, roundCents, type LineEstimate } from "@/lib/promotions";
+import type { PromotionChannel } from "@/types/promotions";
+import { PromoChip, PromoPrice } from "../checkout/promo-line";
 import type { PublicProduct, StaffCartItem } from "@/types/menu";
 import { OrderDetailsForm } from "./order-details-form";
 
@@ -48,6 +52,8 @@ const KIND_META = {
  * Reusa lo de siempre: el carrito del mesero (useStaffCart), la ficha de
  * variantes y extras (ProductSheet), createCounterOrder para llevar y
  * domicilio (con "cobrar después" = payLater) y addTicket para mesas.
+ * Promociones (M13): estimado con las promos de hoy del canal del pedido
+ * (pos.tables / pos.<tipo de servicio>); el total real lo calcula el servidor.
  */
 export function OrderBuilder({
   kind,
@@ -64,6 +70,7 @@ export function OrderBuilder({
 }) {
   const router = useRouter();
   const cart = useStaffCart();
+  const allPromos = useActivePromotions(null);
   const isWide = useMediaQuery("(min-width: 1024px)");
   const [data, setData] = useState<OrderBuilderData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -131,7 +138,15 @@ export function OrderBuilder({
   const own = kind === "delivery" && form.provider === "own";
   const ship = own ? parseShipping(form.shippingCost) : null;
   const shipAmount = ship === null || Number.isNaN(ship) ? 0 : ship;
-  const total = cart.total + shipAmount;
+  const channel: PromotionChannel =
+    kind === "table" ? "pos.tables" : `pos.${form.serviceType || (kind === "delivery" ? "delivery" : "takeaway")}`;
+  const promos = useMemo(() => promotionsForChannel(allPromos, channel), [allPromos, channel]);
+  const categoryOf = useMemo(
+    () => new Map((data?.categories ?? []).flatMap((c) => c.products.map((p) => [p.id, c.id] as const))),
+    [data]
+  );
+  const { byLine: estimates, discount: promoOff } = useCartPromoEstimate(cart.items, data?.details, categoryOf, promos);
+  const total = roundCents(cart.total - promoOff + shipAmount);
   const table = data?.tables.find((t) => t.id === tableId) ?? null;
 
   function requestClose() {
@@ -215,6 +230,8 @@ export function OrderBuilder({
       kind={kind}
       items={cart.items}
       total={total}
+      estimates={estimates}
+      promoOff={promoOff}
       shipAmount={shipAmount}
       shippingPending={own && ship === null}
       form={form}
@@ -353,6 +370,7 @@ export function OrderBuilder({
               const inCart = cart.quantityOf(p.id);
               const { price, hasChoice } = fromPrice(p.price, data?.details[p.id]?.variants);
               const hasExtras = (data?.details[p.id]?.groups.length ?? 0) > 0;
+              const badge = productPromoBadge(p.id, categoryOf.get(p.id), price, promos);
               return (
                 <li key={p.id}>
                   <button
@@ -367,11 +385,22 @@ export function OrderBuilder({
                     )}
                   >
                     <span className="line-clamp-3 text-body font-semibold leading-snug text-foreground">{p.name}</span>
-                    <span className="flex items-end justify-between gap-2">
-                      <span className="text-body-sm font-semibold tabular-nums text-muted-foreground">
-                        {hasChoice ? "Desde " : ""}
-                        {formatPrice(price)}
+                    {badge && (
+                      <span className="flex flex-wrap gap-1">
+                        {badge.labels.map((l) => (
+                          <PromoChip key={l} label={l} />
+                        ))}
                       </span>
+                    )}
+                    <span className="flex items-end justify-between gap-2">
+                      {badge?.netPrice != null ? (
+                        <PromoPrice list={price} net={badge.netPrice} className="justify-start text-body-sm" />
+                      ) : (
+                        <span className="text-body-sm font-semibold tabular-nums text-muted-foreground">
+                          {hasChoice ? "Desde " : ""}
+                          {formatPrice(price)}
+                        </span>
+                      )}
                       {(hasChoice || hasExtras) && <span className="text-caption text-muted-foreground">Elegir</span>}
                     </span>
                     {inCart > 0 && (
@@ -453,6 +482,8 @@ function TicketPane({
   kind,
   items,
   total,
+  estimates,
+  promoOff,
   shipAmount,
   shippingPending,
   form,
@@ -473,6 +504,9 @@ function TicketPane({
   kind: OrderKind;
   items: StaffCartItem[];
   total: number;
+  /** Display estimate per cart line (M13); empty without promotions. */
+  estimates: Map<string, LineEstimate>;
+  promoOff: number;
   shipAmount: number;
   shippingPending: boolean;
   form: CounterFormValues;
@@ -550,8 +584,19 @@ function TicketPane({
                     {item.modifiers && <span className="block text-meta text-muted-foreground">{item.modifiers}</span>}
                     {item.notes && <span className="block text-meta text-attention-soft-foreground">“{item.notes}”</span>}
                   </span>
-                  <span className="shrink-0 text-body-sm font-semibold tabular-nums">{formatPrice(item.price * item.quantity)}</span>
+                  {(estimates.get(item.id)?.discount ?? 0) > 0 ? (
+                    <PromoPrice list={item.price * item.quantity} net={estimates.get(item.id)!.subtotal} className="shrink-0 flex-col items-end gap-0 text-body-sm" />
+                  ) : (
+                    <span className="shrink-0 text-body-sm font-semibold tabular-nums">{formatPrice(item.price * item.quantity)}</span>
+                  )}
                 </div>
+                {(estimates.get(item.id)?.labels.length ?? 0) > 0 && (
+                  <span className="flex flex-wrap gap-1">
+                    {estimates.get(item.id)!.labels.map((l) => (
+                      <PromoChip key={l} label={l} />
+                    ))}
+                  </span>
+                )}
                 <div className="flex items-center gap-1">
                   <QuantityStepper compact min={0} label={item.name} value={item.quantity} onChange={(q) => onQty(item.id, q)} />
                   <button
@@ -589,8 +634,16 @@ function TicketPane({
             <span className="tabular-nums">{shippingPending ? "Por cotizar" : formatPrice(shipAmount)}</span>
           </p>
         )}
+        {promoOff > 0 && (
+          <p className="flex items-center justify-between gap-2 text-body-sm text-attention-soft-foreground">
+            <span className="flex items-center gap-1.5">
+              <Tag className="size-3.5" aria-hidden /> Promociones
+            </span>
+            <span className="tabular-nums">−{formatPrice(promoOff)}</span>
+          </p>
+        )}
         <p className="flex items-baseline justify-between">
-          <span className="text-body font-semibold text-foreground">Total</span>
+          <span className="text-body font-semibold text-foreground">{promoOff > 0 ? "Total estimado" : "Total"}</span>
           <span className="font-display text-title font-semibold tabular-nums text-foreground">{formatPrice(total)}</span>
         </p>
         {kind === "table" ? (
