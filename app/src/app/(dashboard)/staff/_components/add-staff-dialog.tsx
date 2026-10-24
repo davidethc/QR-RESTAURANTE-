@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, RefreshCw, UserPlus } from "lucide-react";
+import { Loader2, RefreshCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,19 +14,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { ChoiceCards } from "@/components/shared/choice-card";
 import { notify } from "@/lib/notifications";
 import { createStaffMember } from "@/lib/actions/staff-admin";
 import { createStaffSchema, generateTempPassword } from "@/lib/validations/staff";
 import { CredentialsCard } from "./credentials-card";
-import { ROLE_HINT, ROLE_LABEL, type AssignableRole } from "./role-labels";
+import { ROLE_HINT, ROLE_ICON, ROLE_LABEL, ROLE_TONE, type AssignableRole } from "./role-labels";
 
 export function AddStaffDialog({
   restaurantId,
@@ -83,11 +77,11 @@ export function AddStaffDialog({
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
-        <Button className="h-10">
-          <UserPlus /> Agregar
+        <Button variant="outline" className="min-h-11 bg-card">
+          <Zap /> Cuenta rápida
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+      <SheetContent side="right" data-caja className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <SheetHeader className="border-b border-border px-6 py-5">
           <SheetTitle className="text-title-sm font-semibold">
             {created ? "Cuenta creada" : "Agregar persona"}
@@ -105,7 +99,7 @@ export function AddStaffDialog({
               <CredentialsCard email={created.email} password={created.password} />
             </div>
             <SheetFooter className="flex-row justify-end border-t border-border px-6 py-4">
-              <Button onClick={() => handleOpenChange(false)}>Listo</Button>
+              <Button className="min-h-11" onClick={() => handleOpenChange(false)}>Listo</Button>
             </SheetFooter>
           </>
         ) : (
@@ -123,6 +117,7 @@ export function AddStaffDialog({
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     autoComplete="off"
+                    className="min-h-11"
                   />
                 </Field>
                 <Field>
@@ -134,23 +129,25 @@ export function AddStaffDialog({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="off"
+                    className="min-h-11"
                   />
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="staff-role">Rol</FieldLabel>
-                  <Select value={role} onValueChange={(v) => setRole(v as AssignableRole)}>
-                    <SelectTrigger id="staff-role" className="h-10 w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {ROLE_LABEL[r]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldDescription>{ROLE_HINT[role]}</FieldDescription>
+                  <FieldLabel id="staff-role-label">Rol</FieldLabel>
+                  <ChoiceCards<AssignableRole>
+                    label="Rol"
+                    size="md"
+                    columns={2}
+                    value={role}
+                    onChange={setRole}
+                    options={roles.map((r) => ({
+                      value: r,
+                      title: ROLE_LABEL[r],
+                      description: ROLE_HINT[r],
+                      icon: ROLE_ICON[r],
+                      tone: ROLE_TONE[r],
+                    }))}
+                  />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="staff-password">Clave temporal</FieldLabel>
@@ -160,11 +157,12 @@ export function AddStaffDialog({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="new-password"
-                      className="font-mono"
+                      className="min-h-11 font-mono"
                     />
                     <Button
                       type="button"
                       variant="outline"
+                      className="size-11"
                       onClick={() => setPassword(generateTempPassword())}
                       aria-label="Generar otra clave"
                     >
@@ -180,10 +178,10 @@ export function AddStaffDialog({
               </FieldGroup>
             </div>
             <SheetFooter className="flex-row justify-end border-t border-border px-6 py-4">
-              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => handleOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" disabled={isPending} className="min-h-11">
                 {isPending && <Loader2 className="animate-spin" />}
                 Crear cuenta
               </Button>

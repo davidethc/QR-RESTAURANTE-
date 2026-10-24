@@ -4,7 +4,9 @@ import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
 import { getReportsBundle, type ReportsBundleResult } from "@/lib/actions/reports";
 import { notify } from "@/lib/notifications";
-import type { RangePresetKey } from "@/lib/reports-dates";
+import { RANGE_PRESET_LABEL, type RangePresetKey } from "@/lib/reports-dates";
+import { BarChart3 } from "lucide-react";
+import { StatusPill } from "@/components/shared/status-strip";
 import type { ReportGranularity, ReportRange } from "@/types/reports";
 import { RangeSelector } from "./range-selector";
 import { KpiCards } from "./kpi-cards";
@@ -31,6 +33,11 @@ const PaymentMethodsChart = dynamic(
   () => import("./payment-methods-chart").then((m) => m.PaymentMethodsChart),
   { ssr: false, loading: chartFallback }
 );
+
+const DAY = new Intl.DateTimeFormat("es-EC", { day: "numeric", month: "short", timeZone: "UTC" });
+function formatDay(iso: string) {
+  return DAY.format(new Date(`${iso}T00:00:00Z`));
+}
 
 function unwrapBundle(bundle: ReportsBundleResult) {
   return {
@@ -102,9 +109,33 @@ export function ReportsDashboard({
     reload(range, nextGranularity);
   }
 
+  const rangeLabel =
+    preset === "custom" ? `${formatDay(range.from)} – ${formatDay(range.to)}` : RANGE_PRESET_LABEL[preset];
+
   return (
-    <div className="flex flex-col gap-6 py-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col">
+      <section
+        aria-label="Cifras del rango"
+        className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border bg-card px-4 py-3 md:px-5"
+      >
+        <StatusPill
+          tone={data.summary && data.summary.net_sales > 0 ? "money-in" : "neutral"}
+          icon={BarChart3}
+          title="Reportes"
+          detail={rangeLabel}
+        />
+        <div aria-busy={isPending} className="flex flex-wrap items-stretch gap-2">
+          {isPending ? (
+            Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14 w-[9.5rem] rounded-card" />)
+          ) : data.summary ? (
+            <KpiCards summary={data.summary} />
+          ) : (
+            <p className="self-center text-meta text-muted-foreground">No se pudieron cargar las cifras de este rango.</p>
+          )}
+        </div>
+      </section>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 md:px-5">
         <RangeSelector
           timezone={timezone}
           businessDayCutoff={businessDayCutoff}
@@ -149,36 +180,25 @@ export function ReportsDashboard({
         />
       </div>
 
-      {isPending && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-card" />
-          ))}
+      <div className="flex flex-col gap-4 px-4 pb-12 pt-4 md:px-5">
+        <SalesPeriodChart
+          rows={data.byPeriod}
+          granularity={granularity}
+          onGranularityChange={handleGranularityChange}
+          disabled={isPending}
+        />
+
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          <CategoryBarChart rows={data.byCategory} />
+          <PaymentMethodsChart rows={data.byMethod} />
         </div>
-      )}
 
-      {!isPending && data.summary && <KpiCards summary={data.summary} />}
-
-      <SalesPeriodChart
-        rows={data.byPeriod}
-        granularity={granularity}
-        onGranularityChange={handleGranularityChange}
-        disabled={isPending}
-      />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <TopProductsTable rows={data.byProduct} />
-        <CategoryBarChart rows={data.byCategory} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <PaymentMethodsChart rows={data.byMethod} />
         <StaffTable rows={data.byStaff} />
+        <PrepTimesCards rows={data.prepTimes} />
+        <PeakHoursHeatmap rows={data.peakHours} />
+        <DiscountsTable rows={data.discounts} />
       </div>
-
-      <PeakHoursHeatmap rows={data.peakHours} />
-      <PrepTimesCards rows={data.prepTimes} />
-      <DiscountsTable rows={data.discounts} />
     </div>
   );
 }

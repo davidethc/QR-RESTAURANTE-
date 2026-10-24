@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeferredValue, useMemo, useRef, useState } from "react";
-import { Search, ShoppingBag, MessageCircle, Info } from "lucide-react";
+import { Search, SearchX, ShoppingBag, MessageCircle, Info, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "./product-card";
@@ -175,126 +175,175 @@ export function MenuBrowser({
   }
 
   return (
-    // pb generoso: la barra inferior es fija y, con el botón "Ver
-    // pedido" visible, ocupa ~9rem. Sin este colchón el último plato
-    // queda tapado y el cliente no puede tocarlo.
-    <div className="flex flex-col gap-7 pb-40">
-      {/* Superficie glass 1 de 2 en toda la app. */}
-      <div className="glass sticky top-0 z-10 flex flex-col gap-3 border-b border-border/50 px-4 py-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar en la carta…"
-            className="neu-inset h-11 rounded-full border-transparent bg-secondary/80 pl-10 text-[15px] placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
-          />
-        </div>
+    // Generous bottom padding: the fixed action bar is ~9rem tall with
+    // "Ver pedido" visible. Without it the last dish is hidden under it.
+    <div className="flex flex-col gap-6 pb-44">
+      <div className="glass sticky top-0 z-10 border-b border-border">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-3">
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              enterKeyHint="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar un plato o bebida"
+              aria-label="Buscar en la carta"
+              className="h-12 rounded-xl border-border bg-card pl-11 pr-11 text-body-lg placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Borrar búsqueda"
+                className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
+              >
+                <X aria-hidden className="size-4" strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
 
-        {results === null && (
-          <nav
-            aria-label="Categorías de la carta"
-            className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
-          >
-            {categories.map((category) => {
-              const isActive = activeCategoryId === category.id;
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => goToCategory(category.id)}
-                  aria-current={isActive ? "true" : undefined}
-                  className={cn(
-                    "flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-primary-soft text-primary-soft-foreground active:bg-muted"
-                  )}
-                >
-                  <span aria-hidden className="emoji-3d text-[15px] leading-none">
-                    {getCategoryIcon(category.name)}
-                  </span>
-                  {category.name}
-                </button>
-              );
-            })}
-          </nav>
-        )}
+          {results === null && (
+            <nav
+              aria-label="Categorías de la carta"
+              className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4"
+            >
+              {categories.map((category) => {
+                const isActive = activeCategoryId === category.id;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => goToCategory(category.id)}
+                    aria-current={isActive ? "true" : undefined}
+                    className={cn(
+                      "flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-body-sm font-semibold transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none",
+                      isActive
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:border-primary/40 active:bg-secondary"
+                    )}
+                  >
+                    <span aria-hidden className="emoji-3d text-body-lg leading-none">
+                      {getCategoryIcon(category.name)}
+                    </span>
+                    {category.name}
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 text-caption font-semibold tabular-nums",
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-secondary text-muted-foreground"
+                      )}
+                    >
+                      {category.products.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+        </div>
       </div>
 
-      {!inTable && (
-        <div className="px-4">
-          <div className="flex items-start gap-2.5 rounded-2xl border border-primary/25 bg-primary/8 px-3.5 py-3">
-            <Info
-              className="mt-0.5 h-4 w-4 shrink-0 text-primary"
-              strokeWidth={2.25}
-            />
-            <p className="text-[13px] leading-snug text-foreground">
-              Estás viendo la carta.{" "}
-              <span className="text-muted-foreground">
-                Arma tu pedido y lo envías por WhatsApp. Si estás en el local,
-                escanea el QR de tu mesa para pedir desde ahí.
-              </span>
-            </p>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        {!inTable && (
+          <div className="px-4">
+            <div
+              role="note"
+              className="flex items-start gap-3 rounded-2xl border border-info-border bg-info-soft px-4 py-3"
+            >
+              <Info aria-hidden className="mt-0.5 size-5 shrink-0 text-info-soft-foreground" strokeWidth={2.25} />
+              <p className="text-body-sm leading-snug text-foreground">
+                <span className="font-semibold">Estás viendo la carta.</span>{" "}
+                <span className="text-muted-foreground">
+                  Arma tu pedido y lo envías por WhatsApp. Si estás en el local,
+                  escanea el QR de tu mesa para pedir desde ahí.
+                </span>
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {results === null && (
-        <SuggestionsRow
-          suggestions={suggestions}
-          onSelectProduct={setSelectedProduct}
-          onAddCombo={(dish, drink) => {
-            // Si algo del combo exige elegir variante/extras, se abre su ficha.
-            const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
-            if (pick) {
-              setSelectedProduct(pick);
-              return;
-            }
-            cart.addItems([
-              { product: dish, quantity: 1, notes: "" },
-              { product: drink, quantity: 1, notes: "" },
-            ]);
-            notify.itemAdded(`${dish.name} + ${drink.name}`);
-          }}
-        />
-      )}
+        {results === null && (
+          <SuggestionsRow
+            suggestions={suggestions}
+            onSelectProduct={setSelectedProduct}
+            onAddCombo={(dish, drink) => {
+              // If anything in the combo needs a variant/extras, open its sheet.
+              const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
+              if (pick) {
+                setSelectedProduct(pick);
+                return;
+              }
+              cart.addItems([
+                { product: dish, quantity: 1, notes: "" },
+                { product: drink, quantity: 1, notes: "" },
+              ]);
+              notify.itemAdded(`${dish.name} + ${drink.name}`);
+            }}
+          />
+        )}
 
-      <div className="flex flex-col border-b border-border">
         {results === null ? (
-          categories.map((category, i) => (
-            <CategorySection
-              key={category.id}
-              category={category}
-              index={i}
-              isOpen={openCategories.has(category.id)}
-              onToggle={() => toggleCategory(category.id)}
-              onSelectProduct={setSelectedProduct}
-              cartQuantities={cartQuantities}
-              sectionRef={sectionRefCallbacks[category.id]}
-            />
-          ))
-        ) : results.length === 0 ? (
-          <p className="px-4 py-8 text-center text-[13px] text-muted-foreground">
-            No encontramos productos con &ldquo;{query}&rdquo;
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2 px-4">
-            {/* Los resultados de búsqueda no tienen su propia categoría
-                visible (category-section.tsx abre cada una con un h2) —
-                sin este encabezado oculto, el h1 del restaurante salta
-                directo a los h3 de cada producto. */}
-            <h2 className="sr-only">Resultados de búsqueda</h2>
-            {results.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                categoryName={product.categoryName}
-                onSelect={setSelectedProduct}
-                quantityInCart={cartQuantities[product.id] ?? 0}
+          <div className="flex flex-col gap-3 px-4">
+            <h2 className="font-display text-title-sm font-bold text-foreground">
+              La carta
+            </h2>
+            {categories.map((category) => (
+              <CategorySection
+                key={category.id}
+                category={category}
+                isOpen={openCategories.has(category.id)}
+                onToggle={() => toggleCategory(category.id)}
+                onSelectProduct={setSelectedProduct}
+                cartQuantities={cartQuantities}
+                sectionRef={sectionRefCallbacks[category.id]}
               />
             ))}
           </div>
+        ) : results.length === 0 ? (
+          <div className="px-4">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-10 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                <SearchX aria-hidden className="size-6" />
+              </span>
+              <p className="text-body font-semibold text-foreground">
+                No encontramos &ldquo;{query}&rdquo;
+              </p>
+              <p className="text-body-sm text-muted-foreground">
+                Prueba con otra palabra o mira la carta completa.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setQuery("")}
+                className="mt-1 h-11 rounded-xl px-5 text-body"
+              >
+                Ver toda la carta
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <section className="flex flex-col gap-3 px-4">
+            {/* Search results have no visible category heading; without
+                this the restaurant h1 jumps straight to each dish's h3. */}
+            <h2 className="text-body-sm font-semibold text-muted-foreground">
+              {results.length} {results.length === 1 ? "resultado" : "resultados"}
+            </h2>
+            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+              {results.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  categoryName={product.categoryName}
+                  onSelect={setSelectedProduct}
+                  quantityInCart={cartQuantities[product.id] ?? 0}
+                />
+              ))}
+            </div>
+          </section>
         )}
       </div>
 
@@ -333,54 +382,56 @@ export function MenuBrowser({
         }}
       />
 
-      {/* Barra de acciones tipo app nativa: elevada sobre el contenido
-          con sombra propia (no un simple borde) y con respeto por el
-          área segura del iPhone, para que el botón no quede debajo de
-          la barra de gestos. */}
+      {/* Native-app action bar: lifted over the content with its own
+          shadow and respecting the iPhone safe area, so the button never
+          sits under the gesture bar. */}
       <div
-        className="glass fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-border/50 px-4 pt-3"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur-md"
         style={{
           paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
-          boxShadow: "0 -8px 24px -12px oklch(0.4 0.03 50 / 0.25)",
+          boxShadow: "0 -10px 28px -16px rgb(15 23 42 / 0.28)",
         }}
       >
-        {cart.itemCount > 0 && (
-          <Button
-            size="lg"
-            className="clay clay-primary h-12 w-full justify-between rounded-2xl text-[15px]"
-            onClick={() => setCartOpen(true)}
-            aria-label={`Ver carrito con ${cart.itemCount} artículos, total ${formatPrice(cart.total)}`}
-          >
-            <span className="flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4" />
-              Ver pedido
-              <span className="rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[11px] font-bold tabular-nums">
-                {cart.itemCount}
-              </span>
-            </span>
-            <span className="font-display text-[20px] font-bold tabular-nums">
-              {formatPrice(cart.total)}
-            </span>
-          </Button>
-        )}
-        {/* Llamar mesero / Pedir cuenta solo tienen sentido sentado en
-            una mesa. Desde casa, la vía de contacto es WhatsApp y vive
-            dentro del carrito. */}
-        {tableNumber !== null ? (
-          <ServiceButtons tableNumber={tableNumber} />
-        ) : (
-          whatsappUrl && (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card text-[15px] font-semibold text-foreground active:bg-muted"
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-3">
+          {cart.itemCount > 0 && (
+            <Button
+              size="lg"
+              className="clay clay-primary h-14 w-full justify-between rounded-2xl px-4 text-body-lg font-semibold"
+              onClick={() => setCartOpen(true)}
+              aria-label={`Ver pedido con ${cart.itemCount} artículos, total ${formatPrice(cart.total)}`}
             >
-              <MessageCircle className="h-4 w-4 text-primary" strokeWidth={2.25} />
-              Hablar por WhatsApp
-            </a>
-          )
-        )}
+              <span className="flex items-center gap-2.5">
+                <span className="relative flex size-9 items-center justify-center rounded-xl bg-primary-foreground/15">
+                  <ShoppingBag aria-hidden className="size-5" />
+                  <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-honey px-1 text-caption font-bold tabular-nums text-honey-foreground">
+                    {cart.itemCount}
+                  </span>
+                </span>
+                Ver mi pedido
+              </span>
+              <span className="font-display text-title font-bold tabular-nums">
+                {formatPrice(cart.total)}
+              </span>
+            </Button>
+          )}
+          {/* Call waiter / ask for the bill only make sense at a table.
+              From home, the contact channel is WhatsApp. */}
+          {tableNumber !== null ? (
+            <ServiceButtons tableNumber={tableNumber} />
+          ) : (
+            whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card text-body font-semibold text-foreground transition-colors duration-150 hover:bg-secondary active:bg-secondary"
+              >
+                <MessageCircle aria-hidden className="size-5 text-primary" strokeWidth={2.25} />
+                Hablar por WhatsApp
+              </a>
+            )
+          )}
+        </div>
       </div>
     </div>
   );

@@ -88,7 +88,7 @@ export default async function MenuPage({
   }
 
   return (
-    <main className="min-h-full">
+    <main className="min-h-dvh bg-background">
       <MenuHeader
         restaurant={menu.restaurant}
         tableNumber={inTable ? session!.tableNumber : null}
@@ -109,11 +109,17 @@ export default async function MenuPage({
           <SessionExpiryWatcher
             expiresAt={getTableSessionExpiresAt(session!)}
           />
-          <AccountBar tableNumber={session!.tableNumber} />
-          <ActiveOrderStrip slug={slug} tableNumber={session!.tableNumber} />
+          {/* "Tu mesa" block: the account and the orders in progress live
+              in one bordered card, separate from the menu below. */}
+          <div className="mx-auto w-full max-w-3xl px-4 pt-4">
+            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+              <AccountBar tableNumber={session!.tableNumber} />
+              <ActiveOrderStrip slug={slug} tableNumber={session!.tableNumber} />
+            </div>
+          </div>
           <MenuBrowser
             categories={menu.categories}
-          productDetails={productDetails}
+            productDetails={productDetails}
             slug={slug}
             tableNumber={session!.tableNumber}
             restaurantName={menu.restaurant.name}

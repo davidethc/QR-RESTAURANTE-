@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Store } from "lucide-react";
+import { Loader2, Save, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageFileInput } from "@/components/shared/image-file-input";
@@ -18,6 +18,7 @@ import {
   type RestaurantSettingsInput,
 } from "@/lib/validations/restaurant";
 import type { RestaurantSettings } from "@/types/staff";
+import { SettingsCard } from "./settings-card";
 
 export function SettingsForm({
   restaurant,
@@ -89,21 +90,25 @@ export function SettingsForm({
       // eslint-disable-next-line react-hooks/refs
       onSubmit={handleSubmit(onSubmit)}
       noValidate
-      className="grid gap-6 border-b border-border pb-8 lg:grid-cols-[240px_1fr] lg:gap-12"
     >
-      <div>
-        <h2 className="text-body font-semibold text-foreground">Datos del restaurante</h2>
-        <p className="mt-1 text-body-sm text-muted-foreground">
-          Lo que ven tus clientes en la carta.
-        </p>
-      </div>
-
-      <div className="flex max-w-lg flex-col gap-6">
+      <SettingsCard
+        id="settings-restaurant"
+        title="Datos del restaurante"
+        help="Lo que ven tus clientes arriba de la carta digital."
+        icon={Store}
+        tone="info"
+        footer={
+          <Button type="submit" disabled={isPending} className="min-h-11">
+            {isPending ? <Loader2 className="animate-spin" /> : <Save />}
+            Guardar cambios
+          </Button>
+        }
+      >
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="rest-logo">Logo</FieldLabel>
-            <div className="flex items-center gap-3">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-card border border-border bg-muted">
+            <div className="flex flex-wrap items-center gap-4 rounded-control border border-dashed border-border bg-background p-3">
+              <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-card border border-border bg-card">
                 {logoUrl ? (
                   <Image
                     src={logoUrl}
@@ -116,22 +121,32 @@ export function SettingsForm({
                   <Store className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
                 )}
               </div>
-              <ImageFileInput
-                id="rest-logo"
-                ref={fileInputRef}
-                aria-describedby="rest-logo-hint"
-              />
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <ImageFileInput
+                  id="rest-logo"
+                  ref={fileInputRef}
+                  aria-describedby="rest-logo-hint"
+                />
+                <p id="rest-logo-hint" className="text-caption text-muted-foreground">
+                  JPEG, PNG o WebP. Se sube al guardar.
+                </p>
+              </div>
             </div>
-            <p id="rest-logo-hint" className="text-caption text-muted-foreground">
-              JPEG, PNG o WebP.
-            </p>
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor="rest-name">Nombre</FieldLabel>
-            <Input id="rest-name" {...register("name")} />
-            <FieldError errors={[errors.name]} />
-          </Field>
+          <div className="grid gap-5 md:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="rest-name">Nombre</FieldLabel>
+              <Input id="rest-name" className="min-h-11" {...register("name")} />
+              <FieldError errors={[errors.name]} />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="rest-phone">Teléfono</FieldLabel>
+              <Input id="rest-phone" type="tel" className="min-h-11" {...register("phone")} />
+              <FieldError errors={[errors.phone]} />
+            </Field>
+          </div>
 
           <Field>
             <FieldLabel htmlFor="rest-description">Descripción</FieldLabel>
@@ -140,25 +155,14 @@ export function SettingsForm({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="rest-phone">Teléfono</FieldLabel>
-            <Input id="rest-phone" type="tel" {...register("phone")} />
-            <FieldError errors={[errors.phone]} />
-          </Field>
-
-          <Field>
             <FieldLabel htmlFor="rest-address">Dirección</FieldLabel>
-            <Input id="rest-address" {...register("address")} />
+            <Input id="rest-address" className="min-h-11" {...register("address")} />
             <FieldError errors={[errors.address]} />
           </Field>
 
           <FieldError errors={[errors.root]} />
         </FieldGroup>
-
-        <Button type="submit" disabled={isPending} className="w-fit">
-          {isPending && <Loader2 className="animate-spin" />}
-          Guardar cambios
-        </Button>
-      </div>
+      </SettingsCard>
     </form>
   );
 }

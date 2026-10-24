@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ReportCard } from "./report-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatPrice } from "@/lib/utils";
 import type { SalesByStaffRow } from "@/types/reports";
@@ -20,13 +21,12 @@ const ROLE_LABEL: Record<string, string> = {
 
 export function StaffTable({ rows }: { rows: SalesByStaffRow[] }) {
   return (
-    <div className="rounded-card border border-border bg-card p-5">
-      <h3 className="mb-3 text-body font-semibold text-foreground">Ventas por mesero</h3>
+    <ReportCard id="report-staff" title="Ventas por mesero" icon={Users} flush>
       <div>
         {rows.length === 0 ? (
           <EmptyState icon={Users} title="Sin actividad de personal en este rango" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto [&_td]:py-3 [&_td:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th]:bg-secondary/60 [&_th:first-child]:pl-4 [&_th:last-child]:pr-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -64,6 +64,6 @@ export function StaffTable({ rows }: { rows: SalesByStaffRow[] }) {
           </div>
         )}
       </div>
-    </div>
+    </ReportCard>
   );
 }

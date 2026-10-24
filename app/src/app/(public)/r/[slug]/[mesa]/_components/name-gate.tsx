@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { CircleAlert, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openTableWithName } from "@/lib/actions/customer-session";
 import { tableNameSchema } from "@/lib/validations/qr-client";
@@ -45,13 +45,13 @@ export function NameGate({
     <main className="flex min-h-dvh flex-col bg-primary-dark text-primary-dark-foreground">
       <div className="flex flex-1 flex-col justify-end gap-3 px-6 pb-8 pt-16">
         <span className="flex w-fit items-baseline gap-1.5 rounded-lg bg-honey px-3 py-1.5 text-honey-foreground">
-          <span className="text-[12px] font-bold uppercase tracking-[0.14em]">Mesa</span>
-          <span className="font-display text-[28px] font-bold leading-none">{tableNumber}</span>
+          <span className="text-caption font-bold uppercase tracking-wider">Mesa</span>
+          <span className="font-display text-display font-bold leading-none tabular-nums">{tableNumber}</span>
         </span>
-        <h1 className="font-display text-balance text-[32px] font-bold leading-tight">
+        <h1 className="font-display text-balance text-3xl font-bold leading-tight">
           Bienvenido a {restaurantName}
         </h1>
-        <p className="text-[16px] opacity-85">¿A nombre de quién ponemos la mesa?</p>
+        <p className="text-body-lg opacity-90">¿A nombre de quién ponemos la mesa?</p>
       </div>
 
       <form
@@ -60,7 +60,7 @@ export function NameGate({
         className="rounded-t-3xl bg-background px-6 pt-6 text-foreground"
         style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
       >
-        <label htmlFor="table-name" className="text-[14px] font-semibold">
+        <label htmlFor="table-name" className="text-body-sm font-semibold">
           Tu nombre
         </label>
         <input
@@ -78,10 +78,15 @@ export function NameGate({
           placeholder="Ej. Ana"
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "table-name-error" : undefined}
-          className="mt-2 h-14 w-full rounded-2xl border border-border bg-card px-4 text-[18px] outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="mt-2 h-14 w-full rounded-2xl border border-input bg-card px-4 text-title-sm outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/30 aria-invalid:border-destructive aria-invalid:ring-destructive/20"
         />
         {error && (
-          <p id="table-name-error" role="alert" className="mt-2 text-[14px] text-destructive">
+          <p
+            id="table-name-error"
+            role="alert"
+            className="mt-2 flex items-start gap-2 rounded-xl border border-money-out-border bg-money-out-soft px-3 py-2.5 text-body-sm font-medium text-money-out-soft-foreground"
+          >
+            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
             {error}
           </p>
         )}
@@ -89,7 +94,7 @@ export function NameGate({
           type="submit"
           size="lg"
           disabled={pending}
-          className="clay clay-primary mt-4 h-14 w-full rounded-2xl text-[16px] font-semibold"
+          className="clay clay-primary mt-4 h-14 w-full rounded-2xl text-body-lg font-semibold"
         >
           {pending && <Loader2 className="animate-spin" aria-hidden />}
           Ver la carta
