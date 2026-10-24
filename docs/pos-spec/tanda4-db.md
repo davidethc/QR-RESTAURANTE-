@@ -146,7 +146,9 @@ Template data: customer ticket and pre-bill → `bill_json` (via the existing bi
 13. Multi-branch link page (§7.3): no `branches` table yet; nothing added.
 
 ## Applying
-Production has no PITR. Before applying, diff each `create or replace` body in M13 against
-`pg_get_functiondef` in production (copied from the repo's latest migrations: m11, m04, caja_cashier_orders,
-m07, bill_item_images). Run the tests inside a transaction with the migrations, e.g. build a scratch file
+Production has no PITR. Verified 2026-10-23 against a `pg_get_functiondef` dump of production: the bodies
+copied into M13 (build_order_lines, insert_order_lines, create_customer_order, create_staff_order, add_ticket,
+create_counter_order, create_counter_sale, add_items_to_bill, edit_order_item, bill_json) are identical to the
+live ones before the one-line changes; each has a single live overload; no new function, table or column
+name already exists; every helper and column used exists. Re-check if production changes before applying. Run the tests inside a transaction with the migrations, e.g. build a scratch file
 `begin; <m13> <m12> <m16> <test body without its own begin> rollback;` and check it ends with `rollback;`.
