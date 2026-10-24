@@ -2,9 +2,9 @@
 export const ROLE_PERMISSIONS = {
   OWNER: ["*"],
   ADMIN: ["*"],
-  MEMBERS_ADMIN: ["home", "members.manage"],
-  BRANCH_MANAGER: ["home", "branch.edit"],
-  MENU_MANAGER: ["home", "menu.manage", "availability.edit"],
+  MEMBERS_ADMIN: ["home", "members.manage", "printing.manage"],
+  BRANCH_MANAGER: ["home", "branch.edit", "printing.manage"],
+  MENU_MANAGER: ["home", "menu.manage", "availability.edit", "printing.manage"],
   CASHIER: ["home", "pos", "orders.attend", "cash.manage", "sales.summary", "availability.edit", "digitalMenu.view", "printing.manage"],
   WAITER: ["home", "tables", "orders.attend", "availability.edit", "digitalMenu.view", "printing.manage"],
   KITCHEN: ["home", "kitchen", "availability.edit", "printing.manage"],
@@ -61,6 +61,10 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, Permission>> = {
   "/reports": "reports.view",
   "/inventory": "inventory.manage",
   "/settings": "branch.edit",
+  // M12: same roles as can_manage_digital_menu (OWNER, ADMIN, BRANCH_MANAGER).
+  "/settings/menu-digital": "branch.edit",
+  // M16: every role prints (spec §6); more specific than /settings.
+  "/settings/printing": "printing.manage",
   "/security": "members.manageAdmins",
   // Rutas especificadas en M02/M16, todavía sin páginas en esta rama.
   "/disponibilidad": "availability.edit",
@@ -70,8 +74,10 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, Permission>> = {
 
 function routePermission(path: string): Permission | undefined {
   const pathname = path.split(/[?#]/, 1)[0];
-  const route = Object.keys(ROUTE_PERMISSIONS).find((prefix) =>
-    pathname === prefix || pathname.startsWith(`${prefix}/`));
+  // Longest matching prefix wins, so /settings/printing beats /settings.
+  const route = Object.keys(ROUTE_PERMISSIONS)
+    .filter((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+    .sort((a, b) => b.length - a.length)[0];
   return route ? ROUTE_PERMISSIONS[route] : undefined;
 }
 

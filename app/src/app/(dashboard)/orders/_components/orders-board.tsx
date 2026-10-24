@@ -54,6 +54,7 @@ export function OrdersBoard({
   summaryDetail,
   actions,
   emptyAction,
+  onlineSection,
 }: {
   /** Ya no se usa aquí (el proveedor del layout conoce el restaurante); se conserva por compatibilidad con la página. */
   restaurantId?: string;
@@ -76,6 +77,8 @@ export function OrdersBoard({
   actions?: React.ReactNode;
   /** Acción de los vacíos de "Nuevos" (p. ej. Nuevo pedido). */
   emptyAction?: React.ReactNode;
+  /** M12: pedidos en línea, en su propia sección sobre el tablero. */
+  onlineSection?: React.ReactNode;
 }) {
   const router = useRouter();
   // Datos en vivo del `StaffLiveProvider` (una sola suscripción para todo
@@ -126,6 +129,9 @@ export function OrdersBoard({
       orders.filter(
         (o) =>
           !pendingIds.has(o.id) &&
+          // M12: un pedido web por aceptar vive en "En línea"; aquí tendría
+          // los botones genéricos, que la base rechaza para source = 'web'.
+          !(o.source === "web" && o.status === "PENDING") &&
           (tableFilter === null || o.table_number === tableFilter) &&
           (source === "all" || (source === "qr") === (o.source === "digital_menu"))
       ),
@@ -265,6 +271,7 @@ export function OrdersBoard({
       </section>
 
       <div className="flex flex-col gap-4 px-4 py-4 md:px-5">
+        {onlineSection}
         <div className="flex flex-wrap items-center gap-3">
           <div role="radiogroup" aria-label="Origen del pedido" className={segmentedListClass()}>
             {SOURCE_FILTERS.map((f, i) => {
