@@ -150,13 +150,14 @@ export function CategorySection({
       {isOpen && (
         <div
           id={panelId}
-          className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-2.5 overflow-x-auto px-4 py-4"
+          className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-3 overflow-x-auto px-4 pb-3 pt-2"
         >
           {category.products.map((product) => (
             <ProductCardCompact
               key={product.id}
               product={product}
               promo={promos?.[product.id]}
+              placeholderIcon={icon}
               onSelect={onSelectProduct}
               quantityInCart={cartQuantities[product.id] ?? 0}
             />
