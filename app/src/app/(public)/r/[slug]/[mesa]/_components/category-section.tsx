@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { ProductCardCompact } from "./product-card-compact";
+import { SwipeHint, useSwipeHint } from "./swipe-hint";
 import type { ProductPromo } from "./product-card";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
@@ -53,6 +54,7 @@ export function CategorySection({
   const remaining = count - previewNames.length;
   const panelId = `cat-panel-${category.id}`;
   const dishes = `${count} ${count === 1 ? "plato" : "platos"}`;
+  const { attachRow, showHint } = useSwipeHint();
 
   return (
     <section
@@ -148,20 +150,27 @@ export function CategorySection({
       )}
 
       {isOpen && (
-        <div
-          id={panelId}
-          className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-3 overflow-x-auto px-4 pb-3 pt-2"
-        >
-          {category.products.map((product) => (
-            <ProductCardCompact
-              key={product.id}
-              product={product}
-              promo={promos?.[product.id]}
-              placeholderIcon={icon}
-              onSelect={onSelectProduct}
-              quantityInCart={cartQuantities[product.id] ?? 0}
-            />
-          ))}
+        <div className="relative">
+          <div
+            ref={attachRow}
+            id={panelId}
+            className={cn(
+              "no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-3 overflow-x-auto px-4 pb-3 pt-2",
+              showHint && "menu-row-nudge"
+            )}
+          >
+            {category.products.map((product) => (
+              <ProductCardCompact
+                key={product.id}
+                product={product}
+                promo={promos?.[product.id]}
+                placeholderIcon={icon}
+                onSelect={onSelectProduct}
+                quantityInCart={cartQuantities[product.id] ?? 0}
+              />
+            ))}
+          </div>
+          {showHint && <SwipeHint />}
         </div>
       )}
     </section>
