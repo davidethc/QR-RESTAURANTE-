@@ -172,7 +172,6 @@ export function MenuBrowser({
         items={cart.items}
         total={cart.total}
         onUpdateQuantity={cart.updateQuantity}
-        onRemove={cart.removeItem}
         onClearCart={cart.clearCart}
         slug={slug}
         tableNumber={tableNumber}
