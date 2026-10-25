@@ -2,13 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_MENU_NAV,
   PREVIEW_LIMIT,
+  SWIPE_HINT_KEY,
+  SWIPE_HINT_MIN_SCROLL,
   TAP_GUARD_MS,
   acceptTap,
   initialMenuNav,
   menuNavReducer,
   pickActiveSection,
   productPromos,
+  readSwipeHint,
+  rememberSwipeHint,
+  rowOverflows,
   sameMenu,
+  swipedEnough,
   visibleProducts,
 } from "./menu-navigation";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
@@ -190,5 +196,59 @@ describe("productPromos", () => {
     ]);
     expect(map.bolon).toEqual({ label: "25%", price: 3 });
     expect(map.cafe).toEqual({ label: "2x1", price: null });
+  });
+});
+
+describe("swipe hint", () => {
+  const memory = (initial: Record<string, string> = {}) => {
+    const data = { ...initial };
+    return {
+      data,
+      getItem: (k: string) => (k in data ? data[k] : null),
+      setItem: (k: string, v: string) => {
+        data[k] = v;
+      },
+    };
+  };
+  const broken = () => {
+    throw new Error("SecurityError");
+  };
+
+  it("shows on a device that never swiped a row", () => {
+    expect(readSwipeHint(() => memory())).toBe("show");
+  });
+
+  it("stays gone once remembered on this device", () => {
+    const store = memory();
+    rememberSwipeHint(() => store);
+    expect(store.data[SWIPE_HINT_KEY]).toBe("1");
+    expect(readSwipeHint(() => store)).toBe("seen");
+  });
+
+  it("renders nothing when storage cannot be read", () => {
+    expect(readSwipeHint(broken)).toBe("unavailable");
+    expect(
+      readSwipeHint(() => ({
+        getItem: () => {
+          throw new Error("blocked");
+        },
+      }))
+    ).toBe("unavailable");
+  });
+
+  it("remembering never throws when storage is blocked", () => {
+    expect(() => rememberSwipeHint(broken)).not.toThrow();
+  });
+
+  it("only rows wider than their box overflow", () => {
+    expect(rowOverflows(900, 390)).toBe(true);
+    expect(rowOverflows(390, 390)).toBe(false);
+    expect(rowOverflows(391, 390)).toBe(false);
+  });
+
+  it("a real horizontal swipe dismisses it, a snap jitter does not", () => {
+    expect(swipedEnough(SWIPE_HINT_MIN_SCROLL)).toBe(true);
+    expect(swipedEnough(2)).toBe(false);
+    expect(swipedEnough(0)).toBe(false);
   });
 });

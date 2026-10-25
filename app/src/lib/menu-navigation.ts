@@ -164,3 +164,42 @@ export function productPromos(
   }
   return map;
 }
+
+/**
+ * "Desliza" hint on the horizontal dish rows. It shows until the customer
+ * scrolls any row sideways once, then never again on that device. Storage
+ * access is wrapped because Safari private mode and blocked site data throw
+ * on read: when it cannot be read the hint renders nothing rather than
+ * nagging on every visit.
+ */
+export const SWIPE_HINT_KEY = "monky:menu-swipe-hint";
+
+/** Horizontal scroll (px) that counts as a deliberate swipe, not a snap jitter. */
+export const SWIPE_HINT_MIN_SCROLL = 8;
+
+export type SwipeHintStatus = "show" | "seen" | "unavailable";
+
+export function readSwipeHint(getStorage: () => Pick<Storage, "getItem">): SwipeHintStatus {
+  try {
+    return getStorage().getItem(SWIPE_HINT_KEY) ? "seen" : "show";
+  } catch {
+    return "unavailable";
+  }
+}
+
+export function rememberSwipeHint(getStorage: () => Pick<Storage, "setItem">): void {
+  try {
+    getStorage().setItem(SWIPE_HINT_KEY, "1");
+  } catch {
+    // Nothing to remember with; the hint is hidden for this visit anyway.
+  }
+}
+
+/** A row overflows when its content is wider than its box (1px rounding slack). */
+export function rowOverflows(scrollWidth: number, clientWidth: number): boolean {
+  return scrollWidth > clientWidth + 1;
+}
+
+export function swipedEnough(scrollLeft: number): boolean {
+  return scrollLeft >= SWIPE_HINT_MIN_SCROLL;
+}

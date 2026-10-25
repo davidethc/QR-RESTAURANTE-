@@ -35,7 +35,12 @@ export function MenuNavRoot({ nav, className, children }: { nav: MenuNavigation;
  * The chips have no color transition and no tap highlight: inside a
  * `backdrop-filter` bar during a smooth scroll, iOS Safari repaints the
  * whole layer each frame and an animated color there flickered. The active
- * chip is solid and instant.
+ * chip changes instantly, and softly: a light tint with primary text and a
+ * thin ring, so the section on screen reads at a glance without a block of
+ * solid color following the scroll.
+ *
+ * The search keeps its full height while scrolling: a compact state would
+ * resize the sticky bar mid-scroll and move every sticky header with it.
  */
 export function MenuToolbar({
   nav,
@@ -62,7 +67,7 @@ export function MenuToolbar({
         <div className="relative">
           <Search
             aria-hidden
-            className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-primary"
           />
           <Input
             enterKeyHint="search"
@@ -70,7 +75,7 @@ export function MenuToolbar({
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder={placeholder}
             aria-label={searchLabel}
-            className="h-12 rounded-xl border-border bg-card pl-11 pr-11 text-body-lg placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
+            className="neu-inset h-12 rounded-xl border-border bg-card pl-11 pr-11 text-body-lg placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
           />
           {query && (
             <button
@@ -108,7 +113,7 @@ export function MenuToolbar({
                       "flex h-11 shrink-0 items-center gap-2 rounded-full border pl-3 pr-2 text-body-sm font-semibold",
                       pressable,
                       isActive
-                        ? "border-primary bg-primary text-primary-foreground"
+                        ? "border-primary/35 bg-primary-soft text-primary-soft-foreground ring-1 ring-primary/20"
                         : "border-border bg-card text-foreground hover:border-primary/40 active:bg-secondary"
                     )}
                   >
@@ -119,7 +124,7 @@ export function MenuToolbar({
                     <span
                       className={cn(
                         "flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-caption font-semibold tabular-nums",
-                        isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-secondary text-muted-foreground"
+                        isActive ? "bg-primary/15 text-primary-soft-foreground" : "bg-secondary text-muted-foreground"
                       )}
                     >
                       {category.products.length}
