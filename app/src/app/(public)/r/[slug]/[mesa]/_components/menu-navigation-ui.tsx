@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CategorySection } from "./category-section";
 import { ProductCard, type ProductPromo } from "./product-card";
 import type { MenuNavigation } from "./use-menu-navigation";
+import type { MenuSearchResult } from "./use-menu-search";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
 /**
@@ -57,9 +58,8 @@ export function MenuToolbar({
   placeholder: string;
   searchLabel: string;
 }) {
-  const { state, goTo, collapseAll, attachBar, attachChipStrip, attachChip } = nav;
+  const { state, goTo, attachBar, attachChipStrip, attachChip } = nav;
   const searching = query.trim().length > 0;
-  const canCollapseAll = state.open.length > 1;
 
   return (
     <div ref={attachBar} className="glass sticky top-0 z-10 border-b border-border">
@@ -133,19 +133,6 @@ export function MenuToolbar({
                 );
               })}
             </nav>
-            {canCollapseAll && (
-              <button
-                type="button"
-                onClick={collapseAll}
-                className={cn(
-                  "mr-4 flex h-11 shrink-0 items-center gap-1 rounded-full bg-foreground px-3.5 text-body-sm font-semibold text-background",
-                  pressable
-                )}
-              >
-                <ChevronsUp aria-hidden className="size-4" strokeWidth={2.5} />
-                Contraer todo
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -178,11 +165,9 @@ export function MenuSectionList({
         <CategorySection
           key={category.id}
           category={category}
-          isOpen={nav.isOpen(category.id)}
-          isExpanded={nav.isExpanded(category.id)}
-          onToggle={() => nav.toggle(category.id)}
-          onCollapse={() => nav.collapse(category.id)}
-          onShowAll={() => nav.showAll(category.id)}
+          isOpen={nav.state.open.includes(category.id)}
+          onToggle={nav.toggle}
+          onCollapse={nav.collapse}
           sectionRef={nav.attachSection}
           onSelectProduct={onSelectProduct}
           cartQuantities={cartQuantities}
@@ -204,7 +189,7 @@ export function MenuSearchResults({
   emptyAction,
 }: {
   query: string;
-  results: (PublicProduct & { categoryName: string })[];
+  results: readonly MenuSearchResult[];
   onClear: () => void;
   onSelectProduct: (product: PublicProduct) => void;
   cartQuantities: Record<string, number>;
@@ -251,26 +236,47 @@ export function MenuSearchResults({
   );
 }
 
+const floatingButton =
+  "flex h-11 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-body-sm font-semibold text-foreground shadow-md transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity";
+
 /**
- * "Arriba": lives inside the fixed action bar, right above it, so it never
- * covers the cart button whatever the bar height is.
+ * "Contraer todo" and "Arriba" float right above the fixed action bar, so
+ * they never cover the category chips or the cart button whatever the bar
+ * height is. Each one only shows while it has something to do.
  */
-export function BackToTopButton({ nav }: { nav: MenuNavigation }) {
+export function MenuFloatingActions({ nav }: { nav: MenuNavigation }) {
+  const canCollapseAll = nav.state.open.length > 1;
   return (
-    <button
-      type="button"
-      onClick={nav.scrollToTop}
-      aria-label="Volver arriba"
-      tabIndex={nav.showTop ? 0 : -1}
-      aria-hidden={!nav.showTop}
-      className={cn(
-        "absolute bottom-full right-4 mb-3 flex h-11 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-body-sm font-semibold text-foreground shadow-md transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity",
-        pressable,
-        nav.showTop ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
-      )}
-    >
-      <ArrowUp aria-hidden className="size-4" strokeWidth={2.5} />
-      Arriba
-    </button>
+    <div className="pointer-events-none absolute bottom-full right-4 mb-3 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={nav.collapseAll}
+        tabIndex={canCollapseAll ? 0 : -1}
+        aria-hidden={!canCollapseAll}
+        className={cn(
+          floatingButton,
+          pressable,
+          canCollapseAll ? "pointer-events-auto translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+        )}
+      >
+        <ChevronsUp aria-hidden className="size-4" strokeWidth={2.5} />
+        Contraer todo
+      </button>
+      <button
+        type="button"
+        onClick={nav.scrollToTop}
+        aria-label="Volver arriba"
+        tabIndex={nav.showTop ? 0 : -1}
+        aria-hidden={!nav.showTop}
+        className={cn(
+          floatingButton,
+          pressable,
+          nav.showTop ? "pointer-events-auto translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+        )}
+      >
+        <ArrowUp aria-hidden className="size-4" strokeWidth={2.5} />
+        Arriba
+      </button>
+    </div>
   );
 }

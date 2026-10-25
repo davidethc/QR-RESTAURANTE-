@@ -1,18 +1,19 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bike, Clock, MapPin, ShoppingBag, Store, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductSheet } from "@/app/(public)/r/[slug]/[mesa]/_components/product-sheet";
 import { SuggestionsRow } from "@/app/(public)/r/[slug]/[mesa]/_components/suggestions-row";
 import { useMenuNavigation } from "@/app/(public)/r/[slug]/[mesa]/_components/use-menu-navigation";
 import {
-  BackToTopButton,
+  MenuFloatingActions,
   MenuNavRoot,
   MenuSearchResults,
   MenuSectionList,
   MenuToolbar,
 } from "@/app/(public)/r/[slug]/[mesa]/_components/menu-navigation-ui";
+import { useCartQuantities, useMenuSearch } from "@/app/(public)/r/[slug]/[mesa]/_components/use-menu-search";
 import { useLiveMenuCategories } from "@/hooks/use-live-menu";
 import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
@@ -20,7 +21,7 @@ import { productPromos } from "@/lib/menu-navigation";
 import { getMenuSuggestions } from "@/lib/suggestions";
 import { needsChoice } from "@/lib/order-lines";
 import { SERVICE_LABELS } from "@/lib/digital-menu";
-import { cn, formatPrice, normalizeText } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import type { PublicCategory, PublicProduct, StaffProductDetail } from "@/types/menu";
 import type { DigitalMenu, OnlineServiceType } from "@/types/digital-menu";
 import { MenuStateNotice } from "./menu-state-notice";
@@ -28,6 +29,8 @@ import { OrderSheet } from "./order-sheet";
 
 /** Cart slot for the delivery/pickup menu. Real tables start at 1 and the QR "carta" uses 0. */
 const ONLINE_CART_SLOT = -1;
+
+const VIEW_ONLY = "Por ahora solo puedes ver el menú";
 
 function modeKey(slug: string) {
   return `mk_online_mode_${slug}`;
@@ -85,7 +88,6 @@ export function DigitalMenuApp({
   );
 
   const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
   // Same navigation as the QR menu: see use-menu-navigation.ts.
   const categoryIds = useMemo(() => visibleCategories.map((c) => c.id), [visibleCategories]);
   const nav = useMenuNavigation(categoryIds);
@@ -95,46 +97,42 @@ export function DigitalMenuApp({
   const [selected, setSelected] = useState<PublicProduct | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const cartQuantities = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const item of cart.items) map[item.product.id] = (map[item.product.id] ?? 0) + item.quantity;
-    return map;
-  }, [cart.items]);
+  const cartQuantities = useCartQuantities(cart.items);
+  const results = useMenuSearch(visibleCategories, query);
 
-  const results = useMemo(() => {
-    const q = normalizeText(deferredQuery.trim());
-    if (!q) return null;
-    return visibleCategories.flatMap((c) =>
-      c.products
-        .filter((p) => normalizeText(`${p.name} ${p.description ?? ""}`).includes(q))
-        .map((p) => ({ ...p, categoryName: c.name }))
-    );
-  }, [visibleCategories, deferredQuery]);
+  // Stable callbacks: the memoized sections, cards and suggestions keep
+  // their render while the customer scrolls or types.
+  const selectProduct = useCallback(
+    (product: PublicProduct) => {
+      if (!accepting) {
+        notify.success(VIEW_ONLY);
+        return;
+      }
+      setSelected(product);
+    },
+    [accepting]
+  );
 
-  function selectProduct(product: PublicProduct) {
-    if (!accepting) {
-      notify.success("Por ahora solo puedes ver el menú");
-      return;
-    }
-    setSelected(product);
-  }
-
-  function addCombo(dish: PublicProduct, drink: PublicProduct) {
-    if (!accepting) {
-      notify.success("Por ahora solo puedes ver el menú");
-      return;
-    }
-    const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
-    if (pick) {
-      setSelected(pick);
-      return;
-    }
-    cart.addItems([
-      { product: dish, quantity: 1, notes: "" },
-      { product: drink, quantity: 1, notes: "" },
-    ]);
-    notify.itemAdded(`${dish.name} + ${drink.name}`);
-  }
+  const { addItems } = cart;
+  const addCombo = useCallback(
+    (dish: PublicProduct, drink: PublicProduct) => {
+      if (!accepting) {
+        notify.success(VIEW_ONLY);
+        return;
+      }
+      const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
+      if (pick) {
+        setSelected(pick);
+        return;
+      }
+      addItems([
+        { product: dish, quantity: 1, notes: "" },
+        { product: drink, quantity: 1, notes: "" },
+      ]);
+      notify.itemAdded(`${dish.name} + ${drink.name}`);
+    },
+    [accepting, productDetails, addItems]
+  );
 
   const freeFrom = delivery?.free_shipping_enabled ? delivery.free_shipping_min_amount : null;
   const minPurchase = delivery?.min_purchase_enabled ? delivery.min_purchase_amount : null;
@@ -293,7 +291,7 @@ export function DigitalMenuApp({
         }}
       >
         <div className="relative mx-auto w-full max-w-3xl px-4 pt-3">
-          <BackToTopButton nav={nav} />
+          <MenuFloatingActions nav={nav} />
           {cart.itemCount > 0 ? (
             <Button
               size="lg"

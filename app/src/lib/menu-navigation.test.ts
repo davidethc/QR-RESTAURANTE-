@@ -1,21 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   INITIAL_MENU_NAV,
-  PREVIEW_LIMIT,
-  SWIPE_HINT_KEY,
-  SWIPE_HINT_MIN_SCROLL,
+  SWIPE_MIN_DX,
+  SWIPE_MIN_SCROLL,
   TAP_GUARD_MS,
   acceptTap,
   initialMenuNav,
+  isUserSwipe,
   menuNavReducer,
   pickActiveSection,
   productPromos,
-  readSwipeHint,
-  rememberSwipeHint,
   rowOverflows,
   sameMenu,
-  swipedEnough,
-  visibleProducts,
 } from "./menu-navigation";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
@@ -68,12 +64,10 @@ describe("menuNavReducer", () => {
     expect(twice).toBe(once);
   });
 
-  it("collapse closes the section and forgets its 'Ver más'", () => {
+  it("collapse closes the section and clears its mark", () => {
     let s = menuNavReducer(INITIAL_MENU_NAV, { type: "open", id: "a" });
-    s = menuNavReducer(s, { type: "showAll", id: "a" });
     s = menuNavReducer(s, { type: "collapse", id: "a" });
     expect(s.open).toEqual([]);
-    expect(s.expanded).toEqual([]);
     expect(s.active).toBeNull();
   });
 
@@ -107,22 +101,6 @@ describe("acceptTap", () => {
     const first = acceptTap(null, "a", 1000);
     expect(acceptTap(first.last, "a", 1000 + TAP_GUARD_MS).accept).toBe(true);
     expect(acceptTap(first.last, "b", 1001).accept).toBe(true);
-  });
-});
-
-describe("visibleProducts", () => {
-  const products = Array.from({ length: 9 }, (_, i) => product(String(i)));
-
-  it("shows the first dishes and counts the hidden ones", () => {
-    const v = visibleProducts(products, false);
-    expect(v.shown).toHaveLength(PREVIEW_LIMIT);
-    expect(v.hidden).toBe(9 - PREVIEW_LIMIT);
-  });
-
-  it("shows everything once expanded, and never hides a single leftover dish", () => {
-    expect(visibleProducts(products, true).hidden).toBe(0);
-    const seven = products.slice(0, PREVIEW_LIMIT + 1);
-    expect(visibleProducts(seven, false).shown).toHaveLength(PREVIEW_LIMIT + 1);
   });
 });
 
@@ -200,55 +178,37 @@ describe("productPromos", () => {
 });
 
 describe("swipe hint", () => {
-  const memory = (initial: Record<string, string> = {}) => {
-    const data = { ...initial };
-    return {
-      data,
-      getItem: (k: string) => (k in data ? data[k] : null),
-      setItem: (k: string, v: string) => {
-        data[k] = v;
-      },
-    };
-  };
-  const broken = () => {
-    throw new Error("SecurityError");
-  };
-
-  it("shows on a device that never swiped a row", () => {
-    expect(readSwipeHint(() => memory())).toBe("show");
-  });
-
-  it("stays gone once remembered on this device", () => {
-    const store = memory();
-    rememberSwipeHint(() => store);
-    expect(store.data[SWIPE_HINT_KEY]).toBe("1");
-    expect(readSwipeHint(() => store)).toBe("seen");
-  });
-
-  it("renders nothing when storage cannot be read", () => {
-    expect(readSwipeHint(broken)).toBe("unavailable");
-    expect(
-      readSwipeHint(() => ({
-        getItem: () => {
-          throw new Error("blocked");
-        },
-      }))
-    ).toBe("unavailable");
-  });
-
-  it("remembering never throws when storage is blocked", () => {
-    expect(() => rememberSwipeHint(broken)).not.toThrow();
-  });
-
   it("only rows wider than their box overflow", () => {
     expect(rowOverflows(900, 390)).toBe(true);
     expect(rowOverflows(390, 390)).toBe(false);
     expect(rowOverflows(391, 390)).toBe(false);
   });
 
-  it("a real horizontal swipe dismisses it, a snap jitter does not", () => {
-    expect(swipedEnough(SWIPE_HINT_MIN_SCROLL)).toBe(true);
-    expect(swipedEnough(2)).toBe(false);
-    expect(swipedEnough(0)).toBe(false);
+  it("a sideways finger swipe that moves the row dismisses it", () => {
+    expect(isUserSwipe({ dx: -SWIPE_MIN_DX, dy: 4, scrolled: SWIPE_MIN_SCROLL, maxScroll: 400 })).toBe(true);
+    expect(isUserSwipe({ dx: 60, dy: -10, scrolled: -40, maxScroll: 400 })).toBe(true);
+  });
+
+  it("a vertical page scroll with some sideways drift does not", () => {
+    expect(isUserSwipe({ dx: -30, dy: 120, scrolled: 30, maxScroll: 400 })).toBe(false);
+    expect(isUserSwipe({ dx: -30, dy: -30, scrolled: 30, maxScroll: 400 })).toBe(false);
+  });
+
+  it("a short nudge or a snap jitter does not", () => {
+    expect(isUserSwipe({ dx: -(SWIPE_MIN_DX - 1), dy: 0, scrolled: 20, maxScroll: 400 })).toBe(false);
+    expect(isUserSwipe({ dx: -40, dy: 0, scrolled: SWIPE_MIN_SCROLL - 1, maxScroll: 400 })).toBe(false);
+  });
+
+  it("a row that overflows by a few pixels is dismissed once swiped to its end", () => {
+    expect(isUserSwipe({ dx: -40, dy: 2, scrolled: 3, maxScroll: 3 })).toBe(true);
+    expect(isUserSwipe({ dx: -40, dy: 2, scrolled: 2, maxScroll: 3 })).toBe(false);
+  });
+
+  it("a row that does not overflow never dismisses it", () => {
+    expect(isUserSwipe({ dx: -40, dy: 0, scrolled: 0, maxScroll: 0 })).toBe(false);
+  });
+
+  it("a scroll the customer did not make (focus, snap, code) does not", () => {
+    expect(isUserSwipe({ dx: 0, dy: 0, scrolled: 150, maxScroll: 400 })).toBe(false);
   });
 });

@@ -48,6 +48,10 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
   const spyLocked = useRef(false);
   const idsRef = useRef(categoryIds);
   const barHeightRef = useRef(0);
+  // Last values the scroll listener published: it runs every frame and
+  // must not schedule a render when nothing changed.
+  const activeRef = useRef(state.active);
+  const showTopRef = useRef(false);
 
   const [barHeight, setBarHeight] = useState(0);
   const [showTop, setShowTop] = useState(false);
@@ -55,6 +59,10 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
   useEffect(() => {
     idsRef.current = categoryIds;
   }, [categoryIds]);
+
+  useEffect(() => {
+    activeRef.current = state.active;
+  }, [state.active]);
 
   // Real height of the sticky bar (search + chips), so scrolls and the
   // sticky section header land right under it on every phone. Callback
@@ -132,8 +140,6 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
     dispatch({ type: "collapseAll" });
   }, [tap]);
 
-  const showAll = useCallback((id: string) => dispatch({ type: "showAll", id }), []);
-
   const scrollToTop = useCallback(() => {
     lockSpy();
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
@@ -169,7 +175,11 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      setShowTop(window.scrollY > TOP_BUTTON_AFTER);
+      const top = window.scrollY > TOP_BUTTON_AFTER;
+      if (top !== showTopRef.current) {
+        showTopRef.current = top;
+        setShowTop(top);
+      }
       if (spyLocked.current) return;
       const line = barHeightRef.current + 24;
       const rects = idsRef.current.flatMap((id) => {
@@ -183,6 +193,8 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
       const visible = rects.filter((r) => r.top < window.innerHeight && r.bottom > line);
       const id = atBottom && visible.length > 0 ? visible[visible.length - 1].id : pickActiveSection(rects, line);
+      if (id === activeRef.current) return;
+      activeRef.current = id;
       dispatch({ type: "spy", id });
     };
     const onScroll = () => {
@@ -239,13 +251,10 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
 
   return {
     state,
-    isOpen: (id: string) => state.open.includes(id),
-    isExpanded: (id: string) => state.expanded.includes(id),
     toggle,
     goTo,
     collapse,
     collapseAll,
-    showAll,
     scrollToTop,
     showTop,
     barHeight,
