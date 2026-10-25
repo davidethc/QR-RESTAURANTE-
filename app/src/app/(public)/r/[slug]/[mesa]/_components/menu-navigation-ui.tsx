@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { ArrowUp, ChevronsUp, Search, SearchX, X } from "lucide-react";
+import { ArrowUp, Search, SearchX, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getCategoryIcon } from "@/lib/category-icons";
@@ -236,47 +236,27 @@ export function MenuSearchResults({
   );
 }
 
-const floatingButton =
-  "flex h-11 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-body-sm font-semibold text-foreground shadow-md transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity";
-
 /**
- * "Contraer todo" and "Arriba" float right above the fixed action bar, so
- * they never cover the category chips or the cart button whatever the bar
- * height is. Each one only shows while it has something to do.
+ * "Volver arriba": one small round button right above the fixed action bar,
+ * shown only after scrolling, so it never hides the dishes or the chips.
+ * Each open category already has its own "Contraer" in its sticky header,
+ * and the chips at the top jump to any category.
  */
-export function MenuFloatingActions({ nav }: { nav: MenuNavigation }) {
-  const canCollapseAll = nav.state.open.length > 1;
+export function BackToTopButton({ nav }: { nav: MenuNavigation }) {
   return (
-    <div className="pointer-events-none absolute bottom-full right-4 mb-3 flex items-center gap-2">
-      <button
-        type="button"
-        onClick={nav.collapseAll}
-        tabIndex={canCollapseAll ? 0 : -1}
-        aria-hidden={!canCollapseAll}
-        className={cn(
-          floatingButton,
-          pressable,
-          canCollapseAll ? "pointer-events-auto translate-y-0 opacity-100" : "translate-y-2 opacity-0"
-        )}
-      >
-        <ChevronsUp aria-hidden className="size-4" strokeWidth={2.5} />
-        Contraer todo
-      </button>
-      <button
-        type="button"
-        onClick={nav.scrollToTop}
-        aria-label="Volver arriba"
-        tabIndex={nav.showTop ? 0 : -1}
-        aria-hidden={!nav.showTop}
-        className={cn(
-          floatingButton,
-          pressable,
-          nav.showTop ? "pointer-events-auto translate-y-0 opacity-100" : "translate-y-2 opacity-0"
-        )}
-      >
-        <ArrowUp aria-hidden className="size-4" strokeWidth={2.5} />
-        Arriba
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={nav.scrollToTop}
+      aria-label="Volver arriba"
+      tabIndex={nav.showTop ? 0 : -1}
+      aria-hidden={!nav.showTop}
+      className={cn(
+        "absolute bottom-full right-4 mb-3 flex size-12 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity",
+        pressable,
+        nav.showTop ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
+      )}
+    >
+      <ArrowUp aria-hidden className="size-5" strokeWidth={2.5} />
+    </button>
   );
 }

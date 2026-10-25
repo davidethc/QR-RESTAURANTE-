@@ -7,7 +7,7 @@ import { SuggestionsRow } from "./suggestions-row";
 import { useMenuNavigation } from "./use-menu-navigation";
 import { useCartQuantities, useMenuSearch } from "./use-menu-search";
 import {
-  MenuFloatingActions,
+  BackToTopButton,
   MenuNavRoot,
   MenuSearchResults,
   MenuSectionList,
@@ -201,7 +201,7 @@ export function MenuBrowser({
         }}
       >
         <div className="relative mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-3">
-          <MenuFloatingActions nav={nav} />
+          <BackToTopButton nav={nav} />
           {cart.itemCount > 0 && (
             <Button
               size="lg"
