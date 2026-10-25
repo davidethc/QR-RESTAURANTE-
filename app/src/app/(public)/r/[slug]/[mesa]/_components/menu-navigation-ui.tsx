@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CategorySection } from "./category-section";
 import { ProductCard, type ProductPromo } from "./product-card";
 import type { MenuNavigation } from "./use-menu-navigation";
+import type { MenuSearchResult } from "./use-menu-search";
 import type { PublicCategory, PublicProduct } from "@/types/menu";
 
 /**
@@ -178,11 +179,9 @@ export function MenuSectionList({
         <CategorySection
           key={category.id}
           category={category}
-          isOpen={nav.isOpen(category.id)}
-          isExpanded={nav.isExpanded(category.id)}
-          onToggle={() => nav.toggle(category.id)}
-          onCollapse={() => nav.collapse(category.id)}
-          onShowAll={() => nav.showAll(category.id)}
+          isOpen={nav.state.open.includes(category.id)}
+          onToggle={nav.toggle}
+          onCollapse={nav.collapse}
           sectionRef={nav.attachSection}
           onSelectProduct={onSelectProduct}
           cartQuantities={cartQuantities}
@@ -204,7 +203,7 @@ export function MenuSearchResults({
   emptyAction,
 }: {
   query: string;
-  results: (PublicProduct & { categoryName: string })[];
+  results: readonly MenuSearchResult[];
   onClear: () => void;
   onSelectProduct: (product: PublicProduct) => void;
   cartQuantities: Record<string, number>;

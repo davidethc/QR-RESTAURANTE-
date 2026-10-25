@@ -1,10 +1,11 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ShoppingBag, MessageCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SuggestionsRow } from "./suggestions-row";
 import { useMenuNavigation } from "./use-menu-navigation";
+import { useCartQuantities, useMenuSearch } from "./use-menu-search";
 import {
   BackToTopButton,
   MenuNavRoot,
@@ -21,7 +22,7 @@ import { useCart } from "@/hooks/use-cart";
 import { notify } from "@/lib/notifications";
 import { getMenuSuggestions, flattenSuggestions } from "@/lib/suggestions";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
-import { formatPrice, normalizeText } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import { needsChoice } from "@/lib/order-lines";
 import type { PublicCategory, PublicProduct, StaffProductDetail } from "@/types/menu";
 
@@ -67,13 +68,7 @@ export function MenuBrowser({
     `Hola ${restaurantName}, vi su carta y quisiera hacer una consulta.`
   );
 
-  const cartQuantities = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const item of cart.items) {
-      map[item.product.id] = (map[item.product.id] ?? 0) + item.quantity;
-    }
-    return map;
-  }, [cart.items]);
+  const cartQuantities = useCartQuantities(cart.items);
 
   // "Sugerencias para ti" nunca se ve vacío: si el restaurante no
   // marcó nada como Destacado, se arman combos plato+bebida ordenados
@@ -84,36 +79,26 @@ export function MenuBrowser({
     [suggestions]
   );
 
-  // Índice de búsqueda precalculado. Antes cada pulsación de tecla
-  // normalizaba en Unicode los 50 nombres de la carta otra vez, en el
-  // hilo principal de un celular de gama baja. Ahora se normaliza una
-  // vez por carta y cada tecla solo hace un includes().
-  const searchIndex = useMemo(
-    () =>
-      categories.flatMap((category) =>
-        category.products.map((product) => ({
-          product,
-          categoryName: category.name,
-          haystack: normalizeText(
-            `${product.name} ${product.description ?? ""}`
-          ),
-        }))
-      ),
-    [categories]
+  const results = useMenuSearch(categories, query);
+
+  // Stable, so the memoized suggestions row does not re-render per keystroke.
+  const { addItems } = cart;
+  const addCombo = useCallback(
+    (dish: PublicProduct, drink: PublicProduct) => {
+      // If anything in the combo needs a variant/extras, open its sheet.
+      const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
+      if (pick) {
+        setSelectedProduct(pick);
+        return;
+      }
+      addItems([
+        { product: dish, quantity: 1, notes: "" },
+        { product: drink, quantity: 1, notes: "" },
+      ]);
+      notify.itemAdded(`${dish.name} + ${drink.name}`);
+    },
+    [productDetails, addItems]
   );
-
-  // La lista de resultados puede quedarse un fotograma atrás de lo que
-  // se está escribiendo: teclear siempre responde al instante.
-  const deferredQuery = useDeferredValue(query);
-
-  const results = useMemo(() => {
-    const q = normalizeText(deferredQuery.trim());
-    if (!q) return null;
-
-    return searchIndex
-      .filter((entry) => entry.haystack.includes(q))
-      .map((entry) => ({ ...entry.product, categoryName: entry.categoryName }));
-  }, [searchIndex, deferredQuery]);
 
   return (
     // Generous bottom padding: the fixed action bar is ~9rem tall with
@@ -133,9 +118,9 @@ export function MenuBrowser({
           <div className="px-4">
             <div
               role="note"
-              className="flex items-start gap-3 rounded-2xl border border-info-border bg-info-soft px-4 py-3"
+              className="flex items-start gap-3 rounded-2xl border border-honey/40 bg-honey-soft px-4 py-3"
             >
-              <Info aria-hidden className="mt-0.5 size-5 shrink-0 text-info-soft-foreground" strokeWidth={2.25} />
+              <Info aria-hidden className="mt-0.5 size-5 shrink-0 text-honey-soft-foreground" strokeWidth={2.25} />
               <p className="text-body-sm leading-snug text-foreground">
                 <span className="font-semibold">Estás viendo la carta.</span>{" "}
                 <span className="text-muted-foreground">
@@ -148,23 +133,7 @@ export function MenuBrowser({
         )}
 
         {results === null && (
-          <SuggestionsRow
-            suggestions={suggestions}
-            onSelectProduct={setSelectedProduct}
-            onAddCombo={(dish, drink) => {
-              // If anything in the combo needs a variant/extras, open its sheet.
-              const pick = [dish, drink].find((p) => needsChoice(productDetails[p.id]));
-              if (pick) {
-                setSelectedProduct(pick);
-                return;
-              }
-              cart.addItems([
-                { product: dish, quantity: 1, notes: "" },
-                { product: drink, quantity: 1, notes: "" },
-              ]);
-              notify.itemAdded(`${dish.name} + ${drink.name}`);
-            }}
-          />
+          <SuggestionsRow suggestions={suggestions} onSelectProduct={setSelectedProduct} onAddCombo={addCombo} />
         )}
 
         {results === null ? (

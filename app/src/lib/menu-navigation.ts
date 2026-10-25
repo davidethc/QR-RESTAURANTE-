@@ -1,4 +1,4 @@
-import type { PublicCategory, PublicProduct } from "@/types/menu";
+import type { PublicCategory } from "@/types/menu";
 import type { DigitalMenuPromotion } from "@/types/digital-menu";
 
 /**
@@ -12,8 +12,6 @@ import type { DigitalMenuPromotion } from "@/types/digital-menu";
 export interface MenuNavState {
   /** Open sections, in the order they were opened. */
   open: readonly string[];
-  /** Sections whose "Ver N más" was used. */
-  expanded: readonly string[];
   /** Section marked in the chip bar. */
   active: string | null;
 }
@@ -23,13 +21,9 @@ export type MenuNavAction =
   | { type: "open"; id: string }
   | { type: "collapse"; id: string }
   | { type: "collapseAll" }
-  | { type: "showAll"; id: string }
   | { type: "spy"; id: string | null };
 
-export const INITIAL_MENU_NAV: MenuNavState = { open: [], expanded: [], active: null };
-
-/** Dishes shown in an open section before "Ver N más". */
-export const PREVIEW_LIMIT = 6;
+export const INITIAL_MENU_NAV: MenuNavState = { open: [], active: null };
 
 /** A second tap on the same control within this window is the same intent. */
 export const TAP_GUARD_MS = 350;
@@ -46,7 +40,6 @@ function without(list: readonly string[], id: string) {
 function close(state: MenuNavState, id: string): MenuNavState {
   return {
     open: without(state.open, id),
-    expanded: without(state.expanded, id),
     active: state.active === id ? null : state.active,
   };
 }
@@ -68,8 +61,6 @@ export function menuNavReducer(state: MenuNavState, action: MenuNavAction): Menu
       return state.open.includes(action.id) ? close(state, action.id) : state;
     case "collapseAll":
       return state.open.length === 0 && state.active === null ? state : INITIAL_MENU_NAV;
-    case "showAll":
-      return state.expanded.includes(action.id) ? state : { ...state, expanded: [...state.expanded, action.id] };
     case "spy":
       return state.active === action.id ? state : { ...state, active: action.id };
   }
@@ -88,18 +79,6 @@ export interface TapRecord {
 export function acceptTap(last: TapRecord | null, id: string, now: number): { accept: boolean; last: TapRecord | null } {
   if (last && last.id === id && now - last.at < TAP_GUARD_MS) return { accept: false, last };
   return { accept: true, last: { id, at: now } };
-}
-
-/**
- * Dishes to render in an open section. One leftover dish is shown instead
- * of a "Ver 1 más" button that costs as much space as the dish itself.
- */
-export function visibleProducts(products: readonly PublicProduct[], expanded: boolean): {
-  shown: readonly PublicProduct[];
-  hidden: number;
-} {
-  if (expanded || products.length <= PREVIEW_LIMIT + 1) return { shown: products, hidden: 0 };
-  return { shown: products.slice(0, PREVIEW_LIMIT), hidden: products.length - PREVIEW_LIMIT };
 }
 
 /** Section crossing the horizontal line `line` px below the viewport top. */
@@ -166,16 +145,18 @@ export function productPromos(
 }
 
 /**
- * "Desliza" hint on the horizontal dish rows. It shows until the customer
- * scrolls any row sideways once, then never again on that device. Storage
- * access is wrapped because Safari private mode and blocked site data throw
- * on read: when it cannot be read the hint renders nothing rather than
- * nagging on every visit.
+ * "Desliza" hint on the horizontal dish rows. It loops until the customer
+ * swipes a row sideways with the finger (or a trackpad), then never shows
+ * again on that device. Storage access is wrapped because Safari private
+ * mode and blocked site data throw on read: when it cannot be read the
+ * hint renders nothing rather than nagging on every visit.
  */
 export const SWIPE_HINT_KEY = "monky:menu-swipe-hint";
 
-/** Horizontal scroll (px) that counts as a deliberate swipe, not a snap jitter. */
-export const SWIPE_HINT_MIN_SCROLL = 8;
+/** Finger travel (px) that reads as a deliberate sideways swipe. */
+export const SWIPE_MIN_DX = 24;
+/** Row scroll (px) that proves the swipe actually moved the row. */
+export const SWIPE_MIN_SCROLL = 8;
 
 export type SwipeHintStatus = "show" | "seen" | "unavailable";
 
@@ -200,6 +181,25 @@ export function rowOverflows(scrollWidth: number, clientWidth: number): boolean 
   return scrollWidth > clientWidth + 1;
 }
 
-export function swipedEnough(scrollLeft: number): boolean {
-  return scrollLeft >= SWIPE_HINT_MIN_SCROLL;
+/**
+ * True only for a gesture the customer made: the finger (or trackpad)
+ * travelled sideways more than it did vertically, and the row really
+ * scrolled. A diagonal flick while scrolling the page, a focus or snap
+ * adjustment (no gesture) or a swipe against the row edge (no scroll)
+ * never counts. A row that overflows by only a few pixels counts once it
+ * reaches its end, so the hint can always be dismissed.
+ */
+export function isUserSwipe({
+  dx,
+  dy,
+  scrolled,
+  maxScroll,
+}: {
+  dx: number;
+  dy: number;
+  scrolled: number;
+  maxScroll: number;
+}): boolean {
+  const needed = Math.max(1, Math.min(SWIPE_MIN_SCROLL, maxScroll));
+  return Math.abs(dx) >= SWIPE_MIN_DX && Math.abs(dx) > Math.abs(dy) && Math.abs(scrolled) >= needed;
 }

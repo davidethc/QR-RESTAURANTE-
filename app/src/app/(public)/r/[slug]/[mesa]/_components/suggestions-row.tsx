@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { memo, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Sparkles, Plus } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
@@ -10,12 +10,15 @@ import type { PublicProduct } from "@/types/menu";
 const cardClass =
   "group flex shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-card text-left touch-manipulation [-webkit-tap-highlight-color:transparent] transition-transform duration-150 ease-out hover:border-primary/40 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none motion-reduce:active:scale-100";
 
+/** Cards on screen at first paint: their photos load eagerly, the rest lazily. */
+const EAGER_CARDS = 2;
+
 /** Fixed photo box: the carousel never shifts while photos load. */
-function Photo({ src, sizes, fallback }: { src: string | null; sizes: string; fallback: string }) {
+function Photo({ src, sizes, fallback, eager }: { src: string | null; sizes: string; fallback: string; eager: boolean }) {
   return (
     <span className="relative block h-full w-full bg-secondary">
       {src ? (
-        <Image src={src} alt="" fill sizes={sizes} className="object-cover" />
+        <Image src={src} alt="" fill sizes={sizes} loading={eager ? "eager" : "lazy"} className="object-cover" />
       ) : (
         <span aria-hidden className="emoji-tile flex size-full items-center justify-center text-[2rem] leading-none">
           <span className="emoji-3d">{fallback}</span>
@@ -29,9 +32,10 @@ function Photo({ src, sizes, fallback }: { src: string | null; sizes: string; fa
  * Featured dishes or combos, right under the search, before the customer
  * picks a category. Never empty (see lib/suggestions.ts). When the menu has
  * photos the cards lead with them; a combo shows dish and drink side by
- * side. Without any photo the cards stay typographic.
+ * side. Without any photo the cards stay typographic. Memoized: the search
+ * box and the scroll-spy re-render the menu, never these cards.
  */
-export function SuggestionsRow({
+export const SuggestionsRow = memo(function SuggestionsRow({
   suggestions,
   onSelectProduct,
   onAddCombo,
@@ -81,8 +85,8 @@ export function SuggestionsRow({
             >
               {hasPhotos && (
                 <span aria-hidden className="grid h-[104px] grid-cols-2 gap-px bg-border">
-                  <Photo src={s.dish.image_url} sizes="104px" fallback="🍽️" />
-                  <Photo src={s.drink.image_url} sizes="104px" fallback="🥤" />
+                  <Photo src={s.dish.image_url} sizes="104px" fallback="🍽️" eager={i < EAGER_CARDS} />
+                  <Photo src={s.drink.image_url} sizes="104px" fallback="🥤" eager={i < EAGER_CARDS} />
                 </span>
               )}
               <span className="flex flex-1 flex-col justify-between gap-3 p-3.5">
@@ -109,14 +113,14 @@ export function SuggestionsRow({
             </button>
           ) : (
             <button
-              key={s.product.id ?? i}
+              key={s.product.id}
               type="button"
               onClick={() => onceGuard(() => onSelectProduct(s.product))}
               className={`${cardClass} w-[168px]`}
             >
               {hasPhotos && (
                 <span aria-hidden className="block h-[120px]">
-                  <Photo src={s.product.image_url} sizes="168px" fallback="🍽️" />
+                  <Photo src={s.product.image_url} sizes="168px" fallback="🍽️" eager={i < EAGER_CARDS} />
                 </span>
               )}
               <span className="flex flex-1 flex-col justify-between gap-3 p-3.5">
@@ -137,4 +141,4 @@ export function SuggestionsRow({
       </div>
     </section>
   );
-}
+});
