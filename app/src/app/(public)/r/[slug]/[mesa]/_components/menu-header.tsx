@@ -79,19 +79,11 @@ export function MenuHeader({
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <p
+          <h1
             className={cn("sabor-title self-start", cover ? "text-primary-dark-foreground" : "text-primary-dark")}
           >
             Sabor Code
             <span aria-hidden className={cn("sabor-flourish", cover ? "bg-honey" : "bg-honey/80")} />
-          </p>
-          <h1
-            className={cn(
-              "mt-1.5 truncate text-body-sm font-semibold uppercase tracking-[0.14em]",
-              cover ? "text-primary-dark-foreground/90" : "text-muted-foreground"
-            )}
-          >
-            {restaurant.name}
           </h1>
           {(status || line) && (
             <p
