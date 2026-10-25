@@ -62,7 +62,7 @@ export function MenuToolbar({
   const searching = query.trim().length > 0;
 
   return (
-    <div ref={attachBar} className="glass sticky top-0 z-10 border-b border-border">
+    <div ref={attachBar} className="sticky top-0 z-10 border-b border-border bg-background">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-2.5 px-4 pb-2.5 pt-3">
         <div className="relative">
           <Search
