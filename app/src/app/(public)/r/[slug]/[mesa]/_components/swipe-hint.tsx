@@ -1,62 +1,40 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { Pointer } from "lucide-react";
-import { isUserSwipe, readSwipeHint, rememberSwipeHint, rowOverflows, type SwipeHintStatus } from "@/lib/menu-navigation";
+import { SWIPE_HINT_DELAY_MS, isUserSwipe, rowOverflows } from "@/lib/menu-navigation";
 
-/**
- * One status for every row on the page: swiping any row hides the hint on
- * all of them at once, and the device remembers it.
- */
-const storage = () => window.localStorage;
-let status: SwipeHintStatus | null = null;
-const listeners = new Set<() => void>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): SwipeHintStatus {
-  if (status === null) status = readSwipeHint(storage);
-  return status;
-}
-
-/** The server cannot know the device: render nothing until the client reads it. */
-function getServerSnapshot(): SwipeHintStatus {
-  return "unavailable";
-}
-
-function dismiss() {
-  if (status === "seen") return;
-  status = "seen";
-  rememberSwipeHint(storage);
-  listeners.forEach((listener) => listener());
-}
+/** Rows the customer already swiped during this visit: their hint never returns. */
+const swipedRows = new Set<string>();
 
 /** A trackpad swipe is a burst of wheel events; this much quiet ends it. */
 const WHEEL_GESTURE_GAP_MS = 250;
 
 /**
- * Watches one horizontal row while the hint is pending.
+ * Hint for one horizontal row. Each row waits `SWIPE_HINT_DELAY_MS` for
+ * the customer to swipe it; if they have not, the hint appears there and
+ * stays until they do. Swiping one row only dismisses that row's hint.
  *
- * Only a gesture the customer makes dismisses it (see `isUserSwipe`): the
- * old version listened to `scroll`, so a focus restore after closing the
- * dish sheet, a snap adjustment or a diagonal flick while scrolling the
- * page marked the hint as seen forever after one visit.
+ * Only a gesture the customer makes counts (see `isUserSwipe`): a focus
+ * restore, a snap adjustment or a diagonal flick while scrolling the page
+ * never dismisses it.
  */
-export function useSwipeHint() {
-  const current = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+export function useSwipeHint(rowId: string) {
   const [row, setRow] = useState<HTMLElement | null>(null);
   const [overflows, setOverflows] = useState(false);
+  const [waited, setWaited] = useState(false);
+  const [swiped, setSwiped] = useState(() => swipedRows.has(rowId));
 
   useEffect(() => {
-    if (!row || current !== "show") return;
+    if (!row || swiped) return;
     const ro = new ResizeObserver(() => setOverflows(rowOverflows(row.scrollWidth, row.clientWidth)));
     ro.observe(row);
+    const timer = setTimeout(() => setWaited(true), SWIPE_HINT_DELAY_MS);
 
+    const dismiss = () => {
+      swipedRows.add(rowId);
+      setSwiped(true);
+    };
     const maxScroll = () => row.scrollWidth - row.clientWidth;
 
     let touch: { x: number; y: number; left: number } | null = null;
@@ -95,24 +73,25 @@ export function useSwipeHint() {
     row.addEventListener("wheel", onWheel, passive);
     return () => {
       ro.disconnect();
+      clearTimeout(timer);
       row.removeEventListener("touchstart", onTouchStart);
       row.removeEventListener("touchmove", onTouchMove);
       row.removeEventListener("touchend", onTouchEnd);
       row.removeEventListener("touchcancel", onTouchEnd);
       row.removeEventListener("wheel", onWheel);
     };
-  }, [row, current]);
+  }, [row, rowId, swiped]);
 
-  return { attachRow: setRow, showHint: current === "show" && overflows };
+  return { attachRow: setRow, showHint: waited && overflows && !swiped };
 }
 
 /**
- * Pill over the right edge of the photos: it fades in once and stays,
- * while the finger glides left and back in one seamless loop (the first
- * and last keyframes are the same pose, so a cycle never jumps). Only
- * `transform` and `opacity` animate, on an HTML wrapper rather than the
- * SVG, so WebKit keeps it on the compositor. Decorative (`aria-hidden`)
- * and `pointer-events-none`, so taps reach the cards under it; absolutely
+ * Pill over the right edge of the photos: it fades in and stays, while the
+ * finger glides left and back in one seamless loop (the first and last
+ * keyframes are the same pose, so a cycle never jumps). Only `transform`
+ * and `opacity` animate, on an HTML wrapper rather than the SVG, so WebKit
+ * keeps it on the compositor. Decorative (`aria-hidden`) and
+ * `pointer-events-none`, so taps reach the cards under it; absolutely
  * placed, so it never moves the layout. With reduced motion it is a still
  * "Desliza →".
  */

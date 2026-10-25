@@ -220,7 +220,7 @@ function DishRow({
   cartQuantities: Record<string, number>;
   promos?: Record<string, ProductPromo>;
 }) {
-  const { attachRow, showHint } = useSwipeHint();
+  const { attachRow, showHint } = useSwipeHint(id);
 
   return (
     <div className="relative">

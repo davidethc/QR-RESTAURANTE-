@@ -145,36 +145,16 @@ export function productPromos(
 }
 
 /**
- * "Desliza" hint on the horizontal dish rows. It loops until the customer
- * swipes a row sideways with the finger (or a trackpad), then never shows
- * again on that device. Storage access is wrapped because Safari private
- * mode and blocked site data throw on read: when it cannot be read the
- * hint renders nothing rather than nagging on every visit.
+ * "Desliza" hint on the horizontal dish rows. Each open category gives the
+ * customer this long to swipe its row on their own; if they have not, the
+ * hint appears on that row and stays until they swipe it.
  */
-export const SWIPE_HINT_KEY = "monky:menu-swipe-hint";
+export const SWIPE_HINT_DELAY_MS = 3000;
 
 /** Finger travel (px) that reads as a deliberate sideways swipe. */
 export const SWIPE_MIN_DX = 24;
 /** Row scroll (px) that proves the swipe actually moved the row. */
 export const SWIPE_MIN_SCROLL = 8;
-
-export type SwipeHintStatus = "show" | "seen" | "unavailable";
-
-export function readSwipeHint(getStorage: () => Pick<Storage, "getItem">): SwipeHintStatus {
-  try {
-    return getStorage().getItem(SWIPE_HINT_KEY) ? "seen" : "show";
-  } catch {
-    return "unavailable";
-  }
-}
-
-export function rememberSwipeHint(getStorage: () => Pick<Storage, "setItem">): void {
-  try {
-    getStorage().setItem(SWIPE_HINT_KEY, "1");
-  } catch {
-    // Nothing to remember with; the hint is hidden for this visit anyway.
-  }
-}
 
 /** A row overflows when its content is wider than its box (1px rounding slack). */
 export function rowOverflows(scrollWidth: number, clientWidth: number): boolean {

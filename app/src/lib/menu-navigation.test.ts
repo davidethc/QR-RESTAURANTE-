@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   INITIAL_MENU_NAV,
-  SWIPE_HINT_KEY,
   SWIPE_MIN_DX,
   SWIPE_MIN_SCROLL,
   TAP_GUARD_MS,
@@ -11,8 +10,6 @@ import {
   menuNavReducer,
   pickActiveSection,
   productPromos,
-  readSwipeHint,
-  rememberSwipeHint,
   rowOverflows,
   sameMenu,
 } from "./menu-navigation";
@@ -181,46 +178,6 @@ describe("productPromos", () => {
 });
 
 describe("swipe hint", () => {
-  const memory = (initial: Record<string, string> = {}) => {
-    const data = { ...initial };
-    return {
-      data,
-      getItem: (k: string) => (k in data ? data[k] : null),
-      setItem: (k: string, v: string) => {
-        data[k] = v;
-      },
-    };
-  };
-  const broken = () => {
-    throw new Error("SecurityError");
-  };
-
-  it("shows on a device that never swiped a row", () => {
-    expect(readSwipeHint(() => memory())).toBe("show");
-  });
-
-  it("stays gone once remembered on this device", () => {
-    const store = memory();
-    rememberSwipeHint(() => store);
-    expect(store.data[SWIPE_HINT_KEY]).toBe("1");
-    expect(readSwipeHint(() => store)).toBe("seen");
-  });
-
-  it("renders nothing when storage cannot be read", () => {
-    expect(readSwipeHint(broken)).toBe("unavailable");
-    expect(
-      readSwipeHint(() => ({
-        getItem: () => {
-          throw new Error("blocked");
-        },
-      }))
-    ).toBe("unavailable");
-  });
-
-  it("remembering never throws when storage is blocked", () => {
-    expect(() => rememberSwipeHint(broken)).not.toThrow();
-  });
-
   it("only rows wider than their box overflow", () => {
     expect(rowOverflows(900, 390)).toBe(true);
     expect(rowOverflows(390, 390)).toBe(false);
