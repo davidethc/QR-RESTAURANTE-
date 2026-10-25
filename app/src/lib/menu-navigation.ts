@@ -149,7 +149,7 @@ export function productPromos(
  * customer this long to swipe its row on their own; if they have not, the
  * hint appears on that row and stays until they swipe it.
  */
-export const SWIPE_HINT_DELAY_MS = 3000;
+export const SWIPE_HINT_DELAY_MS = 1500;
 
 /** Finger travel (px) that reads as a deliberate sideways swipe. */
 export const SWIPE_MIN_DX = 24;
