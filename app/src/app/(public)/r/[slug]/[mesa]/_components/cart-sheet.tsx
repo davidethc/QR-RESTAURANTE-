@@ -166,7 +166,7 @@ export function CartSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="bottom"
-        className="flex data-[side=bottom]:h-[94dvh] max-h-[94dvh] flex-col gap-0 rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
+        className="flex data-[side=bottom]:h-auto max-h-[94dvh] flex-col gap-0 rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
       >
         <div className="flex items-start gap-3 border-b border-border bg-card px-5 pb-4 pt-5 pr-16">
           <div className="min-w-0 flex-1">
@@ -192,7 +192,9 @@ export function CartSheet({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        {/* The sheet hugs its content (up to 94dvh) instead of always
+            filling the screen, so a short order leaves no empty gap. */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
               <span className="flex size-16 items-center justify-center rounded-2xl border border-border bg-card">
@@ -352,7 +354,7 @@ export function CartSheet({
           >
             <div className="mb-3 flex items-baseline justify-between gap-3">
               <span className="text-body font-semibold text-muted-foreground">
-                Total · {itemCount} {itemCount === 1 ? "producto" : "productos"}
+                Total
               </span>
               <span className="font-display text-display font-bold tabular-nums text-foreground">
                 {formatPrice(total)}
