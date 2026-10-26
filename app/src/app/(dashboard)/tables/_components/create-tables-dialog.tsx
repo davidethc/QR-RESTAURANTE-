@@ -27,6 +27,8 @@ import { notify } from "@/lib/notifications";
 import { createTables } from "@/lib/actions/tables";
 import {
   createTablesSchema,
+  firstTakenNumber,
+  nextTableNumber,
   type CreateTablesInput,
   type CreateTablesValues,
 } from "@/lib/validations/tables";
@@ -44,9 +46,20 @@ import {
  *
  * El QR de cada mesa no se pide ni se genera aquí: la columna
  * `qr_token` lo crea sola en la base al insertar la fila.
+ *
+ * Arranca en la siguiente mesa libre (no en la 1, que casi siempre ya
+ * existe) y avisa antes de enviar si el rango choca con una mesa creada.
  */
-export function CreateTablesDialog({ restaurantId }: { restaurantId: string }) {
+export function CreateTablesDialog({
+  restaurantId,
+  existingNumbers,
+}: {
+  restaurantId: string;
+  /** Numbers of the tables the restaurant already has. */
+  existingNumbers: readonly number[];
+}) {
   const [open, setOpen] = useState(false);
+  const next = nextTableNumber(existingNumbers);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -59,7 +72,7 @@ export function CreateTablesDialog({ restaurantId }: { restaurantId: string }) {
     formState: { errors },
   } = useForm<CreateTablesInput, unknown, CreateTablesValues>({
     resolver: zodResolver(createTablesSchema),
-    defaultValues: { fromNumber: 1, toNumber: 1, name: "" },
+    defaultValues: { fromNumber: next, toNumber: next, name: "" },
   });
 
   // `useWatch` en vez de `watch()`: aísla el re-render a este componente
@@ -74,6 +87,13 @@ export function CreateTablesDialog({ restaurantId }: { restaurantId: string }) {
   const isSingle = Number.isFinite(from) && Number.isFinite(to) && from === to;
 
   function onSubmit(values: CreateTablesValues) {
+    const taken = firstTakenNumber(existingNumbers, values.fromNumber, values.toNumber);
+    if (taken !== null) {
+      setError(values.fromNumber === values.toNumber ? "fromNumber" : "toNumber", {
+        message: `La mesa ${taken} ya existe. La siguiente libre es la ${next}.`,
+      });
+      return;
+    }
     startTransition(async () => {
       const result = await createTables(
         restaurantId,
@@ -91,13 +111,19 @@ export function CreateTablesDialog({ restaurantId }: { restaurantId: string }) {
         result.data === 1 ? "Mesa creada" : `${result.data} mesas creadas`,
       );
       setOpen(false);
-      reset();
       router.refresh();
     });
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(value) => {
+        // Every time it opens, start again from the next free table.
+        if (value) reset({ fromNumber: next, toNumber: next, name: "" });
+        setOpen(value);
+      }}
+    >
       <SheetTrigger asChild>
         <Button variant="outline" className="min-h-12 rounded-button px-4 text-body-sm font-semibold">
           <Plus /> Mesas
@@ -110,6 +136,8 @@ export function CreateTablesDialog({ restaurantId }: { restaurantId: string }) {
           </SheetTitle>
           <SheetDescription>
             Una o varias de una vez. Cada mesa sale con su código QR.
+            {existingNumbers.length > 0 &&
+              ` Ya tienes ${existingNumbers.length} ${existingNumbers.length === 1 ? "mesa" : "mesas"}; la siguiente es la ${next}.`}
           </SheetDescription>
         </SheetHeader>
         <form
