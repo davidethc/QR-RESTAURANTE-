@@ -35,3 +35,14 @@ Result: 5 passed, 1 failed (real app bug), 1 skipped (feature absent).
 ## Other unit
 
 `e2e/online/pickup-order.spec.ts` run once with the menu ACTIVE: 1 passed, 1 failed — test-side strict-mode violation (`getByRole('dialog').getByText('Tus datos')` matches 2 elements). Not an app bug; that unit's locator needs `.first()`/exact.
+
+## 2026-10-26 · bug 1 fixed
+
+- `get_public_menu` now marks a product unavailable when every variant is sold out in `availability` (migration `20261026100000_m02_public_menu_sold_out`, SQL test `supabase/tests/m02_public_menu_sold_out.sql`: RED before, GREEN after).
+- `npx playwright test e2e/cash-settings -g "sold"`: passed.
+
+## Full suite, 2026-10-26 (local `next dev`, workers 1)
+
+- Run 1: 36 passed, 2 skipped, 1 failed (table-qr "table 2 is left free": tile still "Llamando al mesero").
+- Run 2: 35 passed, 2 skipped, 1 failed (table-qr P4: QR order not in the staff panel within 5 s).
+- `e2e/table-qr` alone: 6/6 passed. The failures move between tests and only appear after ~3 minutes of continuous load on the dev server; treat as dev-server realtime latency until reproduced against a production build.
