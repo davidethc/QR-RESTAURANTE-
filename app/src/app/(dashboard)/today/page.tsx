@@ -5,7 +5,9 @@ import {
   Bell,
   BellRing,
   CalendarDays,
+  ChartColumn,
   ChefHat,
+  CircleSlash,
   ClipboardList,
   Inbox,
   LayoutGrid,
@@ -25,10 +27,16 @@ import {
   getSalesReport,
 } from "@/lib/queries/staff";
 import { getOpenCashSessionId } from "@/lib/queries/cash";
+import { getAvailabilityItems, type AvailabilityItem } from "@/lib/queries/availability";
+import { getHomeDashboard } from "@/lib/queries/home-dashboard";
+import { getReportsTimezoneSettings } from "@/lib/queries/reports";
+import { parseDashboardRange } from "@/lib/home-dashboard";
 import { canAccessRoute, canHandleMoney, hasPermission, isManager } from "@/lib/permissions";
 import { formatPrice } from "@/lib/utils";
 import { AttentionRow, QuickAction, TodaySection } from "./_components/today-blocks";
 import { TodayNewOrder } from "./_components/today-new-order";
+import { HomeDashboardCards, SoldOutCard } from "./_components/home-dashboard";
+import { TodayRangeFilter } from "./_components/today-range-filter";
 
 // Ver la nota en (dashboard)/layout.tsx.
 export const instant = false;
@@ -41,17 +49,34 @@ export const metadata: Metadata = { title: "Hoy" };
  * rápidos y el resumen. Solo datos que ya existían; las ventas se
  * consultan únicamente con su permiso específico.
  */
-export default async function TodayPage() {
+export default async function TodayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preset?: string; from?: string; to?: string }>;
+}) {
   await connection();
   const session = await getMyRestaurant();
   requireRouteAccess(session, "/today");
 
   const restaurantId = session.restaurant.id;
-  const [summary, settings, sales] = await Promise.all([
+  const canDashboard = hasPermission(session, "reports.view");
+  const [summary, settings, sales, availability, tzSettings] = await Promise.all([
     getDashboardSummary(restaurantId),
     getRestaurantSettings(restaurantId),
     hasPermission(session, "sales.view") ? getSalesReport(restaurantId, 1) : Promise.resolve(null),
+    getAvailabilityItems(restaurantId).catch((): AvailabilityItem[] => []),
+    canDashboard ? getReportsTimezoneSettings(restaurantId) : Promise.resolve(null),
   ]);
+  const dashboardRange = tzSettings
+    ? parseDashboardRange(await searchParams, tzSettings.timezone, tzSettings.business_day_cutoff)
+    : null;
+  // A failing dashboard must not take the operational part of Hoy down with it.
+  const dashboard = dashboardRange
+    ? await getHomeDashboard(restaurantId, dashboardRange.range.from, dashboardRange.range.to).catch(() => "error" as const)
+    : null;
+  const soldOutVariants = availability.filter((i) => !i.available && i.itemType === "variant");
+  const soldOutOptions = availability.filter((i) => !i.available && i.itemType === "modifier_option");
+  const availabilityHref = canAccessRoute(session, "/availability") ? "/availability" : null;
   const cashOpen = settings.billing_enabled && hasPermission(session, "cash.manage") ? !!(await getOpenCashSessionId(restaurantId)) : null;
 
   const canOrders = canAccessRoute(session, "/orders");
@@ -237,6 +262,35 @@ export default async function TodayPage() {
           )}
         </TodaySection>
       </div>
+
+      <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 md:px-5">
+        <SoldOutCard title="Productos agotados" items={soldOutVariants} icon={CircleSlash} moreHref={availabilityHref} />
+        <SoldOutCard title="Personalizaciones agotadas" items={soldOutOptions} icon={CircleSlash} moreHref={availabilityHref} />
+      </div>
+
+      {dashboard && dashboardRange && tzSettings && (
+        <section aria-labelledby="today-dashboard" className="flex flex-col gap-3 px-4 pb-6 md:px-5">
+          <header className="flex flex-col gap-2 border-t border-border pt-4 lg:flex-row lg:items-center lg:justify-between">
+            <h2 id="today-dashboard" className="flex items-center gap-2 text-body font-semibold text-foreground">
+              <ChartColumn className="size-4 text-muted-foreground" aria-hidden />
+              Ventas del periodo
+            </h2>
+            <TodayRangeFilter
+              timezone={tzSettings.timezone}
+              businessDayCutoff={tzSettings.business_day_cutoff}
+              range={dashboardRange.range}
+              preset={dashboardRange.preset}
+            />
+          </header>
+          {dashboard === "error" ? (
+            <p role="alert" className="rounded-card border border-border bg-card p-4 text-meta text-muted-foreground">
+              No pudimos cargar las ventas del periodo. Recarga la página para intentar de nuevo.
+            </p>
+          ) : (
+            <HomeDashboardCards data={dashboard} />
+          )}
+        </section>
+      )}
     </main>
   );
 }

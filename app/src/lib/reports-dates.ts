@@ -63,15 +63,43 @@ export function startOfMonth(dateStr: string): string {
   return `${y}-${pad(m)}-01`;
 }
 
-export type RangePresetKey = "today" | "yesterday" | "last7" | "thisMonth" | "custom";
+/** First day of the month `months` away from the month of `dateStr`. */
+function shiftMonth(dateStr: string, months: number): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1 + months, 1));
+  return formatDate(date);
+}
+
+export type RangePresetKey =
+  | "today"
+  | "yesterday"
+  | "last7"
+  | "last30"
+  | "thisMonth"
+  | "lastMonth"
+  | "last6Months"
+  | "custom";
 
 export const RANGE_PRESET_LABEL: Record<RangePresetKey, string> = {
   today: "Hoy",
   yesterday: "Ayer",
   last7: "7 días",
+  last30: "30 días",
   thisMonth: "Este mes",
+  lastMonth: "Mes anterior",
+  last6Months: "6 meses",
   custom: "Personalizado",
 };
+
+export const RANGE_PRESETS: Exclude<RangePresetKey, "custom">[] = [
+  "today",
+  "yesterday",
+  "last7",
+  "last30",
+  "thisMonth",
+  "lastMonth",
+  "last6Months",
+];
 
 export function rangeForPreset(
   preset: Exclude<RangePresetKey, "custom">,
@@ -88,7 +116,13 @@ export function rangeForPreset(
     }
     case "last7":
       return { from: addDays(today, -6), to: today };
+    case "last30":
+      return { from: addDays(today, -29), to: today };
     case "thisMonth":
       return { from: startOfMonth(today), to: today };
+    case "lastMonth":
+      return { from: shiftMonth(today, -1), to: addDays(startOfMonth(today), -1) };
+    case "last6Months":
+      return { from: shiftMonth(today, -6), to: addDays(startOfMonth(today), -1) };
   }
 }
