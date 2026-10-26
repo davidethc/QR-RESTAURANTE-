@@ -71,14 +71,15 @@ test.describe("Pedido en línea para recoger (/pedir)", () => {
       await sheet.getByRole("button", { name: "Continuar" }).click();
 
       // Contact details.
-      await expect(sheet.getByText("Tus datos")).toBeVisible();
+      await expect(sheet.getByText("Tus datos", { exact: true }).first()).toBeVisible();
       await sheet.getByLabel("Nombre").fill(CUSTOMER_NAME);
       await sheet.getByLabel("Teléfono").fill(CUSTOMER_PHONE);
       await expect(sheet.getByText("Dirección de entrega")).toHaveCount(0);
 
       // Pick the first available payment method.
       await sheet.getByRole("radiogroup", { name: "Método de pago" }).getByRole("radio").first().click();
-      await sheet.getByRole("button", { name: "Enviar pedido" }).click();
+      // The form also has a hidden submit button named "Enviar pedido"; click the visible one with the total.
+      await sheet.getByRole("button", { name: /^Enviar pedido \$/ }).click();
 
       // Confirmation inside the system (tracking page), not WhatsApp.
       await expect(customer).toHaveURL(new RegExp(`/pedir/${QA_SLUG}/pedido/[^/]+`));

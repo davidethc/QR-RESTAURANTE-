@@ -27,3 +27,8 @@ None found.
 
 A worktree without `app/.env.local` makes login fail ("Your project's URL and Key are required to create a
 Supabase client"); not an app bug.
+
+## 2026-10-26 · re-run with the digital menu active
+
+- Locators fixed: "Tus datos" (two matches) and the submit button (a hidden `sr-only` submit shares the name "Enviar pedido"; the test clicks the visible "Enviar pedido $…").
+- `npx playwright test e2e/online --project=chromium --workers=1`: 2/2 passed. The pickup order is placed, appears to staff in "En línea" and is closed with reason "QA E2E" inside the system.
