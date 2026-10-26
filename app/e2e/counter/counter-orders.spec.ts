@@ -15,14 +15,9 @@ test.describe("Counter orders (M18 P5-P7)", () => {
     await login(page, "owner");
   });
 
-  test("P5: the order type picker offers 'Para comer aquí' (dine-in without table)", async ({ page }) => {
-    // Known app gap: the "Nuevo pedido" picker only has Para llevar / Mesa / Domicilio.
-    test.fail(true, "App gap: 'Para comer aquí' cannot be created from 'Nuevo pedido'");
-    await page.goto("/orders");
-    await page.getByRole("button", { name: "Nuevo pedido" }).first().click();
-    const picker = page.getByRole("dialog", { name: "¿Qué tipo de pedido es?" });
-    await expect(picker.getByText("Para llevar", { exact: true })).toBeVisible();
-    await expect(picker.getByText("Para comer aquí", { exact: true })).toBeVisible({ timeout: 3000 });
+  test("P5: a dine-in order without table ('Para comer aquí') is created and charged", async ({ page }) => {
+    await createCounterOrder(page, { kind: "Para comer aquí", name: NAME, charge: "now" });
+    await payOpenChargeSheet(page);
   });
 
   test("P6: a takeaway order is created and charged", async ({ page }) => {

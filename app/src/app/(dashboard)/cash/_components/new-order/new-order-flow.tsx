@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Bike, Loader2, Plus, ShoppingBag, UtensilsCrossed } from "lucide-react";
+import { Bike, Coffee, Loader2, Plus, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChoiceCards } from "@/components/shared/choice-card";
 import { posPressable } from "@/components/shared/pos-tone";
@@ -22,9 +22,9 @@ const OrderBuilder = dynamic(() => import("./order-builder").then((m) => m.Order
 });
 
 /**
- * "Nuevo pedido" en Caja: primero se elige el tipo (tres tarjetas grandes),
- * después se abre el constructor a pantalla completa. Para llevar y
- * domicilio terminan en "Cobrar ahora" o "Cobrar después"; mesa termina en
+ * "Nuevo pedido" en Caja: primero se elige el tipo (cuatro tarjetas grandes),
+ * después se abre el constructor a pantalla completa. Para comer aquí, para
+ * llevar y domicilio terminan en "Cobrar ahora" o "Cobrar después"; mesa termina en
  * "Enviar a cocina" (se cobra desde Por cobrar cuando pidan la cuenta).
  */
 export function NewOrderFlow({
@@ -66,12 +66,14 @@ export function NewOrderFlow({
           </DialogHeader>
           <ChoiceCards<OrderKind>
             label="Tipo de pedido"
+            columns={4}
             value={null}
             onChange={(v) => {
               setKind(v);
               setPicking(false);
             }}
             options={[
+              { value: "dine_in", title: "Para comer aquí", description: "Se sirve en el local, sin mesa asignada.", icon: Coffee, tone: "neutral" },
               { value: "takeaway", title: "Para llevar", description: "El cliente espera y se lo lleva.", icon: ShoppingBag, tone: "money-in" },
               { value: "table", title: "Mesa", description: "Comanda a una mesa del salón.", icon: UtensilsCrossed, tone: "info" },
               { value: "delivery", title: "Domicilio", description: "Envío propio o por plataforma.", icon: Bike, tone: "attention" },

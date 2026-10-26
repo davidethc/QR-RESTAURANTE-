@@ -26,3 +26,8 @@ Playwright summary: 4 tests, 3 passed + 1 expected failure (P5). tsc, eslint (e2
 - Cancel flow is reached through the charge sheet ("Cancelar venta"), only while the order has no payments.
 - Everything created is labelled "QA E2E"; every order is either paid or cancelled.
 - Setup needed `app/.env.local` linked besides `.env.qa.local` (not committed).
+
+## 2026-10-25 · re-run after fixes (fix/m18-bugs)
+
+- P5 fixed: "Nuevo pedido" now offers "Para comer aquí" (saved as `dine_in_no_table`). The test now creates and charges a dine-in order instead of expecting a failure.
+- `npx playwright test e2e/counter --project=chromium --workers=1`: 4/4 passed.

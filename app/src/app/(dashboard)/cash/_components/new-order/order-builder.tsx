@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bike, ChefHat, Loader2, Pencil, Search, ShoppingBag, Tag, Trash2, UtensilsCrossed, Wallet, X } from "lucide-react";
+import { ArrowLeft, Bike, ChefHat, Coffee, Loader2, Pencil, Search, ShoppingBag, Tag, Trash2, UtensilsCrossed, Wallet, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,9 +36,17 @@ import { PromoChip, PromoPrice } from "../checkout/promo-line";
 import type { PublicProduct, StaffCartItem } from "@/types/menu";
 import { OrderDetailsForm } from "./order-details-form";
 
-export type OrderKind = "takeaway" | "table" | "delivery";
+export type OrderKind = "dine_in" | "takeaway" | "table" | "delivery";
+
+/** Counter service type each non-table kind is saved as. */
+const KIND_SERVICE_TYPE = {
+  dine_in: "dine_in_no_table",
+  takeaway: "takeaway",
+  delivery: "delivery",
+} as const;
 
 const KIND_META = {
+  dine_in: { label: "Para comer aquí", icon: Coffee },
   takeaway: { label: "Para llevar", icon: ShoppingBag },
   table: { label: "Mesa", icon: UtensilsCrossed },
   delivery: { label: "Domicilio", icon: Bike },
@@ -79,7 +87,7 @@ export function OrderBuilder({
   const [sheet, setSheet] = useState<{ product: SheetProduct; editing: StaffCartItem | null } | null>(null);
   const [form, setForm] = useState<CounterFormValues>(() => ({
     ...EMPTY_FORM,
-    serviceType: kind === "delivery" ? "delivery" : "takeaway",
+    serviceType: kind === "table" ? "takeaway" : KIND_SERVICE_TYPE[kind],
   }));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [tableId, setTableId] = useState<string | null>(null);
@@ -139,7 +147,7 @@ export function OrderBuilder({
   const ship = own ? parseShipping(form.shippingCost) : null;
   const shipAmount = ship === null || Number.isNaN(ship) ? 0 : ship;
   const channel: PromotionChannel =
-    kind === "table" ? "pos.tables" : `pos.${form.serviceType || (kind === "delivery" ? "delivery" : "takeaway")}`;
+    kind === "table" ? "pos.tables" : `pos.${form.serviceType || KIND_SERVICE_TYPE[kind]}`;
   const promos = useMemo(() => promotionsForChannel(allPromos, channel), [allPromos, channel]);
   const categoryOf = useMemo(
     () => new Map((data?.categories ?? []).flatMap((c) => c.products.map((p) => [p.id, c.id] as const))),
@@ -563,7 +571,7 @@ function TicketPane({
             )}
           </section>
         ) : (
-          <OrderDetailsForm kind={kind} form={form} errors={errors} onChange={onForm} />
+          <OrderDetailsForm kind={kind === "delivery" ? "delivery" : "takeaway"} form={form} errors={errors} onChange={onForm} />
         )}
 
         <h3 className="mb-2 text-body font-semibold text-foreground">Pedido</h3>
