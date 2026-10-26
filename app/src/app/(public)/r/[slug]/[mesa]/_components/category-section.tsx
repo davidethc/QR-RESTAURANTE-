@@ -59,7 +59,13 @@ function CategorySectionBase({
       id={`cat-${category.id}`}
       data-section-id={category.id}
       data-open={isOpen ? "true" : "false"}
-      className={cn("rounded-2xl", !isOpen && "border border-border/70 bg-card shadow-card")}
+      className={cn(
+        "rounded-2xl border bg-card shadow-card",
+        // Open: its own framed block, so it reads as "the category I opened"
+        // and nothing behind it shows through. `overflow-clip` (not hidden)
+        // keeps the row inside the frame without breaking the sticky header.
+        isOpen ? "overflow-clip border-primary/30 ring-1 ring-primary/10" : "border-border/70"
+      )}
     >
       {isOpen ? (
         <>
@@ -104,7 +110,7 @@ function OpenHeader({
 
   return (
     <div
-      className="sticky z-[5] flex items-center gap-1 bg-background/95 pr-2 backdrop-blur-sm supports-[not(backdrop-filter:blur(1px))]:bg-background"
+      className="sticky z-[5] flex items-center gap-1 border-b border-primary/15 bg-primary-soft pr-3"
       style={{ top: "var(--menu-bar-h, 0px)" }}
     >
       <h2 className="min-w-0 flex-1">
@@ -113,9 +119,9 @@ function OpenHeader({
           onClick={() => onToggle(category.id)}
           aria-expanded
           aria-controls={panelId}
-          className={cn("flex min-h-16 w-full items-center gap-3 rounded-tl-2xl px-4 py-2.5 text-left", pressable)}
+          className={cn("flex min-h-16 w-full items-center gap-3 px-4 py-2.5 text-left", pressable)}
         >
-          <span aria-hidden className="emoji-tile flex size-10 shrink-0 items-center justify-center rounded-xl text-title leading-none">
+          <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card text-title leading-none shadow-sm">
             <span className="emoji-3d">{icon}</span>
           </span>
           <span className="flex min-w-0 flex-col">
@@ -227,7 +233,7 @@ function DishRow({
       <div
         ref={attachRow}
         id={id}
-        className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-3 overflow-x-auto px-4 pb-3 pt-2"
+        className="no-scrollbar flex snap-x snap-mandatory scroll-pl-4 scroll-pr-4 gap-3 overflow-x-auto px-4 pb-4 pt-3"
       >
         {products.map((product) => (
           <ProductCardCompact

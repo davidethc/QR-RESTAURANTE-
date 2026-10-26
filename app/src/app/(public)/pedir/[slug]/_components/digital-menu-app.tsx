@@ -7,7 +7,7 @@ import { ProductSheet } from "@/app/(public)/r/[slug]/[mesa]/_components/product
 import { SuggestionsRow } from "@/app/(public)/r/[slug]/[mesa]/_components/suggestions-row";
 import { useMenuNavigation } from "@/app/(public)/r/[slug]/[mesa]/_components/use-menu-navigation";
 import {
-  MenuFloatingActions,
+  BackToTopButton,
   MenuNavRoot,
   MenuSearchResults,
   MenuSectionList,
@@ -291,7 +291,7 @@ export function DigitalMenuApp({
         }}
       >
         <div className="relative mx-auto w-full max-w-3xl px-4 pt-3">
-          <MenuFloatingActions nav={nav} />
+          <BackToTopButton nav={nav} />
           {cart.itemCount > 0 ? (
             <Button
               size="lg"

@@ -71,13 +71,6 @@ describe("menuNavReducer", () => {
     expect(s.active).toBeNull();
   });
 
-  it("collapseAll closes everything", () => {
-    let s = menuNavReducer(INITIAL_MENU_NAV, { type: "open", id: "a" });
-    s = menuNavReducer(s, { type: "open", id: "b" });
-    s = menuNavReducer(s, { type: "collapseAll" });
-    expect(s).toEqual(INITIAL_MENU_NAV);
-  });
-
   it("spy only moves the mark and returns the same state when nothing changes", () => {
     const s = menuNavReducer(INITIAL_MENU_NAV, { type: "spy", id: "b" });
     expect(s.active).toBe("b");

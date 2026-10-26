@@ -20,7 +20,6 @@ export type MenuNavAction =
   | { type: "toggle"; id: string }
   | { type: "open"; id: string }
   | { type: "collapse"; id: string }
-  | { type: "collapseAll" }
   | { type: "spy"; id: string | null };
 
 export const INITIAL_MENU_NAV: MenuNavState = { open: [], active: null };
@@ -59,8 +58,6 @@ export function menuNavReducer(state: MenuNavState, action: MenuNavAction): Menu
       };
     case "collapse":
       return state.open.includes(action.id) ? close(state, action.id) : state;
-    case "collapseAll":
-      return state.open.length === 0 && state.active === null ? state : INITIAL_MENU_NAV;
     case "spy":
       return state.active === action.id ? state : { ...state, active: action.id };
   }
@@ -149,7 +146,7 @@ export function productPromos(
  * customer this long to swipe its row on their own; if they have not, the
  * hint appears on that row and stays until they swipe it.
  */
-export const SWIPE_HINT_DELAY_MS = 3000;
+export const SWIPE_HINT_DELAY_MS = 1500;
 
 /** Finger travel (px) that reads as a deliberate sideways swipe. */
 export const SWIPE_MIN_DX = 24;

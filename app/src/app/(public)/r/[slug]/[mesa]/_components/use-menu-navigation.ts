@@ -123,23 +123,6 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
     [tap]
   );
 
-  const collapseAll = useCallback(() => {
-    if (!tap("collapse-all")) return;
-    // Keep the section under the bar in place, so collapsing does not throw
-    // the customer to an unrelated point of the page.
-    const line = barHeightRef.current + 24;
-    const ids = idsRef.current;
-    const rects = ids.flatMap((id) => {
-      const el = sectionEls.current.get(id);
-      if (!el) return [];
-      const r = el.getBoundingClientRect();
-      return [{ id, top: r.top, bottom: r.bottom }];
-    });
-    const anchor = pickActiveSection(rects, line);
-    if (anchor) pending.current = { id: anchor, kind: "keep" };
-    dispatch({ type: "collapseAll" });
-  }, [tap]);
-
   const scrollToTop = useCallback(() => {
     lockSpy();
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
@@ -254,7 +237,6 @@ export function useMenuNavigation(categoryIds: readonly string[]) {
     toggle,
     goTo,
     collapse,
-    collapseAll,
     scrollToTop,
     showTop,
     barHeight,

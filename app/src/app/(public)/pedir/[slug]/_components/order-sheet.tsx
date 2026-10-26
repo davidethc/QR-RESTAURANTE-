@@ -258,7 +258,7 @@ export function OrderSheet({
     >
       <SheetContent
         side="bottom"
-        className="flex data-[side=bottom]:h-[94dvh] max-h-[94dvh] flex-col gap-0 rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
+        className="flex data-[side=bottom]:h-auto max-h-[94dvh] flex-col gap-0 rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
       >
         <div className="flex items-center gap-2 border-b border-border bg-card px-4 pb-4 pt-5 pr-16">
           {step === "details" && (
@@ -293,7 +293,7 @@ export function OrderSheet({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {cart.items.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
               <ShoppingBag aria-hidden className="size-8 text-primary" />

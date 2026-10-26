@@ -21,6 +21,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { QuantityStepper } from "@/components/shared/quantity-stepper";
 import { notify, isSessionExpiredMessage } from "@/lib/notifications";
@@ -36,7 +37,6 @@ export function CartSheet({
   items,
   total,
   onUpdateQuantity,
-  onRemove,
   onClearCart,
   slug,
   tableNumber,
@@ -51,7 +51,6 @@ export function CartSheet({
   items: CartItem[];
   total: number;
   onUpdateQuantity: (index: number, quantity: number) => void;
-  onRemove: (index: number) => void;
   onClearCart: () => void;
   slug: string;
   tableNumber: number | null;
@@ -167,7 +166,7 @@ export function CartSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="bottom"
-        className="flex data-[side=bottom]:h-[94dvh] max-h-[94dvh] flex-col gap-0 rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
+        className="flex data-[side=bottom]:h-auto max-h-[94dvh] flex-col gap-0 rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
       >
         <div className="flex items-start gap-3 border-b border-border bg-card px-5 pb-4 pt-5 pr-16">
           <div className="min-w-0 flex-1">
@@ -193,7 +192,9 @@ export function CartSheet({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        {/* The sheet hugs its content (up to 94dvh) instead of always
+            filling the screen, so a short order leaves no empty gap. */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
               <span className="flex size-16 items-center justify-center rounded-2xl border border-border bg-card">
@@ -218,16 +219,17 @@ export function CartSheet({
             </div>
           ) : (
             <div className="flex flex-col gap-4 px-4 py-4">
-              <section aria-label="Productos del pedido" className="overflow-hidden rounded-2xl border border-border bg-card">
-                <ul className="flex flex-col divide-y divide-border">
+              <section aria-label="Productos del pedido">
+                <ul className="flex flex-col gap-2">
                   {items.map((item, index) => (
                     <li
                       key={`${item.product.id}-${index}`}
-                      className="flex flex-col gap-3 px-4 py-3.5"
+                      className="flex gap-3 rounded-2xl border border-border bg-card p-3"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-display text-body-lg font-bold leading-snug text-foreground">
+                      <DishThumb product={item.product} size={64} />
+                      <div className="flex min-w-0 flex-1 flex-col gap-2">
+                        <div className="min-w-0">
+                          <p className="font-display line-clamp-2 text-body font-bold leading-snug text-foreground">
                             {item.product.name}
                           </p>
                           {(item.variantName || item.modifiers) && (
@@ -242,28 +244,19 @@ export function CartSheet({
                             </p>
                           )}
                         </div>
-                        <p className="font-display shrink-0 text-body-lg font-bold tabular-nums text-wine">
-                          {formatPrice(item.subtotal)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-3">
-                        <QuantityStepper
-                          value={item.quantity}
-                          min={0}
-                          label={item.product.name}
-                          onChange={(next) => onUpdateQuantity(index, next)}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => onRemove(index)}
-                          aria-label={`Quitar ${item.product.name}`}
-                          className="h-11 gap-1.5 rounded-xl px-3 text-body-sm font-semibold text-money-out-soft-foreground hover:bg-money-out-soft hover:text-money-out-soft-foreground"
-                        >
-                          <Trash2 aria-hidden className="size-4" />
-                          Quitar
-                        </Button>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-display text-body-lg font-bold tabular-nums text-wine">
+                            {formatPrice(item.subtotal)}
+                          </p>
+                          {/* Down to zero removes the dish, so no separate
+                              "Quitar" button competes with the stepper. */}
+                          <QuantityStepper
+                            value={item.quantity}
+                            min={0}
+                            label={item.product.name}
+                            onChange={(next) => onUpdateQuantity(index, next)}
+                          />
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -271,29 +264,33 @@ export function CartSheet({
               </section>
 
               {suggestionsToShow.length > 0 && (
-                <section aria-labelledby="cart-more" className="rounded-2xl border border-border bg-card p-4">
-                  <h3 id="cart-more" className="font-display mb-3 text-body-lg font-bold text-foreground">
-                    ¿Agregas algo más?
+                <section aria-labelledby="cart-more" className="flex flex-col gap-2.5">
+                  <h3 id="cart-more" className="font-display px-1 text-body font-bold text-foreground">
+                    Para acompañar
                   </h3>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {suggestionsToShow.slice(0, 6).map((product) => (
+                  <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-1">
+                    {suggestionsToShow.slice(0, 8).map((product) => (
                       <button
                         key={product.id}
                         type="button"
                         onClick={() => onAddSuggestion(product)}
                         aria-label={`Agregar ${product.name}, ${formatPrice(product.price)}`}
-                        className="group flex min-h-[88px] flex-col justify-between gap-2 rounded-xl border border-border bg-background p-3 text-left transition-[transform,border-color] duration-150 ease-out hover:border-primary/40 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
+                        className="group flex w-[112px] shrink-0 snap-start flex-col gap-1.5 text-left"
                       >
-                        <span className="font-display line-clamp-2 text-body-sm font-bold text-foreground">
-                          {product.name}
-                        </span>
-                        <span className="flex items-center justify-between gap-1">
-                          <span className="font-display text-body font-bold tabular-nums text-wine">
-                            {formatPrice(product.price)}
-                          </span>
-                          <span aria-hidden className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <span className="relative">
+                          <DishThumb product={product} size={112} />
+                          <span
+                            aria-hidden
+                            className="absolute bottom-1.5 right-1.5 flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-transform duration-150 ease-out group-active:scale-90 motion-reduce:transition-none"
+                          >
                             <Plus className="size-4" strokeWidth={3} />
                           </span>
+                        </span>
+                        <span className="line-clamp-2 text-body-sm font-semibold leading-snug text-foreground">
+                          {product.name}
+                        </span>
+                        <span className="font-display text-body-sm font-bold tabular-nums text-wine">
+                          {formatPrice(product.price)}
                         </span>
                       </button>
                     ))}
@@ -357,7 +354,7 @@ export function CartSheet({
           >
             <div className="mb-3 flex items-baseline justify-between gap-3">
               <span className="text-body font-semibold text-muted-foreground">
-                Total · {itemCount} {itemCount === 1 ? "producto" : "productos"}
+                Total
               </span>
               <span className="font-display text-display font-bold tabular-nums text-foreground">
                 {formatPrice(total)}
@@ -467,5 +464,23 @@ export function CartSheet({
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** Square dish photo, or a soft tile with the plate emoji when it has none. */
+function DishThumb({ product, size }: { product: PublicProduct; size: number }) {
+  return (
+    <span
+      className="relative block shrink-0 overflow-hidden rounded-xl bg-secondary"
+      style={{ width: size, height: size }}
+    >
+      {product.image_url ? (
+        <Image src={product.image_url} alt="" fill sizes={`${size}px`} className="object-cover" />
+      ) : (
+        <span aria-hidden className="emoji-tile flex size-full items-center justify-center text-[1.75rem] leading-none">
+          <span className="emoji-3d">🍽️</span>
+        </span>
+      )}
+    </span>
   );
 }

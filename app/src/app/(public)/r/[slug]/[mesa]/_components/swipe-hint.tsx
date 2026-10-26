@@ -97,7 +97,7 @@ export function useSwipeHint(rowId: string) {
  */
 export function SwipeHint() {
   return (
-    <span aria-hidden className="pointer-events-none absolute right-5 top-[83px] z-[1] -translate-y-1/2">
+    <span aria-hidden className="pointer-events-none absolute right-4 top-[87px] z-[1] -translate-y-1/2">
       <span className="swipe-hint flex h-9 items-center gap-1.5 rounded-full bg-card/95 pl-2.5 pr-3.5 text-body-sm font-semibold text-foreground shadow-md ring-1 ring-border/70">
         <span className="swipe-hint-finger flex">
           <Pointer className="size-4 text-primary" strokeWidth={2.5} />

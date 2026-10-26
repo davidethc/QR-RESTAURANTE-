@@ -127,7 +127,7 @@ export function ProductSheet({
       <SheetContent
         ref={contentRef}
         side="bottom"
-        className="data-[side=bottom]:h-[94dvh] max-h-[94dvh] gap-0 overflow-y-auto rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
+        className="data-[side=bottom]:h-auto max-h-[94dvh] gap-0 overflow-y-auto rounded-t-3xl bg-background p-0 sm:mx-auto sm:max-w-xl sm:border-x"
         // Do not prevent focus on the whole dialog: that broke the focus
         // trap (Radix marks the background aria-hidden without `inert`).
         // Redirecting focus to the content itself keeps the trap intact
