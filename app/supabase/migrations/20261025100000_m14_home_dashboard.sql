@@ -70,6 +70,13 @@ begin
              else 0 end as amount
     from live_orders lo
   ),
+  -- One row per order: a session with several paid bills joins each order
+  -- once per bill, which is right for spreading money but would count
+  -- shipping and dishes twice.
+  paid_orders as (
+    select distinct lo.id, lo.shipping, lo.digital
+    from live_orders lo
+  ),
   bill_share as (
     select a.bill_id,
            case when sum(a.amount) > 0
@@ -94,9 +101,9 @@ begin
       count(distinct a.id)                                         as orders,
       count(distinct a.id) filter (where not a.digital)            as orders_pos,
       count(distinct a.id) filter (where a.digital)                as orders_digital,
-      coalesce(sum(a.shipping), 0)                                 as shipping,
-      coalesce(sum(a.shipping) filter (where not a.digital), 0)    as shipping_pos,
-      coalesce(sum(a.shipping) filter (where a.digital), 0)        as shipping_digital
+      (select coalesce(sum(po.shipping), 0) from paid_orders po)                      as shipping,
+      (select coalesce(sum(po.shipping), 0) from paid_orders po where not po.digital) as shipping_pos,
+      (select coalesce(sum(po.shipping), 0) from paid_orders po where po.digital)     as shipping_digital
     from alloc a
   ),
   tips as (
@@ -141,7 +148,7 @@ begin
            sum(oi.quantity)::bigint as quantity,
            sum(oi.subtotal) as amount
     from public.order_items oi
-    join alloc a on a.id = oi.order_id
+    join paid_orders po on po.id = oi.order_id
     left join public.products p on p.id = oi.product_id
     where not oi.cancelled
     group by oi.product_id, p.name,

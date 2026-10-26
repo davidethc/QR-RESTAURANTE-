@@ -70,7 +70,10 @@ export default async function TodayPage({
   const dashboardRange = tzSettings
     ? parseDashboardRange(await searchParams, tzSettings.timezone, tzSettings.business_day_cutoff)
     : null;
-  const dashboard = dashboardRange ? await getHomeDashboard(restaurantId, dashboardRange.range.from, dashboardRange.range.to) : null;
+  // A failing dashboard must not take the operational part of Hoy down with it.
+  const dashboard = dashboardRange
+    ? await getHomeDashboard(restaurantId, dashboardRange.range.from, dashboardRange.range.to).catch(() => "error" as const)
+    : null;
   const soldOutVariants = availability.filter((i) => !i.available && i.itemType === "variant");
   const soldOutOptions = availability.filter((i) => !i.available && i.itemType === "modifier_option");
   const availabilityHref = canAccessRoute(session, "/availability") ? "/availability" : null;
@@ -279,7 +282,13 @@ export default async function TodayPage({
               preset={dashboardRange.preset}
             />
           </header>
-          <HomeDashboardCards data={dashboard} />
+          {dashboard === "error" ? (
+            <p role="alert" className="rounded-card border border-border bg-card p-4 text-meta text-muted-foreground">
+              No pudimos cargar las ventas del periodo. Recarga la página para intentar de nuevo.
+            </p>
+          ) : (
+            <HomeDashboardCards data={dashboard} />
+          )}
         </section>
       )}
     </main>
