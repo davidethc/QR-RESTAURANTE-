@@ -34,10 +34,8 @@ El objetivo es que cualquier agente (humano o de Claude Code) pueda tomar un mó
 | M12 | Menú digital: domicilio y para recoger | Nuevo | M01, M02, M06, M13 | S5 |
 | M13 | Promociones | Nuevo | M01, M04, M06, M12 | S5 |
 | M14 | Dashboard "Hoy" y seguridad | Existe | M00, M04, M06, M07 | S6 |
-| M15 | Configuración general | Adaptar/Nuevo | M00 | S6 (transversal) |
 | M16 | Impresión | Nuevo | M04, M06, M07, M08 | S6 |
-| M17 | Multi-sucursal | Nuevo | M00, M01, M03, M08, M12, M15 | S6 |
-| M18 | QA end-to-end | Nuevo | M00–M17 | S6 (validación final) |
+| M18 | QA end-to-end | Nuevo | M00–M16 | S6 (validación final) |
 
 ## Diagrama de dependencias
 
@@ -46,7 +44,6 @@ graph TD
     M00[M00 Base] --> M01[M01 Catálogo]
     M00 --> M03[M03 Zonas y mesas]
     M00 --> M10[M10 Dispositivos PIN]
-    M00 --> M15[M15 Configuración]
     M00 --> M08[M08 Caja y cortes]
     M00 --> M14[M14 Dashboard y seguridad]
 
@@ -54,7 +51,6 @@ graph TD
     M01 --> M04[M04 Pedido de mesa y comandas]
     M01 --> M12[M12 Menú digital]
     M01 --> M13[M13 Promociones]
-    M01 --> M17[M17 Multi-sucursal]
 
     M02 --> M04
     M02 --> M06[M06 POS mostrador]
@@ -62,7 +58,6 @@ graph TD
 
     M03 --> M04
     M03 --> M11[M11 Cliente QR mesa]
-    M03 --> M17
 
     M04 --> M05[M05 Cocina KDS]
     M04 --> M06
@@ -85,7 +80,6 @@ graph TD
     M07 --> M16
 
     M08 --> M16
-    M08 --> M17
 
     M09 --> M05
     M09 --> M11
@@ -93,12 +87,8 @@ graph TD
     M11 --> M09
 
     M12 --> M13
-    M12 --> M17
 
     M13 --> M12
-
-    M15 --> M12
-    M15 --> M17
 
     M00 --> M18[M18 QA end-to-end]
     M01 --> M18
@@ -115,9 +105,7 @@ graph TD
     M12 --> M18
     M13 --> M18
     M14 --> M18
-    M15 --> M18
     M16 --> M18
-    M17 --> M18
 ```
 
 ## Tablero de tareas
