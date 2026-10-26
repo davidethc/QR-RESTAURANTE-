@@ -8,18 +8,16 @@ import {
   SegmentedControl,
   type SegmentedControlOption,
 } from "@/components/shared/segmented-control";
-import { RANGE_PRESET_LABEL, rangeForPreset, type RangePresetKey } from "@/lib/reports-dates";
+import { RANGE_PRESET_LABEL, RANGE_PRESETS, rangeForPreset, type RangePresetKey } from "@/lib/reports-dates";
 import type { ReportRange } from "@/types/reports";
 
-const PRESETS: Exclude<RangePresetKey, "custom">[] = ["today", "yesterday", "last7", "thisMonth"];
-
 const PRESET_OPTIONS: SegmentedControlOption<RangePresetKey>[] = [
-  ...PRESETS.map((key) => ({ value: key, label: RANGE_PRESET_LABEL[key] })),
+  ...RANGE_PRESETS.map((key) => ({ value: key, label: RANGE_PRESET_LABEL[key] })),
   { value: "custom", label: RANGE_PRESET_LABEL.custom, icon: CalendarRange },
 ];
 
 /**
- * Selector de rango: presets calculados en el día comercial del restaurante
+ * Selector de rango compartido por "Hoy" y Reportes: presets calculados en el día comercial del restaurante
  * (ver lib/reports-dates.ts) + personalizado con dos inputs de fecha. El
  * preset personalizado espera un botón "Aplicar" — cambiar fecha por fecha
  * mientras se escribe dispararía un refetch por cada tecla.

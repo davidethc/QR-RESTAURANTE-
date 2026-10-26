@@ -8,7 +8,7 @@ import { RANGE_PRESET_LABEL, type RangePresetKey } from "@/lib/reports-dates";
 import { BarChart3 } from "lucide-react";
 import { StatusPill } from "@/components/shared/status-strip";
 import type { ReportGranularity, ReportRange } from "@/types/reports";
-import { RangeSelector } from "./range-selector";
+import { RangeSelector } from "@/components/shared/range-selector";
 import { KpiCards } from "./kpi-cards";
 import { TopProductsTable } from "./top-products-table";
 import { StaffTable } from "./staff-table";
