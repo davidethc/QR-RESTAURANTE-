@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
-export type CounterKind = "Para llevar" | "Domicilio";
+export type CounterKind = "Para comer aquí" | "Para llevar" | "Domicilio";
 
 export interface NewOrderData {
   kind: CounterKind;

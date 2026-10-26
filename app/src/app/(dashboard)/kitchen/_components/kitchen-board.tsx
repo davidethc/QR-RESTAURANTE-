@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChefHat, History, Maximize2, Minimize2, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,16 @@ export function KitchenBoard({
   // comandas o pedidos (y tras reconectar o sondear sin socket). El "en
   // vivo" ya se ve en la barra superior del panel.
   useLiveEvents(["orders", "tickets"], refetch);
+
+  // Coming back to /kitchen (e.g. "Volver a cocina" after returning a ticket
+  // from the history) can restore this board with its old state, because the
+  // router keeps visited pages alive. Effects run again when the page is
+  // shown, so re-read once every time it is shown.
+  useEffect(() => {
+    const id = window.setTimeout(() => void refetch(), 0);
+    return () => window.clearTimeout(id);
+  }, [refetch]);
+
   const { afterMutation } = useLiveActions();
 
   if (!data.kds_enabled) {

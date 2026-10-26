@@ -44,6 +44,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   // Cada <Link> visible precarga el shell de su destino.
   partialPrefetching: true,
+  // En desarrollo Next registra los argumentos de cada Server Function, y
+  // el login pasa la contraseña por ahí: no debe quedar en ningún log.
+  logging: { serverFunctions: false },
   experimental: {
     // Reescribe los imports con nombre a imports de módulo concreto, para
     // no arrastrar el barrel entero. `lucide-react` ya viene en la lista

@@ -41,3 +41,9 @@ Note: the KDS has no separate "preparing" state; tickets go pending -> ready (`C
 ## Leftovers on monky-qa
 
 Earlier iterations of this unit (failed runs while developing the spec) left a few "QA KDS ..." orders; they were completed in kitchen, delivered and charged by a throwaway cleanup. One exploratory order, "Para llevar #2" (Pedido #41, "Agua QA", $1,25), may still be unpaid; the final spec leaves nothing open.
+
+## 2026-10-25 · re-run after fixes (fix/m18-bugs)
+
+- Bug 1 fixed: `get_kitchen_tickets` now returns the counter "Comentario para cocina" (`orders.general_comment`) in `order_notes`, joined with `orders.notes` (migration `20261025110000_m05_kds_counter_comment`, SQL test `supabase/tests/m05_kds_counter_comment.sql`).
+- Bug 2 fixed: the KDS board re-reads its tickets every time `/kitchen` is shown again, so "Volver a cocina" no longer shows stale data.
+- `npx playwright test e2e/kitchen --project=chromium --workers=1`: main flow passed 4/4 (one run plus `--repeat-each=3`); case 15 stays manual (skipped).
