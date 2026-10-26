@@ -69,7 +69,7 @@ export default async function TablesPage() {
                 slug={session.restaurant.slug}
                 tables={tables}
               />
-              <CreateTablesDialog restaurantId={session.restaurant.id} />
+              <CreateTablesDialog restaurantId={session.restaurant.id} existingNumbers={tables.map((t) => t.number)} />
             </>
           ) : null
         }
